@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Debentialc">
+    <output-path>$PROJECT_DIR$/out/artifacts/Debentialc</output-path>
+    <root id="archive" name="Debentialc.jar">
+      <element id="file-copy" path="$PROJECT_DIR$/src/main/resources/plugin.yml" />
+      <element id="module-output" name="Debentialc" />
+    </root>
+  </artifact>
+</component>
