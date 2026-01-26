@@ -1,10 +1,5 @@
 package org.example;
 import lombok.Getter;
-import noppes.npcs.api.IWorld;
-import noppes.npcs.api.entity.ICustomNpc;
-import noppes.npcs.api.entity.IDBCPlayer;
-import noppes.npcs.scripted.NpcAPI;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.example.tools.ClassesRegistration;
 import org.example.tools.ci.CustomManager;

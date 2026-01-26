@@ -1,6 +1,16 @@
 package org.example.tools;
+
+import JinRyuu.JRMCore.JRMCoreH;
+import com.gmail.filoghost.holograms.api.Hologram;
+import com.gmail.filoghost.holograms.api.HolographicDisplaysAPI;
+import kamkeel.npcdbc.constants.DBCClass;
+import kamkeel.npcdbc.constants.DBCRace;
 import noppes.npcs.api.entity.IDBCPlayer;
 import noppes.npcs.scripted.NpcAPI;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+import org.example.Main;
 import java.util.*;
 
 public class General {
@@ -24,16 +34,20 @@ public class General {
     public static String WIL = "willpower";
     public static String MND = "mind";
 
-    public static HashMap<String, String> STATS_MAP = new HashMap<> ( );
-    public static IDBCPlayer getDBCPlayer(String name){
+    public static HashMap<String, String> STATS_MAP = new HashMap<>();
+
+    public static IDBCPlayer getDBCPlayer(String name) {
         return NpcAPI.Instance().getPlayer(name).getDBCPlayer();
     }
+
     static {
-        STATS_MAP.put ( "STR", STR );
-        STATS_MAP.put ( "DEX", DEX );
-        STATS_MAP.put ( "CON", CON );
-        STATS_MAP.put ( "WIL", WIL );
-        STATS_MAP.put ( "MND", MND );
-        STATS_MAP.put ( "SPI", SPI );
+        STATS_MAP.put("STR", STR);
+        STATS_MAP.put("DEX", DEX);
+        STATS_MAP.put("CON", CON);
+        STATS_MAP.put("WIL", WIL);
+        STATS_MAP.put("MND", MND);
+        STATS_MAP.put("SPI", SPI);
     }
+
+
 }

@@ -8,11 +8,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.example.Main;
 import org.example.commands.items.RegisterItem;
 import org.example.tools.General;
-
 import java.util.*;
-
 import static org.example.events.CustomArmor.playerArmorBonus;
-
 
 public class CustomManager {
 
@@ -22,7 +19,7 @@ public class CustomManager {
             RegisterItem item = new RegisterItem();
             if (armor == null) continue;
             if (armor.getTypeId() == Material.AIR.getId()) continue;
-            CustomItem ci  = item.toItemCustom(armor);
+            CustomArmor ci  = item.toItemCustom(armor);
             if (ci != null){
                 IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
                 ci.getValueByStat().forEach((k, v) -> {
@@ -40,8 +37,35 @@ public class CustomManager {
             }
         }
     }
-
-
+    public static void effectsTask(){
+        BukkitRunnable runnable = new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player onlinePlayer : Main.instance.getServer().getOnlinePlayers()) {
+                    for (ItemStack armorContent : onlinePlayer.getInventory().getArmorContents()) {
+                        RegisterItem registerItem = new RegisterItem();
+                        CustomArmor ca = registerItem.toItemCustom(armorContent);
+                        ca.getEffects().forEach((k,v)->{
+                            if (k.equalsIgnoreCase("HEALTHREGEN")){
+                                IDBCPlayer idbcPlayer = General.getDBCPlayer(onlinePlayer.getName());
+                                idbcPlayer.setHP((int) (v * idbcPlayer.getBody()));
+                            }
+                            if (k.equalsIgnoreCase("KIREGEN")){
+                                IDBCPlayer idbcPlayer = General.getDBCPlayer(onlinePlayer.getName());
+                                idbcPlayer.setKi((int) (v * idbcPlayer.getKi()));
+                            }
+                            if (k.equalsIgnoreCase("STAMINAREGEN")){
+                                IDBCPlayer idbcPlayer = General.getDBCPlayer(onlinePlayer.getName());
+                                idbcPlayer.setStamina((int) (v * idbcPlayer.getStamina()));
+                            }
+                        });
+                    }
+                }
+            }
+        };
+        runnable.runTaskTimer(Main.instance,1,1);
+    }
+    
     public static void armorTask() {
         BukkitRunnable runnable = new BukkitRunnable() {
             @Override
@@ -53,7 +77,7 @@ public class CustomManager {
                         if (armorContent == null) continue;
                         if (armorContent.getTypeId() == Material.AIR.getId()) continue;
                         if (registerItem.isCustom(armorContent)){
-                           CustomItem ci = registerItem.toItemCustom(armorContent);
+                           CustomArmor ci = registerItem.toItemCustom(armorContent);
                            currentArmorId.add(ci.getId());
                         }
                     }
