@@ -39,10 +39,9 @@ public class CustomItemMenus {
 
                         contents.set(1, 1, ClickableItem.of(createButton, e -> {
                             player.closeInventory();
-                            player.sendMessage(CC.translate("&b/ci create <id> &7- Para crear un item"));
+                            ItemCreationManager.startItemCreation(player);
                         }));
 
-                        // Botón listar items
                         ItemStack listButton = new ItemStack(Material.BOOK);
                         ItemMeta listMeta = listButton.getItemMeta();
                         listMeta.setDisplayName(CC.translate("&c&lListar Items"));
@@ -56,7 +55,6 @@ public class CustomItemMenus {
                             openItemListMenu(1).open(player);
                         }));
 
-                        // Botón ayuda
                         ItemStack helpButton = new ItemStack(Material.PAPER);
                         ItemMeta helpMeta = helpButton.getItemMeta();
                         helpMeta.setDisplayName(CC.translate("&e&lAyuda"));
@@ -70,7 +68,6 @@ public class CustomItemMenus {
                             openHelpMenu().open(player);
                         }));
 
-                        // Botón cerrar
                         ItemStack closeButton = new ItemStack(Material.REDSTONE_BLOCK);
                         ItemMeta closeMeta = closeButton.getItemMeta();
                         closeMeta.setDisplayName(CC.translate("&r&lCerrar"));
@@ -90,9 +87,7 @@ public class CustomItemMenus {
                 .build();
     }
 
-    /**
-     * Menú de listado de items con paginación
-     */
+
     public static SmartInventory openItemListMenu(int page) {
         return SmartInventory.builder()
                 .id("ci_list_menu_" + page)
@@ -112,9 +107,8 @@ public class CustomItemMenus {
                         int start = (page - 1) * pageSize;
                         int end = Math.min(start + pageSize, ids.size());
 
-                        // Mostrar items
                         int row = 1;
-                        int col = 0;
+                        int col = 1;
 
                         for (int i = start; i < end; i++) {
                             String id = ids.get(i);
@@ -140,30 +134,32 @@ public class CustomItemMenus {
                             }));
 
                             col++;
-                            if (col >= 9) {
-                                col = 0;
+                            if (col >= 8) {
+                                col = 1;
                                 row++;
+
+                                if (row >= 4) {
+                                    break;
+                                }
                             }
                         }
 
-                        // Navegación
                         if (page > 1) {
                             ItemStack prevButton = new ItemStack(Material.ARROW);
                             ItemMeta prevMeta = prevButton.getItemMeta();
                             prevMeta.setDisplayName(CC.translate("&b← Anterior"));
                             prevButton.setItemMeta(prevMeta);
 
-                            contents.set(5, 3, ClickableItem.of(prevButton, e -> {
+                            contents.set(4, 2, ClickableItem.of(prevButton, e -> {
                                 openItemListMenu(page - 1).open(player);
                             }));
                         }
 
-                        // Página actual
                         ItemStack pageButton = new ItemStack(Material.BOOK);
                         ItemMeta pageMeta = pageButton.getItemMeta();
                         pageMeta.setDisplayName(CC.translate("&f&lPágina " + page + "/" + totalPages));
                         pageButton.setItemMeta(pageMeta);
-                        contents.set(5, 4, ClickableItem.empty(pageButton));
+                        contents.set(4, 4, ClickableItem.empty(pageButton));
 
                         if (page < totalPages) {
                             ItemStack nextButton = new ItemStack(Material.ARROW);
@@ -171,18 +167,17 @@ public class CustomItemMenus {
                             nextMeta.setDisplayName(CC.translate("&bSiguiente →"));
                             nextButton.setItemMeta(nextMeta);
 
-                            contents.set(5, 5, ClickableItem.of(nextButton, e -> {
+                            contents.set(4, 6, ClickableItem.of(nextButton, e -> {
                                 openItemListMenu(page + 1).open(player);
                             }));
                         }
 
-                        // Botón atrás
                         ItemStack backButton = new ItemStack(Material.REDSTONE_BLOCK);
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&r← Atrás"));
                         backButton.setItemMeta(backMeta);
 
-                        contents.set(5, 8, ClickableItem.of(backButton, e -> {
+                        contents.set(4, 8, ClickableItem.of(backButton, e -> {
                             createMainMenu().open(player);
                         }));
                     }
