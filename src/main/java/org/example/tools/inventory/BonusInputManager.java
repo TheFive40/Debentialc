@@ -34,15 +34,16 @@ public class BonusInputManager {
                                        String operation, String type) {
         playersInputting.put(player.getUniqueId(), new BonusInputState(itemId, stat, operation, type));
 
-        player.sendMessage(CC.translate("&b&l┌─────────────────────────────────────┐"));
-        player.sendMessage(CC.translate("&b&l│  &a&lINGRESA EL VALOR DEL BONUS       &b&l│"));
-        player.sendMessage(CC.translate("&b&l├─────────────────────────────────────┤"));
-        player.sendMessage(CC.translate("&b&l│ &7Stat: &f" + stat.toUpperCase() + "                           &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &7Operación: &f" + operation + "                       &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &c                                     &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &7Escribe el valor (ejemplo: 10, 15) &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &c(Escribe 'cancelar' para abortar) &b&l│"));
-        player.sendMessage(CC.translate("&b&l└─────────────────────────────────────┘"));
+        player.sendMessage(CC.translate("&8"));
+        player.sendMessage(CC.translate("&a BONUS"));
+        player.sendMessage(CC.translate("&8 ─────────────────────────"));
+        player.sendMessage(CC.translate("&7 • Stat: &f" + stat.toUpperCase()));
+        player.sendMessage(CC.translate("&7 • Operación: &f" + operation));
+        player.sendMessage(CC.translate("&8"));
+        player.sendMessage(CC.translate("&7 Ingresa el valor (ej: 10, 15.5):"));
+        player.sendMessage(CC.translate("&8"));
+        player.sendMessage(CC.translate("&7 Escribe 'cancelar' para abortar"));
+        player.sendMessage(CC.translate("&8"));
     }
 
     /**
@@ -69,7 +70,7 @@ public class BonusInputManager {
                 return;
             }
         } catch (NumberFormatException e) {
-            player.sendMessage(CC.translate("&c✗ Debes ingresar un número válido (ejemplo: 10, 15.5)"));
+            player.sendMessage(CC.translate("&c✗ Número inválido (usa: 10 o 15.5)"));
             startBonusInput(player, state.itemId, state.stat, state.operation, state.type);
             return;
         }
@@ -83,8 +84,8 @@ public class BonusInputManager {
                     state.itemId, state.stat, state.operation, value);
         }
 
-        player.sendMessage(CC.translate("&a✓ Bonificación aplicada correctamente"));
-        player.sendMessage(CC.translate("&7Stat: &f" + state.stat + " " + state.operation + value));
+        player.sendMessage(CC.translate("&a✓ Bonus aplicado"));
+        player.sendMessage(CC.translate("&7 " + state.stat + " " + state.operation + value));
 
         String type = state.type;
         String itemId = state.itemId;
@@ -102,7 +103,7 @@ public class BonusInputManager {
      * Cancela el input de bonus
      */
     public static void cancelBonusInput(Player player) {
-        player.sendMessage(CC.translate("&c✗ Entrada de bonus cancelada"));
+        player.sendMessage(CC.translate("&c✗ Cancelado"));
         finishBonusInput(player);
     }
 

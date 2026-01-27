@@ -2,7 +2,6 @@ package org.example.tools.pastebin;
 
 import org.bukkit.entity.Player;
 import org.example.tools.CC;
-import org.example.tools.pastebin.PastebinReader;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,6 +9,7 @@ import java.util.UUID;
 
 /**
  * Gestiona la entrada de URLs de pastebin para editar lore
+ * VERSIÓN MEJORADA: Mensajes estéticos y limpios
  */
 public class PastebinLoreManager {
 
@@ -32,16 +32,7 @@ public class PastebinLoreManager {
         playersInputting.put(player.getUniqueId(), new PastebinLoreState(itemId, type));
 
         player.closeInventory();
-        player.sendMessage(CC.translate("&d&l┌─────────────────────────────────────┐"));
-        player.sendMessage(CC.translate("&d&l│  &5&lPASTEBIN LORE EDITOR             &d&l│"));
-        player.sendMessage(CC.translate("&d&l├─────────────────────────────────────┤"));
-        player.sendMessage(CC.translate("&d&l│ &7Item/Armadura: &f" + itemId + "          &d&l│"));
-        player.sendMessage(CC.translate("&d&l│ &7Tipo: &f" + type.toUpperCase() + "                       &d&l│"));
-        player.sendMessage(CC.translate("&d&l│ &c                                     &d&l│"));
-        player.sendMessage(CC.translate("&d&l│ &7Ingresa la URL del pastebin:       &d&l│"));
-        player.sendMessage(CC.translate("&d&l│ &fhttps://pastebin.com/xxxxx         &d&l│"));
-        player.sendMessage(CC.translate("&d&l│ &c(Escribe 'cancelar' para abortar) &d&l│"));
-        player.sendMessage(CC.translate("&d&l└─────────────────────────────────────┘"));
+        sendCleanMessage(player, "PASTEBIN LORE", itemId, type);
     }
 
     /**
@@ -67,7 +58,7 @@ public class PastebinLoreManager {
         }
 
         // Descargar contenido de pastebin
-        player.sendMessage(CC.translate("&d⏳ Descargando contenido de pastebin..."));
+        player.sendMessage(CC.translate("&f⏳ Procesando..."));
 
         List<String> loreLines = PastebinReader.getFromPastebin(input);
 
@@ -85,8 +76,8 @@ public class PastebinLoreManager {
             applyLoreToArmor(player, state.itemId, loreLines);
         }
 
-        player.sendMessage(CC.translate("&a✓ Lore actualizado desde pastebin"));
-        player.sendMessage(CC.translate("&7Se agregaron &f" + loreLines.size() + " &7líneas"));
+        player.sendMessage(CC.translate("&a✓ Lore actualizado"));
+        player.sendMessage(CC.translate("&7Líneas: &f" + loreLines.size()));
 
         String type = state.type;
         String itemId = state.itemId;
@@ -147,7 +138,7 @@ public class PastebinLoreManager {
         armor.setLore(coloredLore);
         org.example.commands.items.RegisterItem.items.put(armorId, armor);
 
-        // Guardar en BD (usando storage)
+        // Guardar en BD
         org.example.tools.storage.CustomArmorStorage storage = new org.example.tools.storage.CustomArmorStorage();
         storage.saveArmor(armor);
     }
@@ -156,7 +147,7 @@ public class PastebinLoreManager {
      * Cancela la entrada de pastebin
      */
     public static void cancelPastebinInput(Player player) {
-        player.sendMessage(CC.translate("&c✗ Entrada de pastebin cancelada"));
+        player.sendMessage(CC.translate("&c✗ Cancelado"));
         finishPastebinInput(player);
     }
 
@@ -165,5 +156,22 @@ public class PastebinLoreManager {
      */
     private static void finishPastebinInput(Player player) {
         playersInputting.remove(player.getUniqueId());
+    }
+
+    /**
+     * Envía un mensaje limpio y estético
+     */
+    private static void sendCleanMessage(Player player, String title, String itemId, String type) {
+        player.sendMessage(CC.translate("&8"));
+        player.sendMessage(CC.translate("&3 " + title));
+        player.sendMessage(CC.translate("&8 ─────────────────────────"));
+        player.sendMessage(CC.translate("&7 • ID: &f" + itemId));
+        player.sendMessage(CC.translate("&7 • Tipo: &f" + type.toUpperCase()));
+        player.sendMessage(CC.translate("&8"));
+        player.sendMessage(CC.translate("&7 Ingresa la URL del pastebin:"));
+        player.sendMessage(CC.translate("&f https://pastebin.com/xxxxx"));
+        player.sendMessage(CC.translate("&8"));
+        player.sendMessage(CC.translate("&7 Escribe 'cancelar' para abortar"));
+        player.sendMessage(CC.translate("&8"));
     }
 }
