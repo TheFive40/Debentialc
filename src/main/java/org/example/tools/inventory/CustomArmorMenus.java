@@ -79,7 +79,7 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(3, 9)
-                .title(CC.translate("&b&lGestión de Armaduras Custom"))
+                .title(CC.translate("&b&lArmaduras"))
                 .build();
     }
 
@@ -182,7 +182,7 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&b&lArmaduras Custom - Página " + page))
+                .title(CC.translate("&b&lLista - Pag " + page))
                 .build();
     }
 
@@ -304,7 +304,7 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(4, 9)
-                .title(CC.translate("&b&lEditar Armadura: " + armorId))
+                .title(CC.translate("&b&lEditar: " + armorId.substring(0, Math.min(armorId.length(), 15))))
                 .build();
     }
 
@@ -350,7 +350,7 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(4, 9)
-                .title(CC.translate("&b&lConfirmar Eliminación"))
+                .title(CC.translate("&c&lConfirmar"))
                 .build();
     }
 
@@ -409,7 +409,7 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&b&lAyuda - Comandos /ca"))
+                .title(CC.translate("&b&lAyuda"))
                 .build();
     }
 

@@ -79,7 +79,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(3, 9)
-                .title(CC.translate("&c&lGestión de Items Custom"))
+                .title(CC.translate("&c&lItems"))
                 .build();
     }
 
@@ -182,7 +182,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&c&lItems Custom - Página " + page))
+                .title(CC.translate("&c&lLista - Pag " + page))
                 .build();
     }
 
@@ -224,14 +224,14 @@ public class CustomItemMenus {
 
                         ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
                         ItemMeta loreMeta = loreButton.getItemMeta();
-                        loreMeta.setDisplayName(CC.translate("&d&lLore desde Pastebin"));
+                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore"));
                         loreMeta.setLore(Arrays.asList(
-                                CC.translate("&7Carga el lore desde pastebin"),
-                                CC.translate("&a[CLICK PARA USAR]")
+                                CC.translate("&7Líneas: &f" + (item.getLore() != null ? item.getLore().size() : 0)),
+                                CC.translate("&a[CLICK PARA AGREGAR LÍNEA]")
                         ));
                         loreButton.setItemMeta(loreMeta);
                         contents.set(1, 3, ClickableItem.of(loreButton, e -> {
-                            org.example.tools.pastebin.PastebinLoreManager.startPastebinInput(player, itemId, "item");
+                            ItemEditManager.startItemEdit(player, itemId, "addline");
                         }));
 
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
@@ -306,7 +306,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(4, 9)
-                .title(CC.translate("&c&lEditar Item: " + itemId))
+                .title(CC.translate("&c&lEditar: " + itemId.substring(0, Math.min(itemId.length(), 15))))
                 .build();
     }
 
@@ -352,7 +352,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(4, 9)
-                .title(CC.translate("&c&lConfirmar Eliminación"))
+                .title(CC.translate("&c&lConfirmar"))
                 .build();
     }
 
@@ -411,7 +411,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&c&lAyuda - Comandos /ci"))
+                .title(CC.translate("&c&lAyuda"))
                 .build();
     }
 

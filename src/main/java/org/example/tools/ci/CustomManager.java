@@ -81,6 +81,31 @@ public class CustomManager {
     }
 
     /**
+     * Remueve un bonus específico del jugador
+     */
+    public static void removeBonusFromPlayer(Player player, String itemId) {
+        try {
+            IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
+
+            // Remover de todos los atributos posibles
+            for (String stat : General.BONUS_STATS.values()) {
+                try {
+                    idbcPlayer.removeBonusAttribute(stat, itemId);
+                } catch (Exception ignored) {
+                }
+            }
+
+            // Remover del tracking
+            if (playerArmorBonus.containsKey(player.getUniqueId())) {
+                Set<String> bonuses = playerArmorBonus.get(player.getUniqueId());
+                bonuses.remove(itemId);
+                playerArmorBonus.put(player.getUniqueId(), bonuses);
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    /**
      * Tarea de efectos (regeneración, etc)
      */
     public static void effectsTask() {
@@ -116,7 +141,7 @@ public class CustomManager {
     public static void applyEffectToItemFromChat(org.bukkit.entity.Player player, String itemId,
                                                  String effectType, double value) {
         if (!org.example.commands.items.CustomItemCommand.items.containsKey(itemId)) {
-            player.sendMessage(org.example.tools.CC.translate("&cItem no encontrado"));
+            player.sendMessage(org.example.tools.CC.translate("&c✗ Item no encontrado"));
             return;
         }
 
@@ -130,12 +155,16 @@ public class CustomManager {
     public static void applyEffectToArmorFromChat(org.bukkit.entity.Player player, String armorId,
                                                   String effectType, double value) {
         if (!org.example.commands.items.RegisterItem.items.containsKey(armorId)) {
-            player.sendMessage(org.example.tools.CC.translate("&cArmadura no encontrada"));
+            player.sendMessage(org.example.tools.CC.translate("&c✗ Armadura no encontrada"));
             return;
         }
 
         org.example.tools.ci.CustomArmor armor = org.example.commands.items.RegisterItem.items.get(armorId);
         armor.getEffects().put(effectType, value);
+
+        // Guardar en storage
+        org.example.tools.storage.CustomArmorStorage storage = new org.example.tools.storage.CustomArmorStorage();
+        storage.saveArmor(armor);
 
         org.example.commands.items.RegisterItem.items.put(armorId, armor);
     }
@@ -147,7 +176,7 @@ public class CustomManager {
     public static void applyBonusToItemFromChat(org.bukkit.entity.Player player, String itemId,
                                                 String stat, String operation, double value) {
         if (!org.example.commands.items.CustomItemCommand.items.containsKey(itemId)) {
-            player.sendMessage(org.example.tools.CC.translate("&cItem no encontrado"));
+            player.sendMessage(org.example.tools.CC.translate("&c✗ Item no encontrado"));
             return;
         }
 
@@ -168,12 +197,16 @@ public class CustomManager {
     public static void applyBonusToArmorFromChat(org.bukkit.entity.Player player, String armorId,
                                                  String stat, String operation, double value) {
         if (!org.example.commands.items.RegisterItem.items.containsKey(armorId)) {
-            player.sendMessage(org.example.tools.CC.translate("&cArmadura no encontrada"));
+            player.sendMessage(org.example.tools.CC.translate("&c✗ Armadura no encontrada"));
             return;
         }
 
         org.example.tools.ci.CustomArmor armor = org.example.commands.items.RegisterItem.items.get(armorId);
         armor.setOperation(operation, stat).setBonusStat(stat, value);
+
+        // Guardar en storage
+        org.example.tools.storage.CustomArmorStorage storage = new org.example.tools.storage.CustomArmorStorage();
+        storage.saveArmor(armor);
 
         org.example.commands.items.RegisterItem.items.put(armorId, armor);
 
@@ -225,13 +258,14 @@ public class CustomManager {
 
     /**
      * Tarea principal que gestiona armaduras e items en mano
+     * CORREGIDO: Ahora remueve correctamente los bonos cuando se quita armadura/item
      */
     public static void armorTask() {
         BukkitRunnable runnable = new BukkitRunnable() {
             @Override
             public void run() {
                 for (Player player : Main.instance.getServer().getOnlinePlayers()) {
-                    List<String> currentItemIds = new ArrayList<>();
+                    Set<String> currentItemIds = new HashSet<>();
                     RegisterItem registerItem = new RegisterItem();
                     CustomItemCommand itemCmd = new CustomItemCommand();
 
@@ -258,28 +292,14 @@ public class CustomManager {
                         }
                     }
 
-                    // Aplicar bonificaciones
                     applyArmorBonus(player);
                     applyHandItemBonus(player);
 
-                    // Remover bonificaciones inactivas
                     if (playerArmorBonus.containsKey(player.getUniqueId())) {
                         Set<String> activeBonus = new HashSet<>(playerArmorBonus.get(player.getUniqueId()));
                         for (String bonus : activeBonus) {
                             if (!currentItemIds.contains(bonus)) {
-                                try {
-                                    IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
-                                    idbcPlayer.removeBonusAttribute("strength", bonus);
-                                    idbcPlayer.removeBonusAttribute("constitution", bonus);
-                                    idbcPlayer.removeBonusAttribute("dexterity", bonus);
-                                    idbcPlayer.removeBonusAttribute("willpower", bonus);
-                                    idbcPlayer.removeBonusAttribute("mind", bonus);
-
-                                    Set<String> remaining = playerArmorBonus.get(player.getUniqueId());
-                                    remaining.remove(bonus);
-                                    playerArmorBonus.put(player.getUniqueId(), remaining);
-                                } catch (Exception ignored) {
-                                }
+                                removeBonusFromPlayer(player, bonus);
                             }
                         }
                     }
