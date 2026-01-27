@@ -6,11 +6,12 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class DBCConfigManager {
 
     private static final Map<String, Map<String, Double>> configCache = new HashMap<>();
-    private static final String CONFIG_PATH = "container/config/jingames/dbc";
+    private static final String CONFIG_PATH = "/config/jingames/dbc";
 
     private static final String[] RACES = {"human", "saiyan", "half-saiyan", "namekian", "arcosian", "majin"};
     private static final String[] CLASSES = {"MartialArtist", "Spiritualist", "Warrior"};
@@ -56,8 +57,10 @@ public class DBCConfigManager {
     }
 
     private static double extractBodyMultiplier(String content, String race, String dbcClass) {
-        String raceCapitalized = race.replace("-", "").substring(0, 1).toUpperCase() + race.replace("-", "").substring(1);
-        String pattern = "DBC " + raceCapitalized + " " + dbcClass + " Stat Multiplier from Attribute[\\s\\S]*?Body\\s+([0-9.]+)";
+        String raceFormatted = Arrays.stream(race.split("-"))
+                .map(s -> s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase())
+                .collect(Collectors.joining("-"));
+        String pattern = "DBC " + raceFormatted + " " + dbcClass + " Stat Multiplier from Attribute[\\s\\S]*?Body\\s+([0-9.]+)";
 
         Pattern p = Pattern.compile(pattern);
         Matcher m = p.matcher(content);
@@ -74,8 +77,10 @@ public class DBCConfigManager {
     }
 
     private static double extractEnergyPoolMultiplier(String content, String race, String dbcClass) {
-        String raceCapitalized = race.replace("-", "").substring(0, 1).toUpperCase() + race.replace("-", "").substring(1);
-        String pattern = "DBC " + raceCapitalized + " " + dbcClass + " Stat Multiplier from Attribute[\\s\\S]*?EnergyPool\\s+([0-9.]+)";
+        String raceFormatted = Arrays.stream(race.split("-"))
+                .map(s -> s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase())
+                .collect(Collectors.joining("-"));
+        String pattern = "DBC " + raceFormatted + " " + dbcClass + " Stat Multiplier from Attribute[\\s\\S]*?EnergyPool\\s+([0-9.]+)";
 
         Pattern p = Pattern.compile(pattern);
         Matcher m = p.matcher(content);
@@ -92,8 +97,10 @@ public class DBCConfigManager {
     }
 
     private static double extractStaminaMultiplier(String content, String race, String dbcClass) {
-        String raceCapitalized = race.replace("-", "").substring(0, 1).toUpperCase() + race.replace("-", "").substring(1);
-        String pattern = "DBC " + raceCapitalized + " " + dbcClass + " Stat Multiplier from Attribute[\\s\\S]*?Stamina\\s+([0-9.]+)";
+        String raceFormatted = Arrays.stream(race.split("-"))
+                .map(s -> s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase())
+                .collect(Collectors.joining("-"));
+        String pattern = "DBC " + raceFormatted + " " + dbcClass + " Stat Multiplier from Attribute[\\s\\S]*?Stamina\\s+([0-9.]+)";
 
         Pattern p = Pattern.compile(pattern);
         Matcher m = p.matcher(content);

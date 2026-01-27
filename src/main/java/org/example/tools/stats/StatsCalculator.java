@@ -150,8 +150,6 @@ public class StatsCalculator {
 
     private static String getRaceName(int race) {
         switch (race) {
-            case DBCRace.HUMAN:
-                return "human";
             case DBCRace.SAIYAN:
                 return "saiyan";
             case DBCRace.HALFSAIYAN:

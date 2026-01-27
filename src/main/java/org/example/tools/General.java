@@ -1,19 +1,13 @@
 package org.example.tools;
-
 import JinRyuu.JRMCore.JRMCoreH;
-import com.gmail.filoghost.holograms.api.Hologram;
-import com.gmail.filoghost.holograms.api.HolographicDisplaysAPI;
-import kamkeel.npcdbc.constants.DBCClass;
-import kamkeel.npcdbc.constants.DBCRace;
+
+import net.minecraft.entity.player.EntityPlayerMP;
 import noppes.npcs.api.entity.IDBCPlayer;
 import noppes.npcs.scripted.NpcAPI;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.example.Main;
 import java.util.*;
 
-import static org.delaware.tools.General.toPlayerMP;
 
 public class General {
 
@@ -43,6 +37,10 @@ public class General {
     }
     public static int getSTAT ( String stat, Player entity ) {
         return JRMCoreH.getInt ( toPlayerMP ( entity ), STATS_MAP.get ( stat.toUpperCase ( ) ) );
+    }
+
+    public static EntityPlayerMP toPlayerMP(Player player) {
+        return (EntityPlayerMP)NpcAPI.Instance().getPlayer(player.getName()).getDBCPlayer().getMCEntity();
     }
     static {
         STATS_MAP.put("STR", STR);

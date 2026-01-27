@@ -14,6 +14,7 @@ import org.example.tools.General;
 import org.example.tools.stats.StatsCalculator;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.example.events.CustomArmor.playerArmorBonus;
 
@@ -178,6 +179,7 @@ public class CustomManager {
 
         applyArmorBonus(player);
     }
+    static AtomicInteger counter = new AtomicInteger(0);
 
     /**
      * Aplica efectos especiales al jugador
@@ -185,24 +187,36 @@ public class CustomManager {
     private static void applyEffects(Player player, HashMap<String, Double> effects) {
         try {
             IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
+
             effects.forEach((k, v) -> {
+                if (counter.incrementAndGet() % 3 != 0) return;
+
                 try {
                     if (k.equalsIgnoreCase("HEALTHREGEN")) {
-                        int newHP = (int) (StatsCalculator.getMaxHealth(idbcPlayer) + (v * idbcPlayer.getStamina()));
-                        idbcPlayer.setHP(newHP);
-                        EffectsManager.spawnHologram(player, CC.translate("&c❤"),1.0,1.0);
+                        int level = 1;
+                        int max = StatsCalculator.getMaxHealth(idbcPlayer);
+                        idbcPlayer.sendMessage(max + "");
+                        int bonus = (int) (((double) level / 100.0) * max);
+                        idbcPlayer.setHP(idbcPlayer.getHP() + bonus);
+                        EffectsManager.spawnHologram(player, CC.translate("&c❤"), 1.0, 1.0);
+
                     } else if (k.equalsIgnoreCase("KIREGEN")) {
-                        int newKi = (int) (StatsCalculator.getKiMax(idbcPlayer) + (v * idbcPlayer.getKi()));
-                        EffectsManager.spawnHologram(player, CC.translate("&9⚡"),1.5,-1.0);
-                        idbcPlayer.setKi(newKi);
+                        int level = 1;
+                        int max = StatsCalculator.getKiMax(idbcPlayer);
+                        int bonus = (int) (((double) level / 100.0) * max);
+                        idbcPlayer.setKi(idbcPlayer.getKi() + bonus);
+                        EffectsManager.spawnHologram(player, CC.translate("&9⚡"), 1.5, -1.0);
+
                     } else if (k.equalsIgnoreCase("STAMINAREGEN")) {
-                        int newStamina = (int) (idbcPlayer.getStamina() + (v * idbcPlayer.getStamina()));
-                        idbcPlayer.setStamina(newStamina);
-                        EffectsManager.spawnHologram(player, CC.translate("&e❃"),0.4,1.0);
+                        int level = 1;
+                        int max = StatsCalculator.getMaxStamina(idbcPlayer);
+                        int bonus = (int) (((double) level / 100.0) * max);
+                        idbcPlayer.setStamina(bonus + idbcPlayer.getStamina());
+                        EffectsManager.spawnHologram(player, CC.translate("&e❃"), 0.4, 1.0);
                     }
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) {}
             });
+
         } catch (Exception e) {
             // Silent fail
         }

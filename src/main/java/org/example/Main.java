@@ -9,6 +9,7 @@ import org.example.tools.storage.CustomArmorStorage;
 import java.io.*;
 
 import static org.example.tools.ci.CustomManager.effectsTask;
+import static org.example.tools.config.DBCConfigManager.loadAllConfigs;
 
 @Getter
 public class Main extends JavaPlugin {
@@ -35,6 +36,7 @@ public class Main extends JavaPlugin {
         CustomManager.armorTask();
         effectsTask();
         CustomArmorStorage customArmorStorage = new CustomArmorStorage();
+        loadAllConfigs();
     }
 
     @Override
