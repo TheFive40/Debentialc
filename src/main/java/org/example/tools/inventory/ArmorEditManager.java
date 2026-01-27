@@ -122,6 +122,9 @@ public class ArmorEditManager {
         }
 
         finishArmorEdit(player);
+        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(org.example.Main.instance, () -> {
+            CustomArmorMenus.openEditArmorMenu(state.armorId).open(player);
+        }, 1L);
     }
 
     /**

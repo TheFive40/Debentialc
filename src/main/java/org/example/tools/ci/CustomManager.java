@@ -109,7 +109,34 @@ public class CustomManager {
         };
         runnable.runTaskTimer(Main.instance, 1, 1);
     }
-// Agregar estos dos métodos a CustomManager.java
+
+
+    public static void applyEffectToItemFromChat(org.bukkit.entity.Player player, String itemId,
+                                                 String effectType, double value) {
+        if (!org.example.commands.items.CustomItemCommand.items.containsKey(itemId)) {
+            player.sendMessage(org.example.tools.CC.translate("&cItem no encontrado"));
+            return;
+        }
+
+        org.example.tools.ci.CustomItem item = org.example.commands.items.CustomItemCommand.items.get(itemId);
+        item.getEffects().put(effectType, value);
+
+        org.example.tools.storage.CustomItemStorage storage = new org.example.tools.storage.CustomItemStorage();
+        storage.saveItem(item);
+    }
+
+    public static void applyEffectToArmorFromChat(org.bukkit.entity.Player player, String armorId,
+                                                  String effectType, double value) {
+        if (!org.example.commands.items.RegisterItem.items.containsKey(armorId)) {
+            player.sendMessage(org.example.tools.CC.translate("&cArmadura no encontrada"));
+            return;
+        }
+
+        org.example.tools.ci.CustomArmor armor = org.example.commands.items.RegisterItem.items.get(armorId);
+        armor.getEffects().put(effectType, value);
+
+        org.example.commands.items.RegisterItem.items.put(armorId, armor);
+    }
 
     /**
      * Aplica un bonus a un item desde input por chat

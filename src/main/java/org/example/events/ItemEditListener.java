@@ -6,6 +6,8 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.entity.Player;
 import org.example.tools.inventory.ItemEditManager;
 import org.example.tools.inventory.ArmorEditManager;
+import org.example.tools.inventory.EffectInputManager;
+import org.example.tools.inventory.BonusInputManager;
 
 public class ItemEditListener implements Listener {
 
@@ -14,7 +16,6 @@ public class ItemEditListener implements Listener {
         Player player = event.getPlayer();
         String message = event.getMessage().trim();
 
-        // Verificar si está editando un item
         if (ItemEditManager.isEditingItem(player)) {
             event.setCancelled(true);
 
@@ -26,7 +27,6 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // Verificar si está editando una armadura
         if (ArmorEditManager.isEditingArmor(player)) {
             event.setCancelled(true);
 
@@ -34,6 +34,28 @@ public class ItemEditListener implements Listener {
                 ArmorEditManager.cancelArmorEdit(player);
             } else {
                 ArmorEditManager.processArmorEdit(player, message);
+            }
+            return;
+        }
+
+        if (BonusInputManager.isInputtingBonus(player)) {
+            event.setCancelled(true);
+
+            if (message.equalsIgnoreCase("cancelar")) {
+                BonusInputManager.cancelBonusInput(player);
+            } else {
+                BonusInputManager.processBonusInput(player, message);
+            }
+            return;
+        }
+
+        if (EffectInputManager.isInputtingEffect(player)) {
+            event.setCancelled(true);
+
+            if (message.equalsIgnoreCase("cancelar")) {
+                EffectInputManager.cancelEffectInput(player);
+            } else {
+                EffectInputManager.processEffectInput(player, message);
             }
             return;
         }

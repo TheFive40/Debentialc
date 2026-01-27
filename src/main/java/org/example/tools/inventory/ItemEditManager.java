@@ -124,6 +124,9 @@ public class ItemEditManager {
         }
 
         finishItemEdit(player);
+        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(org.example.Main.instance, () -> {
+            CustomItemMenus.openEditItemMenu(state.itemId).open(player);
+        }, 1L);
     }
 
     /**

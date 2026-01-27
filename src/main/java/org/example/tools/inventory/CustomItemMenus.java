@@ -16,9 +16,6 @@ import java.util.*;
 
 public class CustomItemMenus {
 
-    /**
-     * Menú principal de items custom
-     */
     public static SmartInventory createMainMenu() {
         return SmartInventory.builder()
                 .id("ci_menu_main")
@@ -27,7 +24,6 @@ public class CustomItemMenus {
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
-                        // Botón crear item
                         ItemStack createButton = new ItemStack(Material.EMERALD_BLOCK);
                         ItemMeta createMeta = createButton.getItemMeta();
                         createMeta.setDisplayName(CC.translate("&a&lCrear Item"));
@@ -86,7 +82,6 @@ public class CustomItemMenus {
                 .title(CC.translate("&c&lGestión de Items Custom"))
                 .build();
     }
-
 
     public static SmartInventory openItemListMenu(int page) {
         return SmartInventory.builder()
@@ -191,9 +186,6 @@ public class CustomItemMenus {
                 .build();
     }
 
-    /**
-     * Menú de edición de items - COMPLETAMENTE ACTUALIZADO
-     */
     public static SmartInventory openEditItemMenu(String itemId) {
         CustomItem item = CustomItemCommand.items.get(itemId);
         if (item == null) {
@@ -207,7 +199,6 @@ public class CustomItemMenus {
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
-                        // Información del item
                         ItemStack infoItem = new ItemStack(Material.PAPER);
                         ItemMeta infoMeta = infoItem.getItemMeta();
                         infoMeta.setDisplayName(CC.translate("&c&l" + itemId));
@@ -219,7 +210,6 @@ public class CustomItemMenus {
                         infoItem.setItemMeta(infoMeta);
                         contents.set(1, 1, ClickableItem.empty(infoItem));
 
-                        // Botón editar nombre
                         ItemStack renameButton = new ItemStack(Material.NAME_TAG);
                         ItemMeta renameMeta = renameButton.getItemMeta();
                         renameMeta.setDisplayName(CC.translate("&e&lRenombrar"));
@@ -232,7 +222,6 @@ public class CustomItemMenus {
                             ItemEditManager.startItemEdit(player, itemId, "rename");
                         }));
 
-                        // Botón editar lore
                         ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
                         ItemMeta loreMeta = loreButton.getItemMeta();
                         loreMeta.setDisplayName(CC.translate("&e&lEditar Lore"));
@@ -245,7 +234,6 @@ public class CustomItemMenus {
                             ItemEditManager.startItemEdit(player, itemId, "addline");
                         }));
 
-                        // Botón agregar stats
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
                         ItemMeta statsMeta = statsButton.getItemMeta();
                         statsMeta.setDisplayName(CC.translate("&a&lAñadir Stats"));
@@ -264,22 +252,22 @@ public class CustomItemMenus {
                             CustomItemBonusMenus.createStatSelectionMenu(itemId).open(player);
                         }));
 
-                        // Botón ver efectos
                         ItemStack effectsButton = new ItemStack(Material.REDSTONE_TORCH_ON);
                         ItemMeta effectsMeta = effectsButton.getItemMeta();
-                        effectsMeta.setDisplayName(CC.translate("&6&lVer Efectos"));
+                        effectsMeta.setDisplayName(CC.translate("&6&lAgregar Efectos"));
                         List<String> effectsLore = new ArrayList<>();
-                        effectsLore.add(CC.translate("&7Efectos activos:"));
+                        effectsLore.add(CC.translate("&7Efectos actuales: &f" + item.getEffects().size()));
                         item.getEffects().forEach((effect, value) -> {
                             effectsLore.add(CC.translate("&f  " + effect + ": " + (value * 100) + "%"));
                         });
+                        effectsLore.add("");
+                        effectsLore.add(CC.translate("&a[CLICK PARA AGREGAR]"));
                         effectsMeta.setLore(effectsLore);
                         effectsButton.setItemMeta(effectsMeta);
                         contents.set(1, 5, ClickableItem.of(effectsButton, e -> {
-                            openEffectsMenu(itemId).open(player);
+                            CustomItemEffectsMenu.createEffectSelectionMenu(itemId).open(player);
                         }));
 
-                        // ⭐ NUEVO: Botón dar item
                         ItemStack giveButton = new ItemStack(Material.APPLE);
                         ItemMeta giveMeta = giveButton.getItemMeta();
                         giveMeta.setDisplayName(CC.translate("&a&lDar Item"));
@@ -292,7 +280,6 @@ public class CustomItemMenus {
                             ItemEditManager.giveCustomItem(player, itemId);
                         }));
 
-                        // Botón eliminar
                         ItemStack deleteButton = new ItemStack(Material.ANVIL);
                         ItemMeta deleteMeta = deleteButton.getItemMeta();
                         deleteMeta.setDisplayName(CC.translate("&c&lEliminar Item"));
@@ -305,7 +292,6 @@ public class CustomItemMenus {
                             openDeleteConfirmMenu(itemId).open(player);
                         }));
 
-                        // Botón atrás
                         ItemStack backButton = new ItemStack(Material.ARROW);
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&b← Atrás"));
@@ -324,101 +310,6 @@ public class CustomItemMenus {
                 .build();
     }
 
-    /**
-     * Menú de visualización de stats
-     */
-    public static SmartInventory openStatsMenu(String itemId) {
-        CustomItem item = CustomItemCommand.items.get(itemId);
-        if (item == null) return null;
-
-        return SmartInventory.builder()
-                .id("ci_stats_" + itemId)
-                .provider(new InventoryProvider() {
-                    @Override
-                    public void init(Player player, InventoryContents contents) {
-                        contents.fillBorders(ClickableItem.empty(createGlassPane()));
-
-                        int row = 1;
-                        for (Map.Entry<String, Double> entry : item.getValueByStat().entrySet()) {
-                            ItemStack statItem = new ItemStack(Material.REDSTONE);
-                            ItemMeta statMeta = statItem.getItemMeta();
-                            String operation = item.getOperation().getOrDefault(entry.getKey(), "+");
-                            statMeta.setDisplayName(CC.translate("&a&l" + entry.getKey()));
-                            statMeta.setLore(Arrays.asList(
-                                    CC.translate("&7Operación: &f" + operation),
-                                    CC.translate("&7Valor: &f" + entry.getValue())
-                            ));
-                            statItem.setItemMeta(statMeta);
-                            contents.set(row, 4, ClickableItem.empty(statItem));
-                            row++;
-                        }
-
-                        ItemStack backButton = new ItemStack(Material.ARROW);
-                        ItemMeta backMeta = backButton.getItemMeta();
-                        backMeta.setDisplayName(CC.translate("&b← Atrás"));
-                        backButton.setItemMeta(backMeta);
-                        contents.set(5, 4, ClickableItem.of(backButton, e -> {
-                            openEditItemMenu(itemId).open(player);
-                        }));
-                    }
-
-                    @Override
-                    public void update(Player player, InventoryContents contents) {
-                    }
-                })
-                .size(6, 9)
-                .title(CC.translate("&c&lStats: " + itemId))
-                .build();
-    }
-
-    /**
-     * Menú de visualización de efectos
-     */
-    public static SmartInventory openEffectsMenu(String itemId) {
-        CustomItem item = CustomItemCommand.items.get(itemId);
-        if (item == null) return null;
-
-        return SmartInventory.builder()
-                .id("ci_effects_" + itemId)
-                .provider(new InventoryProvider() {
-                    @Override
-                    public void init(Player player, InventoryContents contents) {
-                        contents.fillBorders(ClickableItem.empty(createGlassPane()));
-
-                        int row = 1;
-                        for (Map.Entry<String, Double> entry : item.getEffects().entrySet()) {
-                            ItemStack effectItem = new ItemStack(Material.REDSTONE_TORCH_ON);
-                            ItemMeta effectMeta = effectItem.getItemMeta();
-                            effectMeta.setDisplayName(CC.translate("&6&l" + entry.getKey()));
-                            effectMeta.setLore(Arrays.asList(
-                                    CC.translate("&7Valor: &f" + (entry.getValue() * 100) + "%")
-                            ));
-                            effectItem.setItemMeta(effectMeta);
-                            contents.set(row, 4, ClickableItem.empty(effectItem));
-                            row++;
-                        }
-
-                        ItemStack backButton = new ItemStack(Material.ARROW);
-                        ItemMeta backMeta = backButton.getItemMeta();
-                        backMeta.setDisplayName(CC.translate("&b← Atrás"));
-                        backButton.setItemMeta(backMeta);
-                        contents.set(5, 4, ClickableItem.of(backButton, e -> {
-                            openEditItemMenu(itemId).open(player);
-                        }));
-                    }
-
-                    @Override
-                    public void update(Player player, InventoryContents contents) {
-                    }
-                })
-                .size(6, 9)
-                .title(CC.translate("&c&lEfectos: " + itemId))
-                .build();
-    }
-
-    /**
-     * Menú de confirmación de eliminación
-     */
     public static SmartInventory openDeleteConfirmMenu(String itemId) {
         return SmartInventory.builder()
                 .id("ci_delete_confirm_" + itemId)
@@ -427,7 +318,6 @@ public class CustomItemMenus {
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
-                        // Mensaje de confirmación
                         ItemStack confirmItem = new ItemStack(Material.REDSTONE_BLOCK);
                         ItemMeta confirmMeta = confirmItem.getItemMeta();
                         confirmMeta.setDisplayName(CC.translate("&c&l¿Estás seguro?"));
@@ -438,7 +328,6 @@ public class CustomItemMenus {
                         confirmItem.setItemMeta(confirmMeta);
                         contents.set(1, 4, ClickableItem.empty(confirmItem));
 
-                        // Botón confirmar eliminación
                         ItemStack yesButton = new ItemStack(Material.EMERALD_BLOCK);
                         ItemMeta yesMeta = yesButton.getItemMeta();
                         yesMeta.setDisplayName(CC.translate("&a&lSÍ, ELIMINAR"));
@@ -449,7 +338,6 @@ public class CustomItemMenus {
                             openItemListMenu(1).open(player);
                         }));
 
-                        // Botón cancelar
                         ItemStack noButton = new ItemStack(Material.REDSTONE_BLOCK);
                         ItemMeta noMeta = noButton.getItemMeta();
                         noMeta.setDisplayName(CC.translate("&c&lCANCELAR"));
@@ -468,9 +356,6 @@ public class CustomItemMenus {
                 .build();
     }
 
-    /**
-     * Menú de ayuda
-     */
     public static SmartInventory openHelpMenu() {
         return SmartInventory.builder()
                 .id("ci_help_menu")
@@ -530,9 +415,6 @@ public class CustomItemMenus {
                 .build();
     }
 
-    /**
-     * Crea un panel de cristal decorativo
-     */
     private static ItemStack createGlassPane() {
         ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 14);
         ItemMeta glassMeta = glass.getItemMeta();

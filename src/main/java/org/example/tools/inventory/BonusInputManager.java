@@ -86,7 +86,16 @@ public class BonusInputManager {
         player.sendMessage(CC.translate("&a✓ Bonificación aplicada correctamente"));
         player.sendMessage(CC.translate("&7Stat: &f" + state.stat + " " + state.operation + value));
 
+        String type = state.type;
+        String itemId = state.itemId;
         finishBonusInput(player);
+        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(org.example.Main.instance, () -> {
+            if ("item".equals(type)) {
+                org.example.tools.inventory.CustomItemMenus.openEditItemMenu(itemId).open(player);
+            } else {
+                org.example.tools.inventory.CustomArmorMenus.openEditArmorMenu(itemId).open(player);
+            }
+        }, 1L);
     }
 
     /**
