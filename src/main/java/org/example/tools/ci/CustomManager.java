@@ -73,7 +73,6 @@ public class CustomManager {
                 }
             });
         } catch (Exception e) {
-            // Silent fail - CustomNPC might not be initialized
         }
     }
 
@@ -110,7 +109,48 @@ public class CustomManager {
         };
         runnable.runTaskTimer(Main.instance, 1, 1);
     }
+// Agregar estos dos métodos a CustomManager.java
 
+    /**
+     * Aplica un bonus a un item desde input por chat
+     * Usado por BonusInputManager
+     */
+    public static void applyBonusToItemFromChat(org.bukkit.entity.Player player, String itemId,
+                                                String stat, String operation, double value) {
+        if (!org.example.commands.items.CustomItemCommand.items.containsKey(itemId)) {
+            player.sendMessage(org.example.tools.CC.translate("&cItem no encontrado"));
+            return;
+        }
+
+        org.example.tools.ci.CustomItem item = org.example.commands.items.CustomItemCommand.items.get(itemId);
+        item.setOperation(operation, stat).setBonusStat(stat, value);
+
+        // Guardar en BD
+        org.example.tools.storage.CustomItemStorage storage = new org.example.tools.storage.CustomItemStorage();
+        storage.saveItem(item);
+
+        applyHandItemBonus(player);
+    }
+
+    /**
+     * Aplica un bonus a una armadura desde input por chat
+     * Usado por BonusInputManager
+     */
+    public static void applyBonusToArmorFromChat(org.bukkit.entity.Player player, String armorId,
+                                                 String stat, String operation, double value) {
+        if (!org.example.commands.items.RegisterItem.items.containsKey(armorId)) {
+            player.sendMessage(org.example.tools.CC.translate("&cArmadura no encontrada"));
+            return;
+        }
+
+        org.example.tools.ci.CustomArmor armor = org.example.commands.items.RegisterItem.items.get(armorId);
+        armor.setOperation(operation, stat).setBonusStat(stat, value);
+
+        org.example.commands.items.RegisterItem.items.put(armorId, armor);
+
+        // ⭐ Aplicar el bono inmediatamente al jugador
+        applyArmorBonus(player);
+    }
     /**
      * Aplica efectos especiales al jugador
      */

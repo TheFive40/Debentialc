@@ -499,7 +499,7 @@ public class CustomItemMenus {
                                 CC.translate("&fstr &7- Fuerza"),
                                 CC.translate("&fcon &7- Constitución"),
                                 CC.translate("&fdex &7- Destreza"),
-                                CC.translate("&fwill &7- Voluntad"),
+                                CC.translate("&fwill &7- Ataque de Ki"),
                                 CC.translate("&fmnd &7- Mente")
                         ));
                         statsItem.setItemMeta(statsMeta);

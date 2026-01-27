@@ -161,7 +161,10 @@ public class CustomArmorBonusMenus {
                             contents.set(row, col, ClickableItem.of(opButton, e -> {
                                 BonusFlowManager.setSelectedOperation(player, operation);
                                 BonusFlowManager.nextStep(player);
-                                createValueSelectionMenu(armorId).open(player);
+
+                                player.closeInventory();
+                                BonusInputManager.startBonusInput(player, armorId,
+                                        playerState.selectedStat, operation, "armor");
                             }));
 
                             col += 3;
@@ -186,118 +189,6 @@ public class CustomArmorBonusMenus {
                 .size(5, 9)
                 .title(CC.translate("&b&lSeleccionar Operación - " + armorId))
                 .build();
-    }
-
-    /**
-     * Menú para seleccionar el valor del bonus
-     */
-    public static SmartInventory createValueSelectionMenu(String armorId) {
-        CustomArmor armor = RegisterItem.items.get(armorId);
-        if (armor == null) return null;
-
-        return SmartInventory.builder()
-                .id("ca_bonus_value_select_" + armorId)
-                .provider(new InventoryProvider() {
-                    @Override
-                    public void init(Player player, InventoryContents contents) {
-                        contents.fillBorders(ClickableItem.empty(createGlassPane()));
-
-                        BonusFlowManager.BonusFlowState playerState = BonusFlowManager.getFlowState(player);
-
-                        // Título
-                        ItemStack titleItem = new ItemStack(Material.PAPER);
-                        ItemMeta titleMeta = titleItem.getItemMeta();
-                        titleMeta.setDisplayName(CC.translate("&b&lSelecciona un Valor"));
-                        titleMeta.setLore(Arrays.asList(
-                                CC.translate("&7Armadura: &f" + armorId),
-                                CC.translate("&7Stat: &f" + playerState.selectedStat.toUpperCase()),
-                                CC.translate("&7Operación: &f" + playerState.selectedOperation)
-                        ));
-                        titleItem.setItemMeta(titleMeta);
-                        contents.set(0, 4, ClickableItem.empty(titleItem));
-
-                        // Valores predeterminados
-                        double[] values = {1, 2, 5, 10, 15, 20, 25, 50, 100};
-                        int row = 1;
-                        int col = 1;
-
-                        for (double value : values) {
-                            final double finalValue = value;
-                            ItemStack valueButton = new ItemStack(Material.REDSTONE);
-                            ItemMeta valueMeta = valueButton.getItemMeta();
-                            valueMeta.setDisplayName(CC.translate("&a&l" + value));
-                            valueMeta.setLore(Arrays.asList(
-                                    CC.translate("&7Bonificación: &f" + playerState.selectedOperation + value),
-                                    CC.translate("&a[CLICK PARA APLICAR]")
-                            ));
-                            valueButton.setItemMeta(valueMeta);
-
-                            contents.set(row, col, ClickableItem.of(valueButton, e -> {
-                                applyBonus(player, armorId, playerState.selectedStat,
-                                        playerState.selectedOperation, finalValue);
-                                BonusFlowManager.clearFlowState(player);
-                                CustomArmorMenus.openEditArmorMenu(armorId).open(player);
-                            }));
-
-                            col++;
-                            if (col > 7) {
-                                col = 1;
-                                row++;
-                            }
-                        }
-
-                        // Instrucción para valor personalizado
-                        ItemStack customValueItem = new ItemStack(Material.NAME_TAG);
-                        ItemMeta customValueMeta = customValueItem.getItemMeta();
-                        customValueMeta.setDisplayName(CC.translate("&e&lValor Personalizado"));
-                        customValueMeta.setLore(Arrays.asList(
-                                CC.translate("&7Escribe en el chat el valor deseado"),
-                                CC.translate("&a/ca value <número>")
-                        ));
-                        customValueItem.setItemMeta(customValueMeta);
-                        contents.set(3, 4, ClickableItem.of(customValueItem, e -> {
-                            player.closeInventory();
-                            player.sendMessage(CC.translate("&bEscribe el valor: &a/ca value <número>"));
-                        }));
-
-                        // Botón atrás
-                        ItemStack backButton = new ItemStack(Material.ARROW);
-                        ItemMeta backMeta = backButton.getItemMeta();
-                        backMeta.setDisplayName(CC.translate("&b← Atrás"));
-                        backButton.setItemMeta(backMeta);
-                        contents.set(4, 0, ClickableItem.of(backButton, e -> {
-                            BonusFlowManager.setSelectedOperation(player, null);
-                            BonusFlowManager.getFlowState(player).step = "selecting_operation";
-                            createOperationSelectionMenu(armorId).open(player);
-                        }));
-                    }
-
-                    @Override
-                    public void update(Player player, InventoryContents contents) {
-                    }
-                })
-                .size(5, 9)
-                .title(CC.translate("&b&lSeleccionar Valor - " + armorId))
-                .build();
-    }
-
-    /**
-     * Aplica el bonus a la armadura
-     */
-    private static void applyBonus(Player player, String armorId, String stat,
-                                   String operation, double value) {
-        if (!RegisterItem.items.containsKey(armorId)) {
-            player.sendMessage(CC.translate("&cArmadura no encontrada"));
-            return;
-        }
-
-        CustomArmor armor = RegisterItem.items.get(armorId);
-        armor.setOperation(operation, stat).setBonusStat(stat, value);
-
-        RegisterItem.items.put(armorId, armor);
-
-        player.sendMessage(CC.translate("&a✓ Bonificación aplicada correctamente"));
-        player.sendMessage(CC.translate("&7Stat: &f" + stat + " " + operation + value));
     }
 
     /**

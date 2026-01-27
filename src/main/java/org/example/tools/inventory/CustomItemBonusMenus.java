@@ -13,7 +13,6 @@ import org.example.tools.CC;
 import org.example.tools.ci.CustomItem;
 
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Menús para agregar bonificaciones a items custom
@@ -47,7 +46,7 @@ public class CustomItemBonusMenus {
 
                         // Stats disponibles
                         String[] stats = {"str", "con", "dex", "will", "mnd"};
-                        String[] statNames = {"Fuerza", "Constitución", "Destreza", "Ataque de ki", "Mente"};
+                        String[] statNames = {"Fuerza", "Constitución", "Destreza", "Voluntad", "Mente"};
                         Material[] statMaterials = {
                                 Material.DIAMOND_SWORD,
                                 Material.IRON_CHESTPLATE,
@@ -104,13 +103,12 @@ public class CustomItemBonusMenus {
     }
 
     /**
-     * Menú para seleccionar la operación (+ - * /)
+     * Menú para seleccionar la operación (+ - *)
      */
     public static SmartInventory createOperationSelectionMenu(String itemId) {
         CustomItem item = CustomItemCommand.items.get(itemId);
         if (item == null) return null;
 
-        BonusFlowManager.BonusFlowState state = BonusFlowManager.getFlowState(null); // Será obtenido del player
         return SmartInventory.builder()
                 .id("ci_bonus_op_select_" + itemId)
                 .provider(new InventoryProvider() {
@@ -163,7 +161,11 @@ public class CustomItemBonusMenus {
                             contents.set(row, col, ClickableItem.of(opButton, e -> {
                                 BonusFlowManager.setSelectedOperation(player, operation);
                                 BonusFlowManager.nextStep(player);
-                                createValueSelectionMenu(itemId).open(player);
+
+                                // ⭐ NUEVO: Inicia input por chat en lugar de mostrar menú de valores
+                                player.closeInventory();
+                                BonusInputManager.startBonusInput(player, itemId,
+                                        playerState.selectedStat, operation, "item");
                             }));
 
                             col += 3;
@@ -188,121 +190,6 @@ public class CustomItemBonusMenus {
                 .size(5, 9)
                 .title(CC.translate("&c&lSeleccionar Operación - " + itemId))
                 .build();
-    }
-
-    /**
-     * Menú para seleccionar el valor del bonus
-     */
-    public static SmartInventory createValueSelectionMenu(String itemId) {
-        CustomItem item = CustomItemCommand.items.get(itemId);
-        if (item == null) return null;
-
-        return SmartInventory.builder()
-                .id("ci_bonus_value_select_" + itemId)
-                .provider(new InventoryProvider() {
-                    @Override
-                    public void init(Player player, InventoryContents contents) {
-                        contents.fillBorders(ClickableItem.empty(createGlassPane()));
-
-                        BonusFlowManager.BonusFlowState playerState = BonusFlowManager.getFlowState(player);
-
-                        // Título
-                        ItemStack titleItem = new ItemStack(Material.PAPER);
-                        ItemMeta titleMeta = titleItem.getItemMeta();
-                        titleMeta.setDisplayName(CC.translate("&c&lSelecciona un Valor"));
-                        titleMeta.setLore(Arrays.asList(
-                                CC.translate("&7Item: &f" + itemId),
-                                CC.translate("&7Stat: &f" + playerState.selectedStat.toUpperCase()),
-                                CC.translate("&7Operación: &f" + playerState.selectedOperation)
-                        ));
-                        titleItem.setItemMeta(titleMeta);
-                        contents.set(0, 4, ClickableItem.empty(titleItem));
-
-                        // Valores predeterminados
-                        double[] values = {1, 2, 5, 10, 15, 20, 25, 50, 100};
-                        int row = 1;
-                        int col = 1;
-
-                        for (double value : values) {
-                            final double finalValue = value;
-                            ItemStack valueButton = new ItemStack(Material.REDSTONE);
-                            ItemMeta valueMeta = valueButton.getItemMeta();
-                            valueMeta.setDisplayName(CC.translate("&a&l" + value));
-                            valueMeta.setLore(Arrays.asList(
-                                    CC.translate("&7Bonificación: &f" + playerState.selectedOperation + value),
-                                    CC.translate("&a[CLICK PARA APLICAR]")
-                            ));
-                            valueButton.setItemMeta(valueMeta);
-
-                            contents.set(row, col, ClickableItem.of(valueButton, e -> {
-                                applyBonus(player, itemId, playerState.selectedStat,
-                                        playerState.selectedOperation, finalValue);
-                                BonusFlowManager.clearFlowState(player);
-                                CustomItemMenus.openEditItemMenu(itemId).open(player);
-                            }));
-
-                            col++;
-                            if (col > 7) {
-                                col = 1;
-                                row++;
-                            }
-                        }
-
-                        // Instrucción para valor personalizado
-                        ItemStack customValueItem = new ItemStack(Material.NAME_TAG);
-                        ItemMeta customValueMeta = customValueItem.getItemMeta();
-                        customValueMeta.setDisplayName(CC.translate("&e&lValor Personalizado"));
-                        customValueMeta.setLore(Arrays.asList(
-                                CC.translate("&7Escribe en el chat el valor deseado"),
-                                CC.translate("&a/ci value <número>")
-                        ));
-                        customValueItem.setItemMeta(customValueMeta);
-                        contents.set(3, 4, ClickableItem.of(customValueItem, e -> {
-                            player.closeInventory();
-                            player.sendMessage(CC.translate("&bEscribe el valor: &a/ci value <número>"));
-                        }));
-
-                        // Botón atrás
-                        ItemStack backButton = new ItemStack(Material.ARROW);
-                        ItemMeta backMeta = backButton.getItemMeta();
-                        backMeta.setDisplayName(CC.translate("&b← Atrás"));
-                        backButton.setItemMeta(backMeta);
-                        contents.set(4, 0, ClickableItem.of(backButton, e -> {
-                            BonusFlowManager.setSelectedOperation(player, null);
-                            BonusFlowManager.getFlowState(player).step = "selecting_operation";
-                            createOperationSelectionMenu(itemId).open(player);
-                        }));
-                    }
-
-                    @Override
-                    public void update(Player player, InventoryContents contents) {
-                    }
-                })
-                .size(5, 9)
-                .title(CC.translate("&c&lSeleccionar Valor - " + itemId))
-                .build();
-    }
-
-    /**
-     * Aplica el bonus al item
-     */
-    private static void applyBonus(Player player, String itemId, String stat,
-                                   String operation, double value) {
-        if (!CustomItemCommand.items.containsKey(itemId)) {
-            player.sendMessage(CC.translate("&cItem no encontrado"));
-            return;
-        }
-
-        CustomItem item = CustomItemCommand.items.get(itemId);
-        item.setOperation(operation, stat).setBonusStat(stat, value);
-
-        // Guardar el item actualizado
-        org.example.tools.storage.CustomItemStorage storage =
-                new org.example.tools.storage.CustomItemStorage();
-        storage.saveItem(item);
-
-        player.sendMessage(CC.translate("&a✓ Bonificación aplicada correctamente"));
-        player.sendMessage(CC.translate("&7Stat: &f" + stat + " " + operation + value));
     }
 
     /**
