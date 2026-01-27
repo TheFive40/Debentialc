@@ -4,7 +4,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.example.tools.ClassesRegistration;
 import org.example.tools.ci.CustomManager;
 import org.example.tools.commands.CommandFramework;
+import org.example.tools.storage.CustomArmorStorage;
+
 import java.io.*;
+
+import static org.example.tools.ci.CustomManager.effectsTask;
 
 @Getter
 public class Main extends JavaPlugin {
@@ -29,10 +33,13 @@ public class Main extends JavaPlugin {
         classesRegistration.loadCommands ( "org.example.commands.items" );
         classesRegistration.loadListeners ( "org.example.events" );
         CustomManager.armorTask();
+        effectsTask();
+        CustomArmorStorage customArmorStorage = new CustomArmorStorage();
     }
 
     @Override
     public void onDisable () {
+
     }
 
 

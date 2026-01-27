@@ -13,6 +13,8 @@ import org.bukkit.entity.Player;
 import org.example.Main;
 import java.util.*;
 
+import static org.delaware.tools.General.toPlayerMP;
+
 public class General {
 
 
@@ -39,7 +41,9 @@ public class General {
     public static IDBCPlayer getDBCPlayer(String name) {
         return NpcAPI.Instance().getPlayer(name).getDBCPlayer();
     }
-
+    public static int getSTAT ( String stat, Player entity ) {
+        return JRMCoreH.getInt ( toPlayerMP ( entity ), STATS_MAP.get ( stat.toUpperCase ( ) ) );
+    }
     static {
         STATS_MAP.put("STR", STR);
         STATS_MAP.put("DEX", DEX);

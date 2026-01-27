@@ -9,9 +9,12 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.example.Main;
 import org.example.commands.items.CustomItemCommand;
 import org.example.commands.items.RegisterItem;
+import org.example.tools.CC;
 import org.example.tools.General;
+import org.example.tools.stats.StatsCalculator;
 
 import java.util.*;
+
 import static org.example.events.CustomArmor.playerArmorBonus;
 
 public class CustomManager {
@@ -84,7 +87,6 @@ public class CustomManager {
             @Override
             public void run() {
                 for (Player onlinePlayer : Main.instance.getServer().getOnlinePlayers()) {
-                    // Efectos de armadura
                     for (ItemStack armorContent : onlinePlayer.getInventory().getArmorContents()) {
                         if (armorContent == null || armorContent.getTypeId() == Material.AIR.getId()) continue;
 
@@ -95,7 +97,6 @@ public class CustomManager {
                         applyEffects(onlinePlayer, ca.getEffects());
                     }
 
-                    // Efectos de item en mano
                     ItemStack itemInHand = onlinePlayer.getItemInHand();
                     if (itemInHand != null && itemInHand.getTypeId() != Material.AIR.getId()) {
                         CustomItemCommand itemCmd = new CustomItemCommand();
@@ -175,27 +176,29 @@ public class CustomManager {
 
         org.example.commands.items.RegisterItem.items.put(armorId, armor);
 
-        // ⭐ Aplicar el bono inmediatamente al jugador
         applyArmorBonus(player);
     }
+
     /**
      * Aplica efectos especiales al jugador
      */
     private static void applyEffects(Player player, HashMap<String, Double> effects) {
         try {
             IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
-
             effects.forEach((k, v) -> {
                 try {
                     if (k.equalsIgnoreCase("HEALTHREGEN")) {
-                        int newHP = (int) (idbcPlayer.getBody() + (v * idbcPlayer.getBody()));
+                        int newHP = (int) (StatsCalculator.getMaxHealth(idbcPlayer) + (v * idbcPlayer.getStamina()));
                         idbcPlayer.setHP(newHP);
+                        EffectsManager.spawnHologram(player, CC.translate("&c❤"),1.0,1.0);
                     } else if (k.equalsIgnoreCase("KIREGEN")) {
-                        int newKi = (int) (idbcPlayer.getKi() + (v * idbcPlayer.getKi()));
+                        int newKi = (int) (StatsCalculator.getKiMax(idbcPlayer) + (v * idbcPlayer.getKi()));
+                        EffectsManager.spawnHologram(player, CC.translate("&9⚡"),1.5,-1.0);
                         idbcPlayer.setKi(newKi);
                     } else if (k.equalsIgnoreCase("STAMINAREGEN")) {
                         int newStamina = (int) (idbcPlayer.getStamina() + (v * idbcPlayer.getStamina()));
                         idbcPlayer.setStamina(newStamina);
+                        EffectsManager.spawnHologram(player, CC.translate("&e❃"),0.4,1.0);
                     }
                 } catch (Exception ignored) {
                 }
