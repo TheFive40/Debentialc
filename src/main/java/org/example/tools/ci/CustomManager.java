@@ -71,7 +71,7 @@ public class CustomManager {
                 playerArmorBonus.put(player.getUniqueId(), bonuses);
 
                 try {
-                    idbcPlayer.addBonusAttribute(General.STATS_MAP.get(k.toUpperCase()), itemId,
+                    idbcPlayer.addBonusAttribute(General.BONUS_STATS.get(k.toUpperCase()), itemId,
                             operation, v);
                 } catch (NullPointerException ignored) {
                 }
@@ -195,19 +195,20 @@ public class CustomManager {
                     if (k.equalsIgnoreCase("HEALTHREGEN")) {
                         int level = 1;
                         int max = StatsCalculator.getMaxHealth(idbcPlayer);
-                        idbcPlayer.sendMessage(max + "");
                         int bonus = (int) (((double) level / 100.0) * max);
                         idbcPlayer.setHP(idbcPlayer.getHP() + bonus);
                         EffectsManager.spawnHologram(player, CC.translate("&c❤"), 1.0, 1.0);
 
-                    } else if (k.equalsIgnoreCase("KIREGEN")) {
+                    }
+                    if (k.equalsIgnoreCase("KIREGEN")) {
                         int level = 1;
                         int max = StatsCalculator.getKiMax(idbcPlayer);
                         int bonus = (int) (((double) level / 100.0) * max);
                         idbcPlayer.setKi(idbcPlayer.getKi() + bonus);
                         EffectsManager.spawnHologram(player, CC.translate("&9⚡"), 1.5, -1.0);
 
-                    } else if (k.equalsIgnoreCase("STAMINAREGEN")) {
+                    }
+                    if (k.equalsIgnoreCase("STAMINAREGEN")) {
                         int level = 1;
                         int max = StatsCalculator.getMaxStamina(idbcPlayer);
                         int bonus = (int) (((double) level / 100.0) * max);
