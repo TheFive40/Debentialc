@@ -15,7 +15,7 @@ import org.example.tools.ci.CustomArmor;
 import java.util.*;
 
 /**
- * Menús completos para gestionar armaduras custom
+ * Menús completos para gestionar armaduras custom - CON EDICIÓN POR CHAT
  */
 public class CustomArmorMenus {
 
@@ -201,7 +201,7 @@ public class CustomArmorMenus {
     }
 
     /**
-     * Menú de edición de armadura
+     * Menú de edición de armadura - COMPLETAMENTE ACTUALIZADO
      */
     public static SmartInventory openEditArmorMenu(String armorId) {
         CustomArmor armor = RegisterItem.items.get(armorId);
@@ -226,6 +226,32 @@ public class CustomArmorMenus {
                         infoItem.setItemMeta(infoMeta);
                         contents.set(1, 1, ClickableItem.empty(infoItem));
 
+                        // Botón renombrar
+                        ItemStack renameButton = new ItemStack(Material.NAME_TAG);
+                        ItemMeta renameMeta = renameButton.getItemMeta();
+                        renameMeta.setDisplayName(CC.translate("&e&lRenombrar"));
+                        renameMeta.setLore(Arrays.asList(
+                                CC.translate("&7Nombre actual: &f" + armor.getDisplayName()),
+                                CC.translate("&a[CLICK PARA RENOMBRAR]")
+                        ));
+                        renameButton.setItemMeta(renameMeta);
+                        contents.set(1, 2, ClickableItem.of(renameButton, e -> {
+                            ArmorEditManager.startArmorEdit(player, armorId, "rename");
+                        }));
+
+                        // Botón editar lore
+                        ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
+                        ItemMeta loreMeta = loreButton.getItemMeta();
+                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore"));
+                        loreMeta.setLore(Arrays.asList(
+                                CC.translate("&7Líneas: &f" + (armor.getLore() != null ? armor.getLore().size() : 0)),
+                                CC.translate("&a[CLICK PARA AGREGAR LÍNEA]")
+                        ));
+                        loreButton.setItemMeta(loreMeta);
+                        contents.set(1, 3, ClickableItem.of(loreButton, e -> {
+                            ArmorEditManager.startArmorEdit(player, armorId, "addline");
+                        }));
+
                         // Botón editar stats
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
                         ItemMeta statsMeta = statsButton.getItemMeta();
@@ -240,7 +266,7 @@ public class CustomArmorMenus {
                         statsLore.add(CC.translate("&a[CLICK PARA AGREGAR]"));
                         statsMeta.setLore(statsLore);
                         statsButton.setItemMeta(statsMeta);
-                        contents.set(1, 3, ClickableItem.of(statsButton, e -> {
+                        contents.set(1, 4, ClickableItem.of(statsButton, e -> {
                             BonusFlowManager.startBonusFlow(player, armorId);
                             CustomArmorBonusMenus.createStatSelectionMenu(armorId).open(player);
                         }));
@@ -258,6 +284,19 @@ public class CustomArmorMenus {
                         effectsButton.setItemMeta(effectsMeta);
                         contents.set(1, 5, ClickableItem.of(effectsButton, e -> {
                             openEffectsMenu(armorId).open(player);
+                        }));
+
+                        // ⭐ NUEVO: Botón dar armadura
+                        ItemStack giveButton = new ItemStack(Material.APPLE);
+                        ItemMeta giveMeta = giveButton.getItemMeta();
+                        giveMeta.setDisplayName(CC.translate("&a&lDar Armadura"));
+                        giveMeta.setLore(Arrays.asList(
+                                CC.translate("&7Recibe la armadura en tu inventario"),
+                                CC.translate("&a[CLICK PARA DAR]")
+                        ));
+                        giveButton.setItemMeta(giveMeta);
+                        contents.set(1, 6, ClickableItem.of(giveButton, e -> {
+                            ArmorEditManager.giveCustomArmor(player, armorId);
                         }));
 
                         // Botón eliminar
@@ -400,9 +439,6 @@ public class CustomArmorMenus {
                         List<String> commands = Arrays.asList(
                                 "/ca create <id> - Crear una armadura",
                                 "/ca delete <id> - Eliminar una armadura",
-                                "/ca rename <texto> - Cambiar nombre",
-                                "/ca addline <texto> - Agregar lore",
-                                "/ca setline <línea> <texto> - Editar lore",
                                 "/ca plus <id> <valor> <stat> - Bonus aditivo (+)",
                                 "/ca less <id> <valor> <stat> - Bonus sustractivo (-)",
                                 "/ca percentage <id> <valor> <stat> - Bonus multiplicativo (*)",
@@ -427,7 +463,7 @@ public class CustomArmorMenus {
                                 CC.translate("&fstr &7- Fuerza"),
                                 CC.translate("&fcon &7- Constitución"),
                                 CC.translate("&fdex &7- Destreza"),
-                                CC.translate("&fwill &7- Ataque de Ki"),
+                                CC.translate("&fwill &7- Voluntad"),
                                 CC.translate("&fmnd &7- Mente")
                         ));
                         statsItem.setItemMeta(statsMeta);

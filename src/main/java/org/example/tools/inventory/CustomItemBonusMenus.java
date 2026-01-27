@@ -16,6 +16,7 @@ import java.util.Arrays;
 
 /**
  * Menús para agregar bonificaciones a items custom
+ * VERSIÓN CORREGIDA PARA MINECRAFT 1.7.10 (títulos máximo 32 caracteres)
  */
 public class CustomItemBonusMenus {
 
@@ -98,7 +99,7 @@ public class CustomItemBonusMenus {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&c&lSeleccionar Stat - " + itemId))
+                .title(CC.translate("&c&lStat - " + itemId))
                 .build();
     }
 
@@ -121,7 +122,7 @@ public class CustomItemBonusMenus {
                         // Título
                         ItemStack titleItem = new ItemStack(Material.PAPER);
                         ItemMeta titleMeta = titleItem.getItemMeta();
-                        titleMeta.setDisplayName(CC.translate("&c&lSelecciona una Operación"));
+                        titleMeta.setDisplayName(CC.translate("&c&lSelecciona Operación"));
                         titleMeta.setLore(Arrays.asList(
                                 CC.translate("&7Item: &f" + itemId),
                                 CC.translate("&7Stat: &f" + playerState.selectedStat.toUpperCase()),
@@ -188,7 +189,7 @@ public class CustomItemBonusMenus {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&c&lSeleccionar Operación - " + itemId))
+                .title(CC.translate("&c&lOp - " + itemId))
                 .build();
     }
 

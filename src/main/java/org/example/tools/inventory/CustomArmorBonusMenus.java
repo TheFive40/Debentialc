@@ -16,6 +16,7 @@ import java.util.Arrays;
 
 /**
  * Menús para agregar bonificaciones a armaduras custom
+ * VERSIÓN CORREGIDA PARA MINECRAFT 1.7.10 (títulos máximo 32 caracteres)
  */
 public class CustomArmorBonusMenus {
 
@@ -36,7 +37,7 @@ public class CustomArmorBonusMenus {
                         // Título
                         ItemStack titleItem = new ItemStack(Material.PAPER);
                         ItemMeta titleMeta = titleItem.getItemMeta();
-                        titleMeta.setDisplayName(CC.translate("&b&lSelecciona un Atributo"));
+                        titleMeta.setDisplayName(CC.translate("&b&lSelecciona Atributo"));
                         titleMeta.setLore(Arrays.asList(
                                 CC.translate("&7Armadura: &f" + armorId),
                                 CC.translate("&7Elige sobre cuál stat aplicar el bonus")
@@ -98,7 +99,7 @@ public class CustomArmorBonusMenus {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&b&lSeleccionar Stat - " + armorId))
+                .title(CC.translate("&b&lStat - " + armorId))
                 .build();
     }
 
@@ -121,7 +122,7 @@ public class CustomArmorBonusMenus {
                         // Título
                         ItemStack titleItem = new ItemStack(Material.PAPER);
                         ItemMeta titleMeta = titleItem.getItemMeta();
-                        titleMeta.setDisplayName(CC.translate("&b&lSelecciona una Operación"));
+                        titleMeta.setDisplayName(CC.translate("&b&lSelecciona Operación"));
                         titleMeta.setLore(Arrays.asList(
                                 CC.translate("&7Armadura: &f" + armorId),
                                 CC.translate("&7Stat: &f" + playerState.selectedStat.toUpperCase()),
@@ -162,6 +163,7 @@ public class CustomArmorBonusMenus {
                                 BonusFlowManager.setSelectedOperation(player, operation);
                                 BonusFlowManager.nextStep(player);
 
+                                // ⭐ NUEVO: Inicia input por chat en lugar de mostrar menú de valores
                                 player.closeInventory();
                                 BonusInputManager.startBonusInput(player, armorId,
                                         playerState.selectedStat, operation, "armor");
@@ -187,7 +189,7 @@ public class CustomArmorBonusMenus {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&b&lSeleccionar Operación - " + armorId))
+                .title(CC.translate("&b&lOp - " + armorId))
                 .build();
     }
 

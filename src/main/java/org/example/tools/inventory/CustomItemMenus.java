@@ -192,7 +192,7 @@ public class CustomItemMenus {
     }
 
     /**
-     * Menú de edición de items - ACTUALIZADO CON BOTÓN DE STATS
+     * Menú de edición de items - COMPLETAMENTE ACTUALIZADO
      */
     public static SmartInventory openEditItemMenu(String itemId) {
         CustomItem item = CustomItemCommand.items.get(itemId);
@@ -222,15 +222,14 @@ public class CustomItemMenus {
                         // Botón editar nombre
                         ItemStack renameButton = new ItemStack(Material.NAME_TAG);
                         ItemMeta renameMeta = renameButton.getItemMeta();
-                        renameMeta.setDisplayName(CC.translate("&e&lEditar Nombre"));
+                        renameMeta.setDisplayName(CC.translate("&e&lRenombrar"));
                         renameMeta.setLore(Arrays.asList(
-                                CC.translate("&7Actual: &f" + item.getDisplayName()),
-                                CC.translate("&a/ci rename <texto>")
+                                CC.translate("&7Nombre actual: &f" + item.getDisplayName()),
+                                CC.translate("&a[CLICK PARA RENOMBRAR]")
                         ));
                         renameButton.setItemMeta(renameMeta);
                         contents.set(1, 2, ClickableItem.of(renameButton, e -> {
-                            player.closeInventory();
-                            player.sendMessage(CC.translate("&b/ci rename <nombre> &7- Para cambiar el nombre"));
+                            ItemEditManager.startItemEdit(player, itemId, "rename");
                         }));
 
                         // Botón editar lore
@@ -239,16 +238,14 @@ public class CustomItemMenus {
                         loreMeta.setDisplayName(CC.translate("&e&lEditar Lore"));
                         loreMeta.setLore(Arrays.asList(
                                 CC.translate("&7Líneas: &f" + (item.getLore() != null ? item.getLore().size() : 0)),
-                                CC.translate("&a/ci addline <texto>"),
-                                CC.translate("&a/ci setline <línea> <texto>")
+                                CC.translate("&a[CLICK PARA AGREGAR LÍNEA]")
                         ));
                         loreButton.setItemMeta(loreMeta);
                         contents.set(1, 3, ClickableItem.of(loreButton, e -> {
-                            player.closeInventory();
-                            player.sendMessage(CC.translate("&b/ci addline <texto> &7- Para agregar lore"));
+                            ItemEditManager.startItemEdit(player, itemId, "addline");
                         }));
 
-                        // Botón agregar stats (NUEVO)
+                        // Botón agregar stats
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
                         ItemMeta statsMeta = statsButton.getItemMeta();
                         statsMeta.setDisplayName(CC.translate("&a&lAñadir Stats"));
@@ -280,6 +277,19 @@ public class CustomItemMenus {
                         effectsButton.setItemMeta(effectsMeta);
                         contents.set(1, 5, ClickableItem.of(effectsButton, e -> {
                             openEffectsMenu(itemId).open(player);
+                        }));
+
+                        // ⭐ NUEVO: Botón dar item
+                        ItemStack giveButton = new ItemStack(Material.APPLE);
+                        ItemMeta giveMeta = giveButton.getItemMeta();
+                        giveMeta.setDisplayName(CC.translate("&a&lDar Item"));
+                        giveMeta.setLore(Arrays.asList(
+                                CC.translate("&7Recibe el item en tu inventario"),
+                                CC.translate("&a[CLICK PARA DAR]")
+                        ));
+                        giveButton.setItemMeta(giveMeta);
+                        contents.set(1, 6, ClickableItem.of(giveButton, e -> {
+                            ItemEditManager.giveCustomItem(player, itemId);
                         }));
 
                         // Botón eliminar
@@ -472,9 +482,6 @@ public class CustomItemMenus {
                         List<String> commands = Arrays.asList(
                                 "/ci create <id> - Crear un item",
                                 "/ci delete <id> - Eliminar un item",
-                                "/ci rename <texto> - Cambiar nombre",
-                                "/ci addline <texto> - Agregar lore",
-                                "/ci setline <línea> <texto> - Editar lore",
                                 "/ci plus <id> <valor> <stat> - Bonus aditivo (+)",
                                 "/ci less <id> <valor> <stat> - Bonus sustractivo (-)",
                                 "/ci percentage <id> <valor> <stat> - Bonus multiplicativo (*)",
@@ -499,7 +506,7 @@ public class CustomItemMenus {
                                 CC.translate("&fstr &7- Fuerza"),
                                 CC.translate("&fcon &7- Constitución"),
                                 CC.translate("&fdex &7- Destreza"),
-                                CC.translate("&fwill &7- Ataque de Ki"),
+                                CC.translate("&fwill &7- Voluntad"),
                                 CC.translate("&fmnd &7- Mente")
                         ));
                         statsItem.setItemMeta(statsMeta);
@@ -527,7 +534,7 @@ public class CustomItemMenus {
      * Crea un panel de cristal decorativo
      */
     private static ItemStack createGlassPane() {
-        ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 14); // Color rojo
+        ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 14);
         ItemMeta glassMeta = glass.getItemMeta();
         glassMeta.setDisplayName(CC.translate("&8"));
         glass.setItemMeta(glassMeta);
