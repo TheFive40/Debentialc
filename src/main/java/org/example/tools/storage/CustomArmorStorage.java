@@ -43,12 +43,10 @@ public class CustomArmorStorage {
         armorConfig.set(path + ".isArmor", armor.isArmor());
         armorConfig.set(path + ".bonusStat", new HashMap<>(armor.getValueByStat()));
         armorConfig.set(path + ".operations", new HashMap<>(armor.getOperation()));
-
-        armorConfig.set(path + ".effects", new HashMap<>(armor.getEffects()));
+        armorConfig.set(path + ".effects", new HashMap<>(armor.getEffects())); // AÑADIDO
 
         try {
             armorConfig.save(armorFile);
-            System.out.println("[CustomArmorStorage] Armadura guardada: " + armor.getId());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -90,6 +88,8 @@ public class CustomArmorStorage {
             }
             armor.setOperation(operations);
         }
+
+        // AÑADIDO: Cargar efectos
         if (armorConfig.contains(path + ".effects")) {
             HashMap<String, Double> effects = new HashMap<>();
             for (String key : armorConfig.getConfigurationSection(path + ".effects").getKeys(false)) {
@@ -115,7 +115,6 @@ public class CustomArmorStorage {
             }
         }
 
-        System.out.println("[CustomArmorStorage] Cargadas " + armors.size() + " armaduras");
         return armors;
     }
 }

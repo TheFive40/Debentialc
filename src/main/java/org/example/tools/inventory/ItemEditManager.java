@@ -10,15 +10,12 @@ import org.example.tools.storage.CustomItemStorage;
 import java.util.HashMap;
 import java.util.UUID;
 
-/**
- * Gestiona la edición de items (renombre, lore, etc) por chat
- */
 public class ItemEditManager {
 
     public static class ItemEditState {
         public String itemId;
-        public String editType; // "rename", "addline", "setline"
-        public int lineNumber; // Para setline
+        public String editType;
+        public int lineNumber;
 
         public ItemEditState(String itemId, String editType) {
             this.itemId = itemId;
@@ -34,56 +31,33 @@ public class ItemEditManager {
 
     private static final HashMap<UUID, ItemEditState> playersEditing = new HashMap<>();
 
-    /**
-     * Inicia la edición de un item
-     */
     public static void startItemEdit(Player player, String itemId, String editType) {
         playersEditing.put(player.getUniqueId(), new ItemEditState(itemId, editType));
 
         player.closeInventory();
-        player.sendMessage(CC.translate("&e&l┌─────────────────────────────────┐"));
-        player.sendMessage(CC.translate("&e&l│  &b&lEDITAR ITEM CUSTOM           &e&l│"));
-        player.sendMessage(CC.translate("&e&l├─────────────────────────────────┤"));
-        player.sendMessage(CC.translate("&e&l│ &7Item: &f" + itemId + "                 &e&l│"));
-        player.sendMessage(CC.translate("&e&l│ &7Tipo: &f" + editType.toUpperCase() + "                    &e&l│"));
-        player.sendMessage(CC.translate("&e&l│ &c                               &e&l│"));
-        player.sendMessage(CC.translate("&e&l│ &7Escribe el valor en el chat    &e&l│"));
-        player.sendMessage(CC.translate("&e&l│ &c(Escribe 'cancelar' para abortar)&e&l│"));
-        player.sendMessage(CC.translate("&e&l└─────────────────────────────────┘"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+        player.sendMessage(CC.translate("&c&l  Editar Item"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&7  Tipo: &f" + editType.toUpperCase()));
+        player.sendMessage(CC.translate("&7  Ingresa el nuevo valor"));
+        player.sendMessage(CC.translate("&7  Escribe &c'cancelar' &7para abortar"));
+        player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+        player.sendMessage("");
     }
 
-    public static void startItemEditLine(Player player, String itemId, int lineNumber) {
-        ItemEditState state = new ItemEditState(itemId, "setline", lineNumber);
-        playersEditing.put(player.getUniqueId(), state);
-
-        player.closeInventory();
-        player.sendMessage(CC.translate("&e&l┌─────────────────────────────────┐"));
-        player.sendMessage(CC.translate("&e&l│  &b&lEDITAR LORE DEL ITEM        &e&l│"));
-        player.sendMessage(CC.translate("&e&l├─────────────────────────────────┤"));
-        player.sendMessage(CC.translate("&e&l│ &7Item: &f" + itemId + "                 &e&l│"));
-        player.sendMessage(CC.translate("&e&l│ &7Línea: &f" + lineNumber + "                      &e&l│"));
-        player.sendMessage(CC.translate("&e&l│ &c                               &e&l│"));
-        player.sendMessage(CC.translate("&e&l│ &7Escribe el nuevo texto         &e&l│"));
-        player.sendMessage(CC.translate("&e&l│ &c(Escribe 'cancelar' para abortar)&e&l│"));
-        player.sendMessage(CC.translate("&e&l└─────────────────────────────────┘"));
-    }
-
-    /**
-     * Verifica si un jugador está editando un item
-     */
     public static boolean isEditingItem(Player player) {
         return playersEditing.containsKey(player.getUniqueId());
     }
 
-    /**
-     * Procesa el input de edición
-     */
     public static void processItemEdit(Player player, String input) {
         ItemEditState state = playersEditing.get(player.getUniqueId());
         if (state == null) return;
 
         if (!CustomItemCommand.items.containsKey(state.itemId)) {
+            player.sendMessage("");
             player.sendMessage(CC.translate("&c✗ Item no encontrado"));
+            player.sendMessage("");
             finishItemEdit(player);
             return;
         }
@@ -95,7 +69,9 @@ public class ItemEditManager {
             case "rename":
                 item.setDisplayName(CC.translate(input));
                 storage.saveItem(item);
-                player.sendMessage(CC.translate("&a✓ Nombre actualizado: &f" + input));
+                player.sendMessage("");
+                player.sendMessage(CC.translate("&a✓ Nombre actualizado"));
+                player.sendMessage("");
                 break;
 
             case "addline":
@@ -106,20 +82,26 @@ public class ItemEditManager {
                 lore.add(CC.translate(input));
                 item.setLore(lore);
                 storage.saveItem(item);
-                player.sendMessage(CC.translate("&a✓ Línea de lore agregada"));
+                player.sendMessage("");
+                player.sendMessage(CC.translate("&a✓ Línea agregada"));
+                player.sendMessage("");
                 break;
 
             case "setline":
                 lore = item.getLore();
                 if (lore == null || state.lineNumber > lore.size() || state.lineNumber < 1) {
+                    player.sendMessage("");
                     player.sendMessage(CC.translate("&c✗ Número de línea inválido"));
+                    player.sendMessage("");
                     finishItemEdit(player);
                     return;
                 }
                 lore.set(state.lineNumber - 1, CC.translate(input));
                 item.setLore(lore);
                 storage.saveItem(item);
-                player.sendMessage(CC.translate("&a✓ Línea " + state.lineNumber + " actualizada"));
+                player.sendMessage("");
+                player.sendMessage(CC.translate("&a✓ Línea actualizada"));
+                player.sendMessage("");
                 break;
         }
 
@@ -129,27 +111,22 @@ public class ItemEditManager {
         }, 1L);
     }
 
-    /**
-     * Cancela la edición
-     */
     public static void cancelItemEdit(Player player) {
-        player.sendMessage(CC.translate("&c✗ Edición cancelada"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&c✗ Cancelado"));
+        player.sendMessage("");
         finishItemEdit(player);
     }
 
-    /**
-     * Finaliza la edición
-     */
     private static void finishItemEdit(Player player) {
         playersEditing.remove(player.getUniqueId());
     }
 
-    /**
-     * Da un item custom al jugador
-     */
     public static void giveCustomItem(Player player, String itemId) {
         if (!CustomItemCommand.items.containsKey(itemId)) {
+            player.sendMessage("");
             player.sendMessage(CC.translate("&c✗ Item no encontrado"));
+            player.sendMessage("");
             return;
         }
 
@@ -163,14 +140,16 @@ public class ItemEditManager {
         }
         itemStack.setItemMeta(meta);
 
-        // Dar el item al jugador
         if (player.getInventory().firstEmpty() == -1) {
-            // Inventario lleno, dropearlo en el suelo
             player.getWorld().dropItem(player.getLocation(), itemStack);
-            player.sendMessage(CC.translate("&a✓ Item dado (Inventario lleno, dropeado en el suelo)"));
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Item entregado (soltado)"));
+            player.sendMessage("");
         } else {
             player.getInventory().addItem(itemStack);
-            player.sendMessage(CC.translate("&a✓ Item dado al inventario: &f" + customItem.getDisplayName()));
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Item entregado"));
+            player.sendMessage("");
         }
     }
 }

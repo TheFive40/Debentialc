@@ -7,10 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Gestiona la entrada de URLs de pastebin para editar lore
- * VERSIÓN MEJORADA: Mensajes estéticos y limpios
- */
 public class PastebinLoreManager {
 
     public static class PastebinLoreState {
@@ -25,153 +21,175 @@ public class PastebinLoreManager {
 
     private static final HashMap<UUID, PastebinLoreState> playersInputting = new HashMap<>();
 
-    /**
-     * Inicia la entrada de URL de pastebin para editar lore
-     */
     public static void startPastebinInput(Player player, String itemId, String type) {
         playersInputting.put(player.getUniqueId(), new PastebinLoreState(itemId, type));
 
         player.closeInventory();
-        sendCleanMessage(player, "PASTEBIN LORE", itemId, type);
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+        player.sendMessage(CC.translate("&3&l  Pastebin Lore Editor"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&7  Ingresa la URL de Pastebin"));
+        player.sendMessage(CC.translate("&7  Formatos válidos:"));
+        player.sendMessage(CC.translate("&f  • &bpastebin.com/xxxxx"));
+        player.sendMessage(CC.translate("&f  • &bpastebin.com/raw/xxxxx"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&7  Escribe &c'cancelar' &7para abortar"));
+        player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+        player.sendMessage("");
     }
 
-    /**
-     * Verifica si un jugador está esperando URL de pastebin
-     */
     public static boolean isInputtingPastebin(Player player) {
         return playersInputting.containsKey(player.getUniqueId());
     }
 
-    /**
-     * Procesa la URL de pastebin ingresada
-     */
     public static void processPastebinInput(Player player, String input) {
         PastebinLoreState state = playersInputting.get(player.getUniqueId());
         if (state == null) return;
 
-        // Validar que sea una URL válida
-        if (!input.contains("pastebin.com")) {
-            player.sendMessage(CC.translate("&c✗ URL de pastebin inválida"));
-            player.sendMessage(CC.translate("&7Usa: https://pastebin.com/xxxxx"));
+        // Validar formato URL
+        String url = input.trim();
+        if (!isValidPastebinUrl(url)) {
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&c✗ URL inválida"));
+            player.sendMessage(CC.translate("&7Usa: &fpastebin.com/xxxxx"));
+            player.sendMessage("");
             startPastebinInput(player, state.itemId, state.type);
             return;
         }
 
-        // Descargar contenido de pastebin
-        player.sendMessage(CC.translate("&f⏳ Procesando..."));
+        // Convertir a formato raw si es necesario
+        String rawUrl = convertToRawUrl(url);
 
-        List<String> loreLines = PastebinReader.getFromPastebin(input);
+        // Descargar contenido
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&7Descargando..."));
 
-        if (loreLines == null || loreLines.isEmpty()) {
-            player.sendMessage(CC.translate("&c✗ Error al descargar pastebin"));
-            player.sendMessage(CC.translate("&7Verifica que la URL sea correcta"));
-            startPastebinInput(player, state.itemId, state.type);
+        List<String> lines = PastebinReader.downloadPastebinContent(rawUrl);
+
+        if (lines == null || lines.isEmpty()) {
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&c✗ Error al descargar"));
+            player.sendMessage(CC.translate("&7Verifica la URL"));
+            player.sendMessage("");
+            finishPastebinInput(player);
             return;
         }
 
-        // Aplicar el lore según el tipo
+        // Aplicar lore según el tipo
+        boolean success = false;
         if ("item".equals(state.type)) {
-            applyLoreToItem(player, state.itemId, loreLines);
+            success = applyLoreToItem(player, state.itemId, lines);
         } else if ("armor".equals(state.type)) {
-            applyLoreToArmor(player, state.itemId, loreLines);
+            success = applyLoreToArmor(player, state.itemId, lines);
         }
 
-        player.sendMessage(CC.translate("&a✓ Lore actualizado"));
-        player.sendMessage(CC.translate("&7Líneas: &f" + loreLines.size()));
+        if (success) {
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Lore actualizado"));
+            player.sendMessage(CC.translate("&7Líneas: &f" + lines.size()));
+            player.sendMessage("");
+        } else {
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&c✗ Error al aplicar lore"));
+            player.sendMessage("");
+        }
 
         String type = state.type;
         String itemId = state.itemId;
         finishPastebinInput(player);
 
-        // Reabrir el menú de edición
-        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(org.example.Main.instance, () -> {
-            if ("item".equals(type)) {
-                org.example.tools.inventory.CustomItemMenus.openEditItemMenu(itemId).open(player);
-            } else {
-                org.example.tools.inventory.CustomArmorMenus.openEditArmorMenu(itemId).open(player);
-            }
-        }, 1L);
+        // Reabrir menú después de 1 segundo
+        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
+                org.example.Main.instance,
+                () -> {
+                    if ("item".equals(type)) {
+                        org.example.tools.inventory.CustomItemMenus.openEditItemMenu(itemId).open(player);
+                    } else {
+                        org.example.tools.inventory.CustomArmorMenus.openEditArmorMenu(itemId).open(player);
+                    }
+                },
+                20L
+        );
     }
 
-    /**
-     * Aplica el lore a un item custom
-     */
-    private static void applyLoreToItem(Player player, String itemId, List<String> loreLines) {
+    private static boolean applyLoreToItem(Player player, String itemId, List<String> lines) {
         if (!org.example.commands.items.CustomItemCommand.items.containsKey(itemId)) {
-            player.sendMessage(CC.translate("&c✗ Item no encontrado"));
-            return;
+            return false;
         }
 
         org.example.tools.ci.CustomItem item = org.example.commands.items.CustomItemCommand.items.get(itemId);
 
-        // Aplicar color a cada línea
-        java.util.List<String> coloredLore = new java.util.ArrayList<>();
-        for (String line : loreLines) {
-            coloredLore.add(CC.translate(line));
+        // Traducir códigos de color
+        List<String> translatedLines = new java.util.ArrayList<>();
+        for (String line : lines) {
+            translatedLines.add(CC.translate(line));
         }
 
-        item.setLore(coloredLore);
-        org.example.commands.items.CustomItemCommand.items.put(itemId, item);
+        item.setLore(translatedLines);
 
         // Guardar en BD
         org.example.tools.storage.CustomItemStorage storage = new org.example.tools.storage.CustomItemStorage();
         storage.saveItem(item);
+
+        return true;
     }
 
-    /**
-     * Aplica el lore a una armadura custom
-     */
-    private static void applyLoreToArmor(Player player, String armorId, List<String> loreLines) {
+    private static boolean applyLoreToArmor(Player player, String armorId, List<String> lines) {
         if (!org.example.commands.items.RegisterItem.items.containsKey(armorId)) {
-            player.sendMessage(CC.translate("&c✗ Armadura no encontrada"));
-            return;
+            return false;
         }
 
         org.example.tools.ci.CustomArmor armor = org.example.commands.items.RegisterItem.items.get(armorId);
 
-        // Aplicar color a cada línea
-        java.util.List<String> coloredLore = new java.util.ArrayList<>();
-        for (String line : loreLines) {
-            coloredLore.add(CC.translate(line));
+        // Traducir códigos de color
+        List<String> translatedLines = new java.util.ArrayList<>();
+        for (String line : lines) {
+            translatedLines.add(CC.translate(line));
         }
 
-        armor.setLore(coloredLore);
-        org.example.commands.items.RegisterItem.items.put(armorId, armor);
+        armor.setLore(translatedLines);
 
         // Guardar en BD
         org.example.tools.storage.CustomArmorStorage storage = new org.example.tools.storage.CustomArmorStorage();
         storage.saveArmor(armor);
+
+        return true;
     }
 
-    /**
-     * Cancela la entrada de pastebin
-     */
+    private static boolean isValidPastebinUrl(String url) {
+        return url.matches("^(https?://)?(www\\.)?pastebin\\.com/(raw/)?[a-zA-Z0-9]+$") ||
+                url.matches("^[a-zA-Z0-9]+$");
+    }
+
+    private static String convertToRawUrl(String url) {
+        // Si es solo el código
+        if (url.matches("^[a-zA-Z0-9]+$")) {
+            return "https://pastebin.com/raw/" + url;
+        }
+
+        // Si ya es raw
+        if (url.contains("/raw/")) {
+            if (!url.startsWith("http")) {
+                return "https://" + url;
+            }
+            return url;
+        }
+
+        // Convertir a raw
+        url = url.replace("https://", "").replace("http://", "").replace("www.", "");
+        String code = url.replace("pastebin.com/", "");
+        return "https://pastebin.com/raw/" + code;
+    }
+
     public static void cancelPastebinInput(Player player) {
+        player.sendMessage("");
         player.sendMessage(CC.translate("&c✗ Cancelado"));
+        player.sendMessage("");
         finishPastebinInput(player);
     }
 
-    /**
-     * Finaliza la entrada de pastebin
-     */
     private static void finishPastebinInput(Player player) {
         playersInputting.remove(player.getUniqueId());
-    }
-
-    /**
-     * Envía un mensaje limpio y estético
-     */
-    private static void sendCleanMessage(Player player, String title, String itemId, String type) {
-        player.sendMessage(CC.translate("&8"));
-        player.sendMessage(CC.translate("&3 " + title));
-        player.sendMessage(CC.translate("&8 ─────────────────────────"));
-        player.sendMessage(CC.translate("&7 • ID: &f" + itemId));
-        player.sendMessage(CC.translate("&7 • Tipo: &f" + type.toUpperCase()));
-        player.sendMessage(CC.translate("&8"));
-        player.sendMessage(CC.translate("&7 Ingresa la URL del pastebin:"));
-        player.sendMessage(CC.translate("&f https://pastebin.com/xxxxx"));
-        player.sendMessage(CC.translate("&8"));
-        player.sendMessage(CC.translate("&7 Escribe 'cancelar' para abortar"));
-        player.sendMessage(CC.translate("&8"));
     }
 }

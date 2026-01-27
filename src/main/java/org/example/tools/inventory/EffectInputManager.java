@@ -11,7 +11,7 @@ public class EffectInputManager {
     public static class EffectInputState {
         public String itemId;
         public String effectType;
-        public String type; // "item" o "armor"
+        public String type;
 
         public EffectInputState(String itemId, String effectType, String type) {
             this.itemId = itemId;
@@ -25,15 +25,17 @@ public class EffectInputManager {
     public static void startEffectInput(Player player, String itemId, String effectType, String type) {
         playersInputting.put(player.getUniqueId(), new EffectInputState(itemId, effectType, type));
 
-        player.sendMessage(CC.translate("&6&l┌─────────────────────────────────────┐"));
-        player.sendMessage(CC.translate("&6&l│  &e&lINGRESA EL VALOR DEL EFECTO      &6&l│"));
-        player.sendMessage(CC.translate("&6&l├─────────────────────────────────────┤"));
-        player.sendMessage(CC.translate("&6&l│ &7Efecto: &f" + effectType + "                      &6&l│"));
-        player.sendMessage(CC.translate("&6&l│ &c                                     &6&l│"));
-        player.sendMessage(CC.translate("&6&l│ &7Escribe el valor (0.0 a 1.0)       &6&l│"));
-        player.sendMessage(CC.translate("&6&l│ &7Ejemplo: 0.5 = 50%                 &6&l│"));
-        player.sendMessage(CC.translate("&6&l│ &c(Escribe 'cancelar' para abortar) &6&l│"));
-        player.sendMessage(CC.translate("&6&l└─────────────────────────────────────┘"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+        player.sendMessage(CC.translate("&3&l  Ingresa Valor del Efecto"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&7  Efecto: &b" + effectType));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&7  Rango: &f0.0 - 1.0"));
+        player.sendMessage(CC.translate("&7  Ejemplo: &f0.5 &7= 50%"));
+        player.sendMessage(CC.translate("&7  Escribe &c'cancelar' &7para abortar"));
+        player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+        player.sendMessage("");
     }
 
     public static boolean isInputtingEffect(Player player) {
@@ -48,12 +50,16 @@ public class EffectInputManager {
         try {
             value = Double.parseDouble(input);
             if (value < 0 || value > 1) {
-                player.sendMessage(CC.translate("&c✗ El valor debe estar entre 0 y 1"));
+                player.sendMessage("");
+                player.sendMessage(CC.translate("&c✗ Valor fuera de rango (0-1)"));
+                player.sendMessage("");
                 startEffectInput(player, state.itemId, state.effectType, state.type);
                 return;
             }
         } catch (NumberFormatException e) {
-            player.sendMessage(CC.translate("&c✗ Debes ingresar un número válido (ejemplo: 0.5)"));
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&c✗ Número inválido"));
+            player.sendMessage("");
             startEffectInput(player, state.itemId, state.effectType, state.type);
             return;
         }
@@ -66,8 +72,10 @@ public class EffectInputManager {
                     state.itemId, state.effectType, value);
         }
 
-        player.sendMessage(CC.translate("&a✓ Efecto aplicado correctamente"));
-        player.sendMessage(CC.translate("&7Efecto: &f" + state.effectType + " " + (value * 100) + "%"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&a✓ Efecto aplicado"));
+        player.sendMessage(CC.translate("&7" + state.effectType + ": " + (value * 100) + "%"));
+        player.sendMessage("");
 
         String type = state.type;
         String itemId = state.itemId;
@@ -82,7 +90,9 @@ public class EffectInputManager {
     }
 
     public static void cancelEffectInput(Player player) {
-        player.sendMessage(CC.translate("&c✗ Entrada de efecto cancelada"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&c✗ Cancelado"));
+        player.sendMessage("");
         finishEffectInput(player);
     }
 

@@ -36,7 +36,7 @@ public class PastebinReader {
      * @param pastebinUrl URL raw del pastebin
      * @return Lista de líneas, o null si falla
      */
-    private static List<String> downloadPastebinContent(String pastebinUrl) {
+    public static List<String> downloadPastebinContent(String pastebinUrl) {
         List<String> lines = new ArrayList<>();
 
         try {
