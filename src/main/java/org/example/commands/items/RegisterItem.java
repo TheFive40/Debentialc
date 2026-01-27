@@ -277,13 +277,13 @@ public class RegisterItem extends BaseCommand {
         player.sendMessage(CC.translate("&8&l&m--------------------------------------"));
     }
 
+
     public CustomArmor toItemCustom(ItemStack itemStack) {
-        if (itemStack.getItemMeta() == null) return null;
-        String displayName = itemStack.getItemMeta().getDisplayName();
-        List<String> lore = itemStack.getItemMeta().getLore();
-        int materialId = itemStack.getTypeId();
-        return items.values().stream().filter(e -> e.equals(new CustomArmor().setLore(lore)
-                        .setMaterial(materialId).setDisplayName(displayName))).findFirst()
+        if (itemStack == null || itemStack.getItemMeta() == null) return null;
+
+        return items.values().stream()
+                .filter(armor -> armor.matchesItem(itemStack))
+                .findFirst()
                 .orElse(null);
     }
 

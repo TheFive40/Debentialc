@@ -12,34 +12,23 @@ import java.util.UUID;
 public class ArmorCreationManager {
     private static final HashMap<UUID, Boolean> playersCreatingArmor = new HashMap<>();
 
-    /**
-     * Inicia el proceso de creación de armadura para un jugador
-     */
     public static void startArmorCreation(Player player) {
         playersCreatingArmor.put(player.getUniqueId(), true);
-        player.sendMessage(CC.translate("&b&l┌─────────────────────────────┐"));
-        player.sendMessage(CC.translate("&b&l│  &a&lCREACIÓN DE ARMADURA CUSTOM  &b&l│"));
-        player.sendMessage(CC.translate("&b&l├─────────────────────────────┤"));
-        player.sendMessage(CC.translate("&b&l│ &7Escribe el nombre de la     &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &7armadura que sostienes      &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &c(Escribe 'cancelar' para abortar)&b&l│"));
-        player.sendMessage(CC.translate("&b&l└─────────────────────────────┘"));
+        player.sendMessage(CC.translate("&8"));
+        player.sendMessage(CC.translate("&b&l» CREAR ARMADURA"));
+        player.sendMessage(CC.translate("&8 ━━━━━━━━━━━━━━━━━━━━"));
+        player.sendMessage(CC.translate("&7Escribe el ID de la armadura"));
+        player.sendMessage(CC.translate("&7(Escribe &c'cancelar'&7 para abortar)"));
+        player.sendMessage(CC.translate("&8"));
     }
 
-    /**
-     * Verifica si un jugador está en proceso de crear una armadura
-     */
     public static boolean isCreatingArmor(Player player) {
         return playersCreatingArmor.getOrDefault(player.getUniqueId(), false);
     }
 
-    /**
-     * Procesa el nombre ingresado por el jugador
-     */
     public static void processArmorCreation(Player player, String armorName) {
         ItemStack armor = player.getItemInHand();
 
-        // Validaciones
         if (armor == null || armor.getTypeId() == 0) {
             player.sendMessage(CC.translate("&c✗ Debes sostener una armadura en la mano"));
             startArmorCreation(player);
@@ -47,26 +36,24 @@ public class ArmorCreationManager {
         }
 
         if (armor.getItemMeta() == null) {
-            player.sendMessage(CC.translate("&c✗ Esta armadura no tiene metadatos (nombre/lore)"));
+            player.sendMessage(CC.translate("&c✗ Esta armadura no tiene metadatos"));
             startArmorCreation(player);
             return;
         }
 
         if (armorName.isEmpty()) {
-            player.sendMessage(CC.translate("&c✗ El nombre de la armadura no puede estar vacío"));
+            player.sendMessage(CC.translate("&c✗ El ID no puede estar vacío"));
             startArmorCreation(player);
             return;
         }
 
-        // Verificar que el ID no exista
         String armorId = armorName.toLowerCase().replace(" ", "_");
         if (RegisterItem.items.containsKey(armorId)) {
-            player.sendMessage(CC.translate("&c✗ Ya existe una armadura con el ID: &f" + armorId));
+            player.sendMessage(CC.translate("&c✗ Ya existe una armadura con ese ID"));
             startArmorCreation(player);
             return;
         }
 
-        // Crear la armadura custom
         CustomArmor customArmor = new CustomArmor()
                 .setId(armorId)
                 .setMaterial(armor.getTypeId())
@@ -75,25 +62,20 @@ public class ArmorCreationManager {
 
         RegisterItem.items.put(armorId, customArmor);
 
-        // Mensaje de confirmación
-        player.sendMessage(CC.translate("&a✓ Armadura creada correctamente"));
-        player.sendMessage(CC.translate("&7ID: &f" + armorId));
-        player.sendMessage(CC.translate("&7Nombre: &f" + customArmor.getDisplayName()));
+        // Guardar en BD
+        org.example.tools.storage.CustomArmorStorage storage =
+                new org.example.tools.storage.CustomArmorStorage();
+        storage.saveArmor(customArmor);
 
+        player.sendMessage(CC.translate("&a✓ Armadura creada: &f" + armorId));
         finishArmorCreation(player);
     }
 
-    /**
-     * Cancela el proceso de creación
-     */
     public static void cancelArmorCreation(Player player) {
-        player.sendMessage(CC.translate("&c✗ Creación de armadura cancelada"));
+        player.sendMessage(CC.translate("&c✗ Cancelado"));
         finishArmorCreation(player);
     }
 
-    /**
-     * Finaliza el proceso de creación
-     */
     private static void finishArmorCreation(Player player) {
         playersCreatingArmor.put(player.getUniqueId(), false);
     }

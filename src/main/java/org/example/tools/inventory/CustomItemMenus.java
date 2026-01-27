@@ -224,14 +224,14 @@ public class CustomItemMenus {
 
                         ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
                         ItemMeta loreMeta = loreButton.getItemMeta();
-                        loreMeta.setDisplayName(CC.translate("&d&lLore desde Pastebin"));
+                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore"));
                         loreMeta.setLore(Arrays.asList(
-                                CC.translate("&7Carga el lore desde pastebin"),
-                                CC.translate("&a[CLICK PARA USAR]")
+                                CC.translate("&7Líneas: &f" + (item.getLore() != null ? item.getLore().size() : 0)),
+                                CC.translate("&a[CLICK PARA AGREGAR LÍNEA]")
                         ));
                         loreButton.setItemMeta(loreMeta);
                         contents.set(1, 3, ClickableItem.of(loreButton, e -> {
-                            org.example.tools.pastebin.PastebinLoreManager.startPastebinInput(player, itemId, "item");
+                            ItemEditManager.startItemEdit(player, itemId, "addline");
                         }));
 
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);

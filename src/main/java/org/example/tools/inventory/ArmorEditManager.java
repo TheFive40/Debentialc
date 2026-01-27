@@ -4,20 +4,18 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.example.tools.CC;
 import org.example.tools.ci.CustomArmor;
+import org.example.tools.storage.CustomArmorStorage;
 import org.example.commands.items.RegisterItem;
 
 import java.util.HashMap;
 import java.util.UUID;
 
-/**
- * Gestiona la edición de armaduras (renombre, lore, etc) por chat
- */
 public class ArmorEditManager {
 
     public static class ArmorEditState {
         public String armorId;
-        public String editType; // "rename", "addline", "setline"
-        public int lineNumber; // Para setline
+        public String editType;
+        public int lineNumber;
 
         public ArmorEditState(String armorId, String editType) {
             this.armorId = armorId;
@@ -33,50 +31,23 @@ public class ArmorEditManager {
 
     private static final HashMap<UUID, ArmorEditState> playersEditing = new HashMap<>();
 
-    /**
-     * Inicia la edición de una armadura
-     */
     public static void startArmorEdit(Player player, String armorId, String editType) {
         playersEditing.put(player.getUniqueId(), new ArmorEditState(armorId, editType));
 
         player.closeInventory();
-        player.sendMessage(CC.translate("&b&l┌─────────────────────────────────┐"));
-        player.sendMessage(CC.translate("&b&l│  &a&lEDITAR ARMADURA CUSTOM       &b&l│"));
-        player.sendMessage(CC.translate("&b&l├─────────────────────────────────┤"));
-        player.sendMessage(CC.translate("&b&l│ &7Armadura: &f" + armorId + "          &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &7Tipo: &f" + editType.toUpperCase() + "                    &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &c                               &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &7Escribe el valor en el chat    &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &c(Escribe 'cancelar' para abortar)&b&l│"));
-        player.sendMessage(CC.translate("&b&l└─────────────────────────────────┘"));
+        player.sendMessage(CC.translate("&8"));
+        player.sendMessage(CC.translate("&b&l» EDITAR ARMADURA"));
+        player.sendMessage(CC.translate("&8 ━━━━━━━━━━━━━━━━━━━━"));
+        player.sendMessage(CC.translate("&7Tipo: &f" + editType.toUpperCase()));
+        player.sendMessage(CC.translate("&7Escribe el nuevo valor"));
+        player.sendMessage(CC.translate("&7(Escribe &c'cancelar'&7 para abortar)"));
+        player.sendMessage(CC.translate("&8"));
     }
 
-    public static void startArmorEditLine(Player player, String armorId, int lineNumber) {
-        ArmorEditState state = new ArmorEditState(armorId, "setline", lineNumber);
-        playersEditing.put(player.getUniqueId(), state);
-
-        player.closeInventory();
-        player.sendMessage(CC.translate("&b&l┌─────────────────────────────────┐"));
-        player.sendMessage(CC.translate("&b&l│  &a&lEDITAR LORE DE ARMADURA     &b&l│"));
-        player.sendMessage(CC.translate("&b&l├─────────────────────────────────┤"));
-        player.sendMessage(CC.translate("&b&l│ &7Armadura: &f" + armorId + "          &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &7Línea: &f" + lineNumber + "                      &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &c                               &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &7Escribe el nuevo texto         &b&l│"));
-        player.sendMessage(CC.translate("&b&l│ &c(Escribe 'cancelar' para abortar)&b&l│"));
-        player.sendMessage(CC.translate("&b&l└─────────────────────────────────┘"));
-    }
-
-    /**
-     * Verifica si un jugador está editando una armadura
-     */
     public static boolean isEditingArmor(Player player) {
         return playersEditing.containsKey(player.getUniqueId());
     }
 
-    /**
-     * Procesa el input de edición
-     */
     public static void processArmorEdit(Player player, String input) {
         ArmorEditState state = playersEditing.get(player.getUniqueId());
         if (state == null) return;
@@ -88,12 +59,13 @@ public class ArmorEditManager {
         }
 
         CustomArmor armor = RegisterItem.items.get(state.armorId);
+        CustomArmorStorage storage = new CustomArmorStorage();
 
         switch (state.editType.toLowerCase()) {
             case "rename":
                 armor.setDisplayName(CC.translate(input));
-                RegisterItem.items.put(state.armorId, armor);
-                player.sendMessage(CC.translate("&a✓ Nombre actualizado: &f" + input));
+                storage.saveArmor(armor);
+                player.sendMessage(CC.translate("&a✓ Nombre actualizado"));
                 break;
 
             case "addline":
@@ -103,8 +75,8 @@ public class ArmorEditManager {
                 }
                 lore.add(CC.translate(input));
                 armor.setLore(lore);
-                RegisterItem.items.put(state.armorId, armor);
-                player.sendMessage(CC.translate("&a✓ Línea de lore agregada"));
+                storage.saveArmor(armor);
+                player.sendMessage(CC.translate("&a✓ Línea agregada"));
                 break;
 
             case "setline":
@@ -116,8 +88,8 @@ public class ArmorEditManager {
                 }
                 lore.set(state.lineNumber - 1, CC.translate(input));
                 armor.setLore(lore);
-                RegisterItem.items.put(state.armorId, armor);
-                player.sendMessage(CC.translate("&a✓ Línea " + state.lineNumber + " actualizada"));
+                storage.saveArmor(armor);
+                player.sendMessage(CC.translate("&a✓ Línea actualizada"));
                 break;
         }
 
@@ -127,24 +99,15 @@ public class ArmorEditManager {
         }, 1L);
     }
 
-    /**
-     * Cancela la edición
-     */
     public static void cancelArmorEdit(Player player) {
-        player.sendMessage(CC.translate("&c✗ Edición cancelada"));
+        player.sendMessage(CC.translate("&c✗ Cancelado"));
         finishArmorEdit(player);
     }
 
-    /**
-     * Finaliza la edición
-     */
     private static void finishArmorEdit(Player player) {
         playersEditing.remove(player.getUniqueId());
     }
 
-    /**
-     * Da una armadura custom al jugador
-     */
     public static void giveCustomArmor(Player player, String armorId) {
         if (!RegisterItem.items.containsKey(armorId)) {
             player.sendMessage(CC.translate("&c✗ Armadura no encontrada"));
@@ -161,14 +124,12 @@ public class ArmorEditManager {
         }
         itemStack.setItemMeta(meta);
 
-        // Dar la armadura al jugador
         if (player.getInventory().firstEmpty() == -1) {
-            // Inventario lleno, dropearlo en el suelo
             player.getWorld().dropItem(player.getLocation(), itemStack);
-            player.sendMessage(CC.translate("&a✓ Armadura dada (Inventario lleno, dropeada en el suelo)"));
+            player.sendMessage(CC.translate("&a✓ Armadura entregada"));
         } else {
             player.getInventory().addItem(itemStack);
-            player.sendMessage(CC.translate("&a✓ Armadura dada al inventario: &f" + customArmor.getDisplayName()));
+            player.sendMessage(CC.translate("&a✓ Armadura entregada"));
         }
     }
 }

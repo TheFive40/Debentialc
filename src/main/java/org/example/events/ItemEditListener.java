@@ -8,7 +8,6 @@ import org.example.tools.inventory.ItemEditManager;
 import org.example.tools.inventory.ArmorEditManager;
 import org.example.tools.inventory.EffectInputManager;
 import org.example.tools.inventory.BonusInputManager;
-import org.example.tools.pastebin.PastebinLoreManager;
 
 public class ItemEditListener implements Listener {
 
@@ -57,16 +56,6 @@ public class ItemEditListener implements Listener {
                 EffectInputManager.cancelEffectInput(player);
             } else {
                 EffectInputManager.processEffectInput(player, message);
-            }
-            return;
-        }
-        if (PastebinLoreManager.isInputtingPastebin(player)) {
-            event.setCancelled(true);
-
-            if (message.equalsIgnoreCase("cancelar")) {
-                PastebinLoreManager.cancelPastebinInput(player);
-            } else {
-                PastebinLoreManager.processPastebinInput(player, message);
             }
             return;
         }
