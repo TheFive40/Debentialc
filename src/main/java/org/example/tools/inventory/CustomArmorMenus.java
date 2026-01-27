@@ -14,14 +14,8 @@ import org.example.tools.ci.CustomArmor;
 
 import java.util.*;
 
-/**
- * Menús completos para gestionar armaduras custom
- */
 public class CustomArmorMenus {
 
-    /**
-     * Menú principal de armaduras custom
-     */
     public static SmartInventory createMainMenu() {
         return SmartInventory.builder()
                 .id("ca_menu_main")
@@ -30,7 +24,6 @@ public class CustomArmorMenus {
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
-                        // Botón crear armadura
                         ItemStack createButton = new ItemStack(Material.IRON_CHESTPLATE);
                         ItemMeta createMeta = createButton.getItemMeta();
                         createMeta.setDisplayName(CC.translate("&a&lCrear Armadura"));
@@ -45,7 +38,6 @@ public class CustomArmorMenus {
                             ArmorCreationManager.startArmorCreation(player);
                         }));
 
-                        // Botón listar armaduras
                         ItemStack listButton = new ItemStack(Material.BOOK);
                         ItemMeta listMeta = listButton.getItemMeta();
                         listMeta.setDisplayName(CC.translate("&b&lListar Armaduras"));
@@ -59,7 +51,6 @@ public class CustomArmorMenus {
                             openArmorListMenu(1).open(player);
                         }));
 
-                        // Botón ayuda
                         ItemStack helpButton = new ItemStack(Material.PAPER);
                         ItemMeta helpMeta = helpButton.getItemMeta();
                         helpMeta.setDisplayName(CC.translate("&e&lAyuda"));
@@ -73,7 +64,6 @@ public class CustomArmorMenus {
                             openHelpMenu().open(player);
                         }));
 
-                        // Botón cerrar
                         ItemStack closeButton = new ItemStack(Material.REDSTONE_BLOCK);
                         ItemMeta closeMeta = closeButton.getItemMeta();
                         closeMeta.setDisplayName(CC.translate("&r&lCerrar"));
@@ -93,9 +83,6 @@ public class CustomArmorMenus {
                 .build();
     }
 
-    /**
-     * Menú de listado de armaduras con paginación
-     */
     public static SmartInventory openArmorListMenu(int page) {
         return SmartInventory.builder()
                 .id("ca_list_menu_" + page)
@@ -152,7 +139,6 @@ public class CustomArmorMenus {
                             }
                         }
 
-                        // Navegación
                         if (page > 1) {
                             ItemStack prevButton = new ItemStack(Material.ARROW);
                             ItemMeta prevMeta = prevButton.getItemMeta();
@@ -196,13 +182,10 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&b&lArmaduras - Pág " + page))
+                .title(CC.translate("&b&lArmaduras Custom - Página " + page))
                 .build();
     }
 
-    /**
-     * Menú de edición de armadura
-     */
     public static SmartInventory openEditArmorMenu(String armorId) {
         CustomArmor armor = RegisterItem.items.get(armorId);
         if (armor == null) return null;
@@ -214,7 +197,6 @@ public class CustomArmorMenus {
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
-                        // Información de la armadura
                         ItemStack infoItem = new ItemStack(Material.PAPER);
                         ItemMeta infoMeta = infoItem.getItemMeta();
                         infoMeta.setDisplayName(CC.translate("&b&l" + armorId));
@@ -226,7 +208,30 @@ public class CustomArmorMenus {
                         infoItem.setItemMeta(infoMeta);
                         contents.set(1, 1, ClickableItem.empty(infoItem));
 
-                        // Botón editar stats
+                        ItemStack renameButton = new ItemStack(Material.NAME_TAG);
+                        ItemMeta renameMeta = renameButton.getItemMeta();
+                        renameMeta.setDisplayName(CC.translate("&e&lRenombrar"));
+                        renameMeta.setLore(Arrays.asList(
+                                CC.translate("&7Nombre actual: &f" + armor.getDisplayName()),
+                                CC.translate("&a[CLICK PARA RENOMBRAR]")
+                        ));
+                        renameButton.setItemMeta(renameMeta);
+                        contents.set(1, 2, ClickableItem.of(renameButton, e -> {
+                            ArmorEditManager.startArmorEdit(player, armorId, "rename");
+                        }));
+
+                        ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
+                        ItemMeta loreMeta = loreButton.getItemMeta();
+                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore"));
+                        loreMeta.setLore(Arrays.asList(
+                                CC.translate("&7Líneas: &f" + (armor.getLore() != null ? armor.getLore().size() : 0)),
+                                CC.translate("&a[CLICK PARA AGREGAR LÍNEA]")
+                        ));
+                        loreButton.setItemMeta(loreMeta);
+                        contents.set(1, 3, ClickableItem.of(loreButton, e -> {
+                            ArmorEditManager.startArmorEdit(player, armorId, "addline");
+                        }));
+
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
                         ItemMeta statsMeta = statsButton.getItemMeta();
                         statsMeta.setDisplayName(CC.translate("&a&lAñadir Stats"));
@@ -240,27 +245,39 @@ public class CustomArmorMenus {
                         statsLore.add(CC.translate("&a[CLICK PARA AGREGAR]"));
                         statsMeta.setLore(statsLore);
                         statsButton.setItemMeta(statsMeta);
-                        contents.set(1, 3, ClickableItem.of(statsButton, e -> {
+                        contents.set(1, 4, ClickableItem.of(statsButton, e -> {
                             BonusFlowManager.startBonusFlow(player, armorId);
                             CustomArmorBonusMenus.createStatSelectionMenu(armorId).open(player);
                         }));
 
-                        // Botón ver efectos
                         ItemStack effectsButton = new ItemStack(Material.REDSTONE_TORCH_ON);
                         ItemMeta effectsMeta = effectsButton.getItemMeta();
-                        effectsMeta.setDisplayName(CC.translate("&6&lVer Efectos"));
+                        effectsMeta.setDisplayName(CC.translate("&6&lAgregar Efectos"));
                         List<String> effectsLore = new ArrayList<>();
-                        effectsLore.add(CC.translate("&7Efectos activos:"));
+                        effectsLore.add(CC.translate("&7Efectos actuales: &f" + armor.getEffects().size()));
                         armor.getEffects().forEach((effect, value) -> {
                             effectsLore.add(CC.translate("&f  " + effect + ": " + (value * 100) + "%"));
                         });
+                        effectsLore.add("");
+                        effectsLore.add(CC.translate("&a[CLICK PARA AGREGAR]"));
                         effectsMeta.setLore(effectsLore);
                         effectsButton.setItemMeta(effectsMeta);
                         contents.set(1, 5, ClickableItem.of(effectsButton, e -> {
-                            openEffectsMenu(armorId).open(player);
+                            CustomArmorEffectsMenus.createEffectSelectionMenu(armorId).open(player);
                         }));
 
-                        // Botón eliminar
+                        ItemStack giveButton = new ItemStack(Material.APPLE);
+                        ItemMeta giveMeta = giveButton.getItemMeta();
+                        giveMeta.setDisplayName(CC.translate("&a&lDar Armadura"));
+                        giveMeta.setLore(Arrays.asList(
+                                CC.translate("&7Recibe la armadura en tu inventario"),
+                                CC.translate("&a[CLICK PARA DAR]")
+                        ));
+                        giveButton.setItemMeta(giveMeta);
+                        contents.set(1, 6, ClickableItem.of(giveButton, e -> {
+                            ArmorEditManager.giveCustomArmor(player, armorId);
+                        }));
+
                         ItemStack deleteButton = new ItemStack(Material.ANVIL);
                         ItemMeta deleteMeta = deleteButton.getItemMeta();
                         deleteMeta.setDisplayName(CC.translate("&c&lEliminar Armadura"));
@@ -273,7 +290,6 @@ public class CustomArmorMenus {
                             openDeleteConfirmMenu(armorId).open(player);
                         }));
 
-                        // Botón atrás
                         ItemStack backButton = new ItemStack(Material.ARROW);
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&b← Atrás"));
@@ -288,58 +304,10 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(4, 9)
-                .title(CC.translate("&b&lArm: " + armorId))
+                .title(CC.translate("&b&lEditar Armadura: " + armorId))
                 .build();
     }
 
-    /**
-     * Menú de visualización de efectos
-     */
-    public static SmartInventory openEffectsMenu(String armorId) {
-        CustomArmor armor = RegisterItem.items.get(armorId);
-        if (armor == null) return null;
-
-        return SmartInventory.builder()
-                .id("ca_effects_" + armorId)
-                .provider(new InventoryProvider() {
-                    @Override
-                    public void init(Player player, InventoryContents contents) {
-                        contents.fillBorders(ClickableItem.empty(createGlassPane()));
-
-                        int row = 1;
-                        for (Map.Entry<String, Double> entry : armor.getEffects().entrySet()) {
-                            ItemStack effectItem = new ItemStack(Material.REDSTONE_TORCH_ON);
-                            ItemMeta effectMeta = effectItem.getItemMeta();
-                            effectMeta.setDisplayName(CC.translate("&6&l" + entry.getKey()));
-                            effectMeta.setLore(Arrays.asList(
-                                    CC.translate("&7Valor: &f" + (entry.getValue() * 100) + "%")
-                            ));
-                            effectItem.setItemMeta(effectMeta);
-                            contents.set(row, 4, ClickableItem.empty(effectItem));
-                            row++;
-                        }
-
-                        ItemStack backButton = new ItemStack(Material.ARROW);
-                        ItemMeta backMeta = backButton.getItemMeta();
-                        backMeta.setDisplayName(CC.translate("&b← Atrás"));
-                        backButton.setItemMeta(backMeta);
-                        contents.set(5, 4, ClickableItem.of(backButton, e -> {
-                            openEditArmorMenu(armorId).open(player);
-                        }));
-                    }
-
-                    @Override
-                    public void update(Player player, InventoryContents contents) {
-                    }
-                })
-                .size(6, 9)
-                .title(CC.translate("&b&lEfectos: " + armorId))
-                .build();
-    }
-
-    /**
-     * Menú de confirmación de eliminación
-     */
     public static SmartInventory openDeleteConfirmMenu(String armorId) {
         return SmartInventory.builder()
                 .id("ca_delete_confirm_" + armorId)
@@ -386,9 +354,6 @@ public class CustomArmorMenus {
                 .build();
     }
 
-    /**
-     * Menú de ayuda
-     */
     public static SmartInventory openHelpMenu() {
         return SmartInventory.builder()
                 .id("ca_help_menu")
@@ -400,9 +365,6 @@ public class CustomArmorMenus {
                         List<String> commands = Arrays.asList(
                                 "/ca create <id> - Crear una armadura",
                                 "/ca delete <id> - Eliminar una armadura",
-                                "/ca rename <texto> - Cambiar nombre",
-                                "/ca addline <texto> - Agregar lore",
-                                "/ca setline <línea> <texto> - Editar lore",
                                 "/ca plus <id> <valor> <stat> - Bonus aditivo (+)",
                                 "/ca less <id> <valor> <stat> - Bonus sustractivo (-)",
                                 "/ca percentage <id> <valor> <stat> - Bonus multiplicativo (*)",
@@ -451,9 +413,6 @@ public class CustomArmorMenus {
                 .build();
     }
 
-    /**
-     * Crea un panel de cristal decorativo
-     */
     private static ItemStack createGlassPane() {
         ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 14);
         ItemMeta glassMeta = glass.getItemMeta();
