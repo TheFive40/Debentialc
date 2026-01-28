@@ -47,7 +47,7 @@ public class CustomArmorBonusMenus {
 
                         // Stats disponibles
                         String[] stats = {"str", "con", "dex", "will", "mnd"};
-                        String[] statNames = {"Fuerza", "Constitución", "Destreza", "Voluntad", "Mente"};
+                        String[] statNames = {"Fuerza", "Constitución", "Destreza", "Daño de Ki", "Mente"};
                         Material[] statMaterials = {
                                 Material.DIAMOND_SWORD,
                                 Material.IRON_CHESTPLATE,

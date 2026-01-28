@@ -1,7 +1,7 @@
 package org.example.tools.ci;
 import lombok.Getter;
 import lombok.Setter;
-import org.example.commands.items.RegisterItem;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,32 +26,50 @@ public class CustomArmor {
         this.material = material;
         return this;
     }
+
     public CustomArmor setDisplayName(String displayName){
         this.displayName = displayName;
         return this;
     }
+
     public CustomArmor setLore(List<String> lore){
         this.lore = lore;
         return this;
     }
 
     public CustomArmor setOperation(String operation, String stat){
-        this.operation.put(stat,operation);
+        this.operation.put(stat, operation);
         return this;
     }
+
     public CustomArmor setBonusStat(String stat, double value){
-        this.valueByStat.put(stat,value);
+        this.valueByStat.put(stat, value);
         return this;
     }
+
     public CustomArmor setId(String id){
         this.id = id;
         return this;
     }
+
+    public boolean matchesItem(ItemStack itemStack) {
+        if (itemStack == null || itemStack.getItemMeta() == null) return false;
+
+        String displayName = itemStack.getItemMeta().getDisplayName();
+        int materialId = itemStack.getTypeId();
+
+        return this.displayName != null &&
+                this.displayName.equals(displayName) &&
+                this.material == materialId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         CustomArmor item = (CustomArmor) o;
-        return material == item.material && Objects.equals(displayName, item.displayName) && Objects.equals(lore, item.lore);
+        return material == item.material &&
+                Objects.equals(displayName, item.displayName) &&
+                Objects.equals(lore, item.lore);
     }
 
     @Override
