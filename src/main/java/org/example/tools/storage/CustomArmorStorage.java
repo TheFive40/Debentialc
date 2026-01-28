@@ -47,6 +47,7 @@ public class CustomArmorStorage {
         armorConfig.set(path + ".operations", new HashMap<>(armor.getOperation()));
         armorConfig.set(path + ".effects", new HashMap<>(armor.getEffects()));
         armorConfig.set(path + ".maxDurability", armor.getMaxDurability());
+        armorConfig.set(path + ".unbreakable", armor.isUnbreakable());
 
         try {
             armorConfig.save(armorFile);
@@ -76,6 +77,7 @@ public class CustomArmorStorage {
         armor.setDisplayName(armorConfig.getString(path + ".displayName"));
         armor.setLore(armorConfig.getStringList(path + ".lore"));
         armor.setMaxDurability(armorConfig.getInt(path + ".maxDurability", -1));
+        armor.setUnbreakable(armorConfig.getBoolean(path + ".unbreakable", false));
 
         if (armorConfig.contains(path + ".bonusStat")) {
             HashMap<String, Double> bonusStat = new HashMap<>();

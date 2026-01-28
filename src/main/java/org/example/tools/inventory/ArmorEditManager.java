@@ -146,6 +146,11 @@ public class ArmorEditManager {
             org.example.tools.durability.CustomDurabilityManager.addDurabilityToLore(itemStack);
         }
 
+        // Aplicar estado de irrompible si está activado
+        if (customArmor.isUnbreakable()) {
+            org.example.tools.durability.CustomDurabilityManager.setUnbreakable(itemStack, true);
+        }
+
         if (player.getInventory().firstEmpty() == -1) {
             player.getWorld().dropItem(player.getLocation(), itemStack);
             player.sendMessage("");

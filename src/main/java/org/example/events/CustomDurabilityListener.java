@@ -28,15 +28,11 @@ public class CustomDurabilityListener implements Listener {
 
         Player player = (Player) event.getDamager();
         ItemStack item = player.getItemInHand();
-
         if (item == null || item.getType() == Material.AIR) return;
 
+        if (CustomDurabilityManager.isUnbreakable(item)) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
 
-        // Cancelamos el daño vanilla
-        //event.setCancelled(true);
-
-        // Aplicamos daño custom
         boolean broken = CustomDurabilityManager.damageItem(item, 1);
 
         if (broken) {
@@ -98,8 +94,7 @@ public class CustomDurabilityListener implements Listener {
         if (item == null || item.getTypeId() == 0) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
 
-        // El daño ya fue aplicado por PlayerItemDamageEvent si corresponde
-        // Solo actualizamos el lore
+
         CustomDurabilityManager.updateDurabilityLore(item);
     }
 }

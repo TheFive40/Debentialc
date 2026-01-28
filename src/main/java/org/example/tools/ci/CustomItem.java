@@ -25,6 +25,9 @@ public class CustomItem {
     // Durabilidad máxima personalizada (-1 = sin durabilidad custom)
     private int maxDurability = -1;
 
+    // Item irrompible (no recibe daño)
+    private boolean unbreakable = false;
+
     public CustomItem setMaterial(int material) {
         this.material = material;
         return this;
@@ -72,6 +75,11 @@ public class CustomItem {
 
     public CustomItem setMaxDurability(int maxDurability) {
         this.maxDurability = maxDurability;
+        return this;
+    }
+
+    public CustomItem setUnbreakable(boolean unbreakable) {
+        this.unbreakable = unbreakable;
         return this;
     }
 

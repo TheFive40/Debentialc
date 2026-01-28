@@ -26,6 +26,9 @@ public class CustomArmor {
     // Durabilidad máxima personalizada (-1 = sin durabilidad custom)
     private int maxDurability = -1;
 
+    // Item irrompible (no recibe daño)
+    private boolean unbreakable = false;
+
     public CustomArmor setMaterial(int material) {
         this.material = material;
         return this;
@@ -58,6 +61,11 @@ public class CustomArmor {
 
     public CustomArmor setMaxDurability(int maxDurability) {
         this.maxDurability = maxDurability;
+        return this;
+    }
+
+    public CustomArmor setUnbreakable(boolean unbreakable) {
+        this.unbreakable = unbreakable;
         return this;
     }
 

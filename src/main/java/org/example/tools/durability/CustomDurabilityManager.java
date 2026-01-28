@@ -9,13 +9,55 @@ import java.util.List;
 
 /**
  * Sistema de durabilidad personalizada para items
- * Simula durabilidad extendida usando NBT tags personalizados
+ * Usa el formato visible "X/Y (Z%)" para almacenar y extraer datos
  */
 public class CustomDurabilityManager {
 
-    // Keys para NBT (usando lore como fallback para 1.7.10)
-    private static final String CUSTOM_DURABILITY_KEY = "§8[DUR:";
-    private static final String CUSTOM_MAX_DURABILITY_KEY = "§8[MAX:";
+    private static final String UNBREAKABLE_KEY = "§8[UNBREAKABLE]";
+
+    /**
+     * Establece un item como irrompible
+     */
+    public static void setUnbreakable(ItemStack item, boolean unbreakable) {
+        if (item == null || item.getTypeId() == 0) return;
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
+
+        List<String> lore = meta.getLore();
+        if (lore == null) {
+            lore = new ArrayList<>();
+        }
+
+        // Remover tag anterior de irrompible
+        lore.removeIf(line -> line.equals(UNBREAKABLE_KEY));
+
+        // Agregar tag si es irrompible
+        if (unbreakable) {
+            lore.add(UNBREAKABLE_KEY);
+        }
+
+        meta.setLore(lore);
+        item.setItemMeta(meta);
+
+        // Si es irrompible, restaurar durabilidad visual al máximo
+        if (unbreakable && item.getType().getMaxDurability() > 0) {
+            item.setDurability((short) 0);
+        }
+    }
+
+    /**
+     * Verifica si un item es irrompible
+     */
+    public static boolean isUnbreakable(ItemStack item) {
+        if (item == null || item.getTypeId() == 0) return false;
+        if (!item.hasItemMeta()) return false;
+
+        List<String> lore = item.getItemMeta().getLore();
+        if (lore == null) return false;
+
+        return lore.contains(UNBREAKABLE_KEY);
+    }
 
     /**
      * Establece la durabilidad máxima personalizada de un item
@@ -53,12 +95,16 @@ public class CustomDurabilityManager {
             lore = new ArrayList<>();
         }
 
-        // Remover datos antiguos de durabilidad del lore
-        lore.removeIf(line -> line.startsWith(CUSTOM_DURABILITY_KEY) || line.startsWith(CUSTOM_MAX_DURABILITY_KEY));
+        // Remover línea de durabilidad anterior si existe
+        lore.removeIf(line -> {
+            String cleanLine = line.replaceAll("§[0-9a-fk-or]", "");
+            return cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)");
+        });
 
-        // Agregar nuevos datos de durabilidad (ocultos en el lore)
-        lore.add(CUSTOM_DURABILITY_KEY + current + "]");
-        lore.add(CUSTOM_MAX_DURABILITY_KEY + max + "]");
+        // Agregar nueva línea de durabilidad al principio
+        double percentage = (double) current / (double) max * 100;
+        String durabilityLine = CC.translate("&a" + current + "/" + max + " (" + String.format("%.0f", percentage) + "%)");
+        lore.add(0, durabilityLine);
 
         meta.setLore(lore);
         item.setItemMeta(meta);
@@ -75,13 +121,16 @@ public class CustomDurabilityManager {
         if (!item.hasItemMeta()) return 0;
 
         List<String> lore = item.getItemMeta().getLore();
-        if (lore == null) return 0;
+        if (lore == null || lore.isEmpty()) return 0;
 
+        // Buscar línea con patrón X/Y (Z%)
         for (String line : lore) {
-            if (line.startsWith(CUSTOM_DURABILITY_KEY)) {
+            String cleanLine = line.replaceAll("§[0-9a-fk-or]", ""); // Remover códigos de color
+            if (cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)")) {
                 try {
-                    String value = line.substring(CUSTOM_DURABILITY_KEY.length(), line.length() - 1);
-                    return Integer.parseInt(value);
+                    // Extraer el número antes de la barra "/"
+                    String[] parts = cleanLine.split("/");
+                    return Integer.parseInt(parts[0].trim());
                 } catch (Exception e) {
                     return 0;
                 }
@@ -99,13 +148,17 @@ public class CustomDurabilityManager {
         if (!item.hasItemMeta()) return 0;
 
         List<String> lore = item.getItemMeta().getLore();
-        if (lore == null) return 0;
+        if (lore == null || lore.isEmpty()) return 0;
 
+        // Buscar línea con patrón X/Y (Z%)
         for (String line : lore) {
-            if (line.startsWith(CUSTOM_MAX_DURABILITY_KEY)) {
+            String cleanLine = line.replaceAll("§[0-9a-fk-or]", ""); // Remover códigos de color
+            if (cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)")) {
                 try {
-                    String value = line.substring(CUSTOM_MAX_DURABILITY_KEY.length(), line.length() - 1);
-                    return Integer.parseInt(value);
+                    // Extraer el número después de la barra "/" y antes del espacio
+                    String[] parts = cleanLine.split("/");
+                    String maxPart = parts[1].split(" ")[0].trim();
+                    return Integer.parseInt(maxPart);
                 } catch (Exception e) {
                     return 0;
                 }
@@ -123,10 +176,12 @@ public class CustomDurabilityManager {
         if (!item.hasItemMeta()) return false;
 
         List<String> lore = item.getItemMeta().getLore();
-        if (lore == null) return false;
+        if (lore == null || lore.isEmpty()) return false;
 
+        // Buscar línea con patrón X/Y (Z%)
         for (String line : lore) {
-            if (line.startsWith(CUSTOM_DURABILITY_KEY)) {
+            String cleanLine = line.replaceAll("§[0-9a-fk-or]", "");
+            if (cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)")) {
                 return true;
             }
         }
@@ -141,6 +196,11 @@ public class CustomDurabilityManager {
      * @return true si el item se rompió
      */
     public static boolean damageItem(ItemStack item, int damage) {
+        // Si el item es irrompible, no hacer nada
+        if (isUnbreakable(item)) {
+            return false;
+        }
+
         if (!hasCustomDurability(item)) return false;
 
         int current = getCustomDurability(item);
@@ -207,6 +267,7 @@ public class CustomDurabilityManager {
 
     /**
      * Obtiene un texto formateado de la durabilidad para mostrar
+     * Formato: "500/500 (100%)" siempre en verde
      */
     public static String getDurabilityText(ItemStack item) {
         if (!hasCustomDurability(item)) return "";
@@ -215,47 +276,26 @@ public class CustomDurabilityManager {
         int max = getCustomMaxDurability(item);
         double percentage = (double) current / (double) max * 100;
 
-        String color;
-        if (percentage > 75) {
-            color = "&a"; // Verde
-        } else if (percentage > 50) {
-            color = "&e"; // Amarillo
-        } else if (percentage > 25) {
-            color = "&6"; // Naranja
-        } else {
-            color = "&c"; // Rojo
-        }
-
-        return CC.translate(color + "Durabilidad: " + current + "/" + max + " (" + String.format("%.1f", percentage) + "%)");
+        // Siempre en verde, formato simple
+        return CC.translate("&a" + current + "/" + max + " (" + String.format("%.0f", percentage) + "%)");
     }
 
     /**
      * Agrega el texto de durabilidad al lore visible del item
      */
     public static void addDurabilityToLore(ItemStack item) {
-        if (!hasCustomDurability(item)) return;
-
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return;
-
-        List<String> lore = meta.getLore();
-        if (lore == null) {
-            lore = new ArrayList<>();
+        if (!hasCustomDurability(item)) {
+            // Si no tiene durabilidad custom aún, no hacer nada
+            // setCustomDurability() ya agrega la línea automáticamente
+            return;
         }
-
-        // Remover texto de durabilidad anterior del lore visible
-        lore.removeIf(line -> line.contains("Durabilidad:"));
-
-        // Agregar nuevo texto de durabilidad al principio del lore visible
-        String durabilityText = getDurabilityText(item);
-        lore.add(0, durabilityText);
-
-        meta.setLore(lore);
-        item.setItemMeta(meta);
+        // La línea de durabilidad ya está en el lore gracias a setCustomDurability()
+        // Este método solo se mantiene por compatibilidad de API
     }
 
     /**
      * Remueve el texto de durabilidad del lore visible
+     * Busca líneas con el patrón: "número/número (número%)"
      */
     public static void removeDurabilityFromLore(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return;
@@ -264,19 +304,27 @@ public class CustomDurabilityManager {
         List<String> lore = meta.getLore();
         if (lore == null) return;
 
-        lore.removeIf(line -> line.contains("Durabilidad:"));
+        // Remover líneas que coincidan con el patrón de durabilidad
+        // Formato: "§aX/Y (Z%)" o sin color
+        lore.removeIf(line -> {
+            String cleanLine = line.replaceAll("§[0-9a-fk-or]", ""); // Remover códigos de color
+            return cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)");
+        });
 
         meta.setLore(lore);
         item.setItemMeta(meta);
     }
 
     /**
-     * Actualiza el texto de durabilidad en el lore si existe
+     * Actualiza el texto de durabilidad en el lore
      */
     public static void updateDurabilityLore(ItemStack item) {
         if (!hasCustomDurability(item)) return;
 
-        removeDurabilityFromLore(item);
-        addDurabilityToLore(item);
+        int current = getCustomDurability(item);
+        int max = getCustomMaxDurability(item);
+
+        // setCustomDurability ya maneja la actualización del lore
+        setCustomDurability(item, current, max);
     }
 }
