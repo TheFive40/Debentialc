@@ -3,6 +3,7 @@ package org.example.tools.storage;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.example.Main;
+import org.example.commands.items.RegisterItem;
 import org.example.tools.ci.CustomArmor;
 
 import java.io.File;
@@ -21,6 +22,7 @@ public class CustomArmorStorage {
         }
         this.armorFile = new File(dataFolder, "custom_armors.yml");
         loadArmors();
+        RegisterItem.items.putAll(loadAllArmors());
     }
 
     public void loadArmors() {

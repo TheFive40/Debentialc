@@ -5,9 +5,15 @@ import org.bukkit.inventory.ItemStack;
 import org.example.tools.CC;
 import org.example.tools.ci.CustomItem;
 import org.example.commands.items.CustomItemCommand;
+import org.example.tools.pastebin.PastebinReader;
 import org.example.tools.storage.CustomItemStorage;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 public class ItemEditManager {
@@ -55,9 +61,7 @@ public class ItemEditManager {
         if (state == null) return;
 
         if (!CustomItemCommand.items.containsKey(state.itemId)) {
-            player.sendMessage("");
             player.sendMessage(CC.translate("&c✗ Item no encontrado"));
-            player.sendMessage("");
             finishItemEdit(player);
             return;
         }
@@ -74,13 +78,39 @@ public class ItemEditManager {
                 player.sendMessage("");
                 break;
 
-            case "addline":
-                java.util.List<String> lore = item.getLore();
-                if (lore == null) {
-                    lore = new java.util.ArrayList<>();
+            case "lore":
+                String pasteUrl = input.trim();
+                if (!pasteUrl.contains("pastebin.com")) {
+                    player.sendMessage("");
+                    player.sendMessage(CC.translate("&c✗ URL inválida. Debe ser de pastebin.com"));
+                    player.sendMessage("");
+                    startItemEdit(player, state.itemId, "lore");
+                    return;
                 }
-                lore.add(CC.translate(input));
+
+                List<String> lore = fetchPastebinLore(pasteUrl);
+                if (lore == null || lore.isEmpty()) {
+                    player.sendMessage("");
+                    player.sendMessage(CC.translate("&c✗ No se pudo obtener el lore del pastebin"));
+                    player.sendMessage("");
+                    startItemEdit(player, state.itemId, "lore");
+                    return;
+                }
+
                 item.setLore(lore);
+                storage.saveItem(item);
+                player.sendMessage("");
+                player.sendMessage(CC.translate("&a✓ Lore actualizado (" + lore.size() + " líneas)"));
+                player.sendMessage("");
+                break;
+
+            case "addline":
+                List<String> currentLore = item.getLore();
+                if (currentLore == null) {
+                    currentLore = new ArrayList<>();
+                }
+                currentLore.add(CC.translate(input));
+                item.setLore(currentLore);
                 storage.saveItem(item);
                 player.sendMessage("");
                 player.sendMessage(CC.translate("&a✓ Línea agregada"));
@@ -88,16 +118,14 @@ public class ItemEditManager {
                 break;
 
             case "setline":
-                lore = item.getLore();
-                if (lore == null || state.lineNumber > lore.size() || state.lineNumber < 1) {
-                    player.sendMessage("");
+                currentLore = item.getLore();
+                if (currentLore == null || state.lineNumber > currentLore.size() || state.lineNumber < 1) {
                     player.sendMessage(CC.translate("&c✗ Número de línea inválido"));
-                    player.sendMessage("");
                     finishItemEdit(player);
                     return;
                 }
-                lore.set(state.lineNumber - 1, CC.translate(input));
-                item.setLore(lore);
+                currentLore.set(state.lineNumber - 1, CC.translate(input));
+                item.setLore(currentLore);
                 storage.saveItem(item);
                 player.sendMessage("");
                 player.sendMessage(CC.translate("&a✓ Línea actualizada"));
@@ -111,9 +139,13 @@ public class ItemEditManager {
         }, 1L);
     }
 
+    private static List<String> fetchPastebinLore(String pasteUrl) {
+        return PastebinReader.getFromPastebin(pasteUrl);
+    }
+
     public static void cancelItemEdit(Player player) {
         player.sendMessage("");
-        player.sendMessage(CC.translate("&c✗ Cancelado"));
+        player.sendMessage(CC.translate("&c✗ Edición cancelada"));
         player.sendMessage("");
         finishItemEdit(player);
     }
@@ -124,9 +156,7 @@ public class ItemEditManager {
 
     public static void giveCustomItem(Player player, String itemId) {
         if (!CustomItemCommand.items.containsKey(itemId)) {
-            player.sendMessage("");
             player.sendMessage(CC.translate("&c✗ Item no encontrado"));
-            player.sendMessage("");
             return;
         }
 
@@ -142,14 +172,10 @@ public class ItemEditManager {
 
         if (player.getInventory().firstEmpty() == -1) {
             player.getWorld().dropItem(player.getLocation(), itemStack);
-            player.sendMessage("");
-            player.sendMessage(CC.translate("&a✓ Item entregado (soltado)"));
-            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Item entregado (inventario lleno)"));
         } else {
             player.getInventory().addItem(itemStack);
-            player.sendMessage("");
             player.sendMessage(CC.translate("&a✓ Item entregado"));
-            player.sendMessage("");
         }
     }
 }

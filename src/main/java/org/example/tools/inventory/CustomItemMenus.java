@@ -182,7 +182,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&c&lLista - Pag " + page))
+                .title(CC.translate("&c&lLista Pag " + page))
                 .build();
     }
 
@@ -224,14 +224,15 @@ public class CustomItemMenus {
 
                         ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
                         ItemMeta loreMeta = loreButton.getItemMeta();
-                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore"));
+                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore (Pastebin)"));
                         loreMeta.setLore(Arrays.asList(
                                 CC.translate("&7Líneas: &f" + (item.getLore() != null ? item.getLore().size() : 0)),
-                                CC.translate("&a[CLICK PARA AGREGAR LÍNEA]")
+                                CC.translate("&7Pega la URL de pastebin"),
+                                CC.translate("&a[CLICK PARA EDITAR]")
                         ));
                         loreButton.setItemMeta(loreMeta);
                         contents.set(1, 3, ClickableItem.of(loreButton, e -> {
-                            ItemEditManager.startItemEdit(player, itemId, "addline");
+                            ItemEditManager.startItemEdit(player, itemId, "lore");
                         }));
 
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
@@ -306,7 +307,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(4, 9)
-                .title(CC.translate("&c&lEditar: " + itemId.substring(0, Math.min(itemId.length(), 15))))
+                .title(CC.translate("&c&lEditar Item"))
                 .build();
     }
 

@@ -1,6 +1,8 @@
 package org.example.tools.ci;
 
+import kamkeel.npcdbc.constants.Effects;
 import noppes.npcs.api.entity.IDBCPlayer;
+import org.bukkit.Effect;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -16,13 +18,11 @@ import org.example.tools.stats.StatsCalculator;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.delaware.tools.General.*;
 import static org.example.events.CustomArmor.playerArmorBonus;
 
 public class CustomManager {
 
-    /**
-     * Aplica bonificaciones de armadura al jugador
-     */
     public static void applyArmorBonus(Player player) {
         PlayerInventory inventory = player.getInventory();
         for (ItemStack armor : inventory.getArmorContents()) {
@@ -36,9 +36,6 @@ public class CustomManager {
         }
     }
 
-    /**
-     * Aplica bonificaciones de items en mano al jugador
-     */
     public static void applyHandItemBonus(Player player) {
         ItemStack itemInHand = player.getItemInHand();
         if (itemInHand == null || itemInHand.getTypeId() == Material.AIR.getId()) {
@@ -53,9 +50,6 @@ public class CustomManager {
         }
     }
 
-    /**
-     * Método general para aplicar bonus a un jugador
-     */
     private static void applyBonusToPlayer(Player player, String itemId,
                                            HashMap<String, Double> stats,
                                            HashMap<String, String> operations) {
@@ -80,14 +74,10 @@ public class CustomManager {
         }
     }
 
-    /**
-     * Remueve un bonus específico del jugador
-     */
     public static void removeBonusFromPlayer(Player player, String itemId) {
         try {
             IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
 
-            // Remover de todos los atributos posibles
             for (String stat : General.BONUS_STATS.values()) {
                 try {
                     idbcPlayer.removeBonusAttribute(stat, itemId);
@@ -95,7 +85,6 @@ public class CustomManager {
                 }
             }
 
-            // Remover del tracking
             if (playerArmorBonus.containsKey(player.getUniqueId())) {
                 Set<String> bonuses = playerArmorBonus.get(player.getUniqueId());
                 bonuses.remove(itemId);
@@ -105,9 +94,6 @@ public class CustomManager {
         }
     }
 
-    /**
-     * Tarea de efectos (regeneración, etc)
-     */
     public static void effectsTask() {
         BukkitRunnable runnable = new BukkitRunnable() {
             @Override
@@ -162,17 +148,12 @@ public class CustomManager {
         org.example.tools.ci.CustomArmor armor = org.example.commands.items.RegisterItem.items.get(armorId);
         armor.getEffects().put(effectType, value);
 
-        // Guardar en storage
         org.example.tools.storage.CustomArmorStorage storage = new org.example.tools.storage.CustomArmorStorage();
         storage.saveArmor(armor);
 
         org.example.commands.items.RegisterItem.items.put(armorId, armor);
     }
 
-    /**
-     * Aplica un bonus a un item desde input por chat
-     * Usado por BonusInputManager
-     */
     public static void applyBonusToItemFromChat(org.bukkit.entity.Player player, String itemId,
                                                 String stat, String operation, double value) {
         if (!org.example.commands.items.CustomItemCommand.items.containsKey(itemId)) {
@@ -183,17 +164,12 @@ public class CustomManager {
         org.example.tools.ci.CustomItem item = org.example.commands.items.CustomItemCommand.items.get(itemId);
         item.setOperation(operation, stat).setBonusStat(stat, value);
 
-        // Guardar en BD
         org.example.tools.storage.CustomItemStorage storage = new org.example.tools.storage.CustomItemStorage();
         storage.saveItem(item);
 
         applyHandItemBonus(player);
     }
 
-    /**
-     * Aplica un bonus a una armadura desde input por chat
-     * Usado por BonusInputManager
-     */
     public static void applyBonusToArmorFromChat(org.bukkit.entity.Player player, String armorId,
                                                  String stat, String operation, double value) {
         if (!org.example.commands.items.RegisterItem.items.containsKey(armorId)) {
@@ -204,7 +180,6 @@ public class CustomManager {
         org.example.tools.ci.CustomArmor armor = org.example.commands.items.RegisterItem.items.get(armorId);
         armor.setOperation(operation, stat).setBonusStat(stat, value);
 
-        // Guardar en storage
         org.example.tools.storage.CustomArmorStorage storage = new org.example.tools.storage.CustomArmorStorage();
         storage.saveArmor(armor);
 
@@ -214,52 +189,41 @@ public class CustomManager {
     }
     static AtomicInteger counter = new AtomicInteger(0);
 
-    /**
-     * Aplica efectos especiales al jugador
-     */
     private static void applyEffects(Player player, HashMap<String, Double> effects) {
         try {
             IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
 
             effects.forEach((k, v) -> {
-                if (counter.incrementAndGet() % 3 != 0) return;
+                if (counter.incrementAndGet() % 5 != 0) return;
 
                 try {
                     if (k.equalsIgnoreCase("HEALTHREGEN")) {
-                        int level = 1;
                         int max = StatsCalculator.getMaxHealth(idbcPlayer);
-                        int bonus = (int) (((double) level / 100.0) * max);
+                        int bonus = (int) (v * max);
                         idbcPlayer.setHP(idbcPlayer.getHP() + bonus);
-                        EffectsManager.spawnHologram(player, CC.translate("&c❤"), 1.0, 1.0);
-
                     }
                     if (k.equalsIgnoreCase("KIREGEN")) {
-                        int level = 1;
                         int max = StatsCalculator.getKiMax(idbcPlayer);
-                        int bonus = (int) (((double) level / 100.0) * max);
+                        int bonus = (int) (v * max);
                         idbcPlayer.setKi(idbcPlayer.getKi() + bonus);
-                        EffectsManager.spawnHologram(player, CC.translate("&9⚡"), 1.5, -1.0);
-
                     }
                     if (k.equalsIgnoreCase("STAMINAREGEN")) {
-                        int level = 1;
-                        int max = StatsCalculator.getMaxStamina(idbcPlayer);
-                        int bonus = (int) (((double) level / 100.0) * max);
-                        idbcPlayer.setStamina(bonus + idbcPlayer.getStamina());
-                        EffectsManager.spawnHologram(player, CC.translate("&e❃"), 0.4, 1.0);
+                        int bonus = (int) (v * idbcPlayer.getStamina ( ));
+                        idbcPlayer.setStamina ( idbcPlayer.getStamina ( ) + bonus );
                     }
+                    if (k.equalsIgnoreCase("KIREGEN"))
+                        EffectsManager.spawnHologram(player, CC.translate("&9⚡"), 1.5, -1.0);
+                    else if (k.equalsIgnoreCase("STAMINAREGEN"))
+                        EffectsManager.spawnHologram(player, CC.translate("&e❃"), 0.4, 1.5);
+                    else if (k.equalsIgnoreCase("HEALTHREGEN"))
+                        EffectsManager.spawnHologram(player, CC.translate("&c❤"), 1.0, 1.0);
                 } catch (Exception ignored) {}
             });
 
         } catch (Exception e) {
-            // Silent fail
         }
     }
 
-    /**
-     * Tarea principal que gestiona armaduras e items en mano
-     * CORREGIDO: Ahora remueve correctamente los bonos cuando se quita armadura/item
-     */
     public static void armorTask() {
         BukkitRunnable runnable = new BukkitRunnable() {
             @Override
@@ -269,7 +233,6 @@ public class CustomManager {
                     RegisterItem registerItem = new RegisterItem();
                     CustomItemCommand itemCmd = new CustomItemCommand();
 
-                    // Detectar armaduras actuales
                     for (ItemStack armorContent : player.getInventory().getArmorContents()) {
                         if (armorContent == null) continue;
                         if (armorContent.getTypeId() == Material.AIR.getId()) continue;
@@ -281,7 +244,6 @@ public class CustomManager {
                         }
                     }
 
-                    // Detectar item en mano
                     ItemStack itemInHand = player.getItemInHand();
                     if (itemInHand != null && itemInHand.getTypeId() != Material.AIR.getId()) {
                         if (itemCmd.isCustom(itemInHand)) {

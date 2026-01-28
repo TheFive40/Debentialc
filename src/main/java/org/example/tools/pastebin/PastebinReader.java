@@ -1,6 +1,7 @@
 package org.example.tools.pastebin;
 
 import org.bukkit.Bukkit;
+import org.example.tools.CC;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -51,7 +52,7 @@ public class PastebinReader {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        lines.add(line);
+                        lines.add(CC.translate(line));
                     }
                 }
                 return lines;

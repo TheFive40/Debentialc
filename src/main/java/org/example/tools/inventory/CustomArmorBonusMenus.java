@@ -163,7 +163,6 @@ public class CustomArmorBonusMenus {
                                 BonusFlowManager.setSelectedOperation(player, operation);
                                 BonusFlowManager.nextStep(player);
 
-                                // ⭐ NUEVO: Inicia input por chat en lugar de mostrar menú de valores
                                 player.closeInventory();
                                 BonusInputManager.startBonusInput(player, armorId,
                                         playerState.selectedStat, operation, "armor");

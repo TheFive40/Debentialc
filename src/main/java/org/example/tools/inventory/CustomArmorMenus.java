@@ -11,6 +11,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.example.commands.items.RegisterItem;
 import org.example.tools.CC;
 import org.example.tools.ci.CustomArmor;
+import org.example.tools.storage.CustomArmorStorage;
 
 import java.util.*;
 
@@ -89,7 +90,7 @@ public class CustomArmorMenus {
                 .provider(new InventoryProvider() {
                     @Override
                     public void init(Player player, InventoryContents contents) {
-                        Set<String> armorIds = RegisterItem.items.keySet();
+                        Set<String> armorIds = new CustomArmorStorage().loadAllArmors().keySet();
                         int pageSize = 21;
                         int totalPages = (int) Math.ceil((double) armorIds.size() / pageSize);
 
@@ -107,7 +108,7 @@ public class CustomArmorMenus {
 
                         for (int i = start; i < end; i++) {
                             String id = ids.get(i);
-                            CustomArmor armor = RegisterItem.items.get(id);
+                            CustomArmor armor = new CustomArmorStorage().loadArmor(id);
 
                             ItemStack displayItem = new ItemStack(armor.getMaterial());
                             ItemMeta meta = displayItem.getItemMeta();
@@ -182,12 +183,12 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&b&lLista - Pag " + page))
+                .title(CC.translate("&b&lLista Pag " + page))
                 .build();
     }
 
     public static SmartInventory openEditArmorMenu(String armorId) {
-        CustomArmor armor = RegisterItem.items.get(armorId);
+        CustomArmor armor = new CustomArmorStorage().loadArmor(armorId);
         if (armor == null) return null;
 
         return SmartInventory.builder()
@@ -222,14 +223,15 @@ public class CustomArmorMenus {
 
                         ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
                         ItemMeta loreMeta = loreButton.getItemMeta();
-                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore"));
+                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore (Pastebin)"));
                         loreMeta.setLore(Arrays.asList(
                                 CC.translate("&7Líneas: &f" + (armor.getLore() != null ? armor.getLore().size() : 0)),
-                                CC.translate("&a[CLICK PARA AGREGAR LÍNEA]")
+                                CC.translate("&7Pega la URL de pastebin"),
+                                CC.translate("&a[CLICK PARA EDITAR]")
                         ));
                         loreButton.setItemMeta(loreMeta);
                         contents.set(1, 3, ClickableItem.of(loreButton, e -> {
-                            ArmorEditManager.startArmorEdit(player, armorId, "addline");
+                            ArmorEditManager.startArmorEdit(player, armorId, "lore");
                         }));
 
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
@@ -304,7 +306,7 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(4, 9)
-                .title(CC.translate("&b&lEditar: " + armorId.substring(0, Math.min(armorId.length(), 15))))
+                .title(CC.translate("&b&lEditar Armadura"))
                 .build();
     }
 
@@ -331,7 +333,7 @@ public class CustomArmorMenus {
                         yesMeta.setDisplayName(CC.translate("&a&lSÍ, ELIMINAR"));
                         yesButton.setItemMeta(yesMeta);
                         contents.set(2, 3, ClickableItem.of(yesButton, e -> {
-                            RegisterItem.items.remove(armorId);
+                            new CustomArmorStorage().deleteArmor(armorId);
                             player.sendMessage(CC.translate("&aArmadura eliminada correctamente"));
                             openArmorListMenu(1).open(player);
                         }));
