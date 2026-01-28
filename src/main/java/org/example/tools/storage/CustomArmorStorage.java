@@ -45,7 +45,8 @@ public class CustomArmorStorage {
         armorConfig.set(path + ".isArmor", armor.isArmor());
         armorConfig.set(path + ".bonusStat", new HashMap<>(armor.getValueByStat()));
         armorConfig.set(path + ".operations", new HashMap<>(armor.getOperation()));
-        armorConfig.set(path + ".effects", new HashMap<>(armor.getEffects())); // AÑADIDO
+        armorConfig.set(path + ".effects", new HashMap<>(armor.getEffects()));
+        armorConfig.set(path + ".maxDurability", armor.getMaxDurability());
 
         try {
             armorConfig.save(armorFile);
@@ -74,6 +75,7 @@ public class CustomArmorStorage {
         armor.setMaterial(armorConfig.getInt(path + ".material"));
         armor.setDisplayName(armorConfig.getString(path + ".displayName"));
         armor.setLore(armorConfig.getStringList(path + ".lore"));
+        armor.setMaxDurability(armorConfig.getInt(path + ".maxDurability", -1));
 
         if (armorConfig.contains(path + ".bonusStat")) {
             HashMap<String, Double> bonusStat = new HashMap<>();
@@ -91,7 +93,6 @@ public class CustomArmorStorage {
             armor.setOperation(operations);
         }
 
-        // AÑADIDO: Cargar efectos
         if (armorConfig.contains(path + ".effects")) {
             HashMap<String, Double> effects = new HashMap<>();
             for (String key : armorConfig.getConfigurationSection(path + ".effects").getKeys(false)) {

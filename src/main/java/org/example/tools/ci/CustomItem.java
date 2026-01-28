@@ -22,6 +22,9 @@ public class CustomItem {
     private String id;
     private boolean isActive = true;
 
+    // Durabilidad máxima personalizada (-1 = sin durabilidad custom)
+    private int maxDurability = -1;
+
     public CustomItem setMaterial(int material) {
         this.material = material;
         return this;
@@ -64,6 +67,11 @@ public class CustomItem {
 
     public CustomItem setEffects(HashMap<String, Double> effects) {
         this.effects = effects;
+        return this;
+    }
+
+    public CustomItem setMaxDurability(int maxDurability) {
+        this.maxDurability = maxDurability;
         return this;
     }
 

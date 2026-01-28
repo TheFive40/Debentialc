@@ -44,6 +44,7 @@ public class CustomItemStorage {
         itemsConfig.set(path + ".bonusStat", new HashMap<>(item.getValueByStat()));
         itemsConfig.set(path + ".operations", new HashMap<>(item.getOperation()));
         itemsConfig.set(path + ".effects", new HashMap<>(item.getEffects()));
+        itemsConfig.set(path + ".maxDurability", item.getMaxDurability());
 
         try {
             itemsConfig.save(itemsFile);
@@ -73,6 +74,7 @@ public class CustomItemStorage {
         item.setDisplayName(itemsConfig.getString(path + ".displayName"));
         item.setLore(itemsConfig.getStringList(path + ".lore"));
         item.setActive(itemsConfig.getBoolean(path + ".isActive", true));
+        item.setMaxDurability(itemsConfig.getInt(path + ".maxDurability", -1));
 
         // Cargar bonificaciones
         if (itemsConfig.contains(path + ".bonusStat")) {

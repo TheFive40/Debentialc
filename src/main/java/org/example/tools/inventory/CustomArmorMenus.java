@@ -15,6 +15,10 @@ import org.example.tools.storage.CustomArmorStorage;
 
 import java.util.*;
 
+/**
+ * Menús de gestión de armaduras custom
+ * VERSIÓN MEJORADA: Integración completa con Pastebin para edición de lore
+ */
 public class CustomArmorMenus {
 
     public static SmartInventory createMainMenu() {
@@ -80,7 +84,7 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(3, 9)
-                .title(CC.translate("&b&lArmaduras"))
+                .title(CC.translate("&b&lGestión Armaduras Custom"))
                 .build();
     }
 
@@ -90,12 +94,12 @@ public class CustomArmorMenus {
                 .provider(new InventoryProvider() {
                     @Override
                     public void init(Player player, InventoryContents contents) {
-                        Set<String> armorIds = new CustomArmorStorage().loadAllArmors().keySet();
+                        Set<String> armorIds = RegisterItem.items.keySet();
                         int pageSize = 21;
                         int totalPages = (int) Math.ceil((double) armorIds.size() / pageSize);
 
                         if (page < 1) return;
-                        if (page > totalPages) return;
+                        if (page > totalPages && totalPages > 0) return;
 
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
@@ -108,7 +112,7 @@ public class CustomArmorMenus {
 
                         for (int i = start; i < end; i++) {
                             String id = ids.get(i);
-                            CustomArmor armor = new CustomArmorStorage().loadArmor(id);
+                            CustomArmor armor = RegisterItem.items.get(id);
 
                             ItemStack displayItem = new ItemStack(armor.getMaterial());
                             ItemMeta meta = displayItem.getItemMeta();
@@ -118,6 +122,7 @@ public class CustomArmorMenus {
                             lore.add(CC.translate("&7Nombre: &f" + armor.getDisplayName()));
                             lore.add(CC.translate("&7Stats: &f" + armor.getValueByStat().size()));
                             lore.add(CC.translate("&7Efectos: &f" + armor.getEffects().size()));
+                            lore.add(CC.translate("&7Lore: &f" + (armor.getLore() != null ? armor.getLore().size() + " líneas" : "Sin lore")));
                             lore.add("");
                             lore.add(CC.translate("&a[CLICK PARA EDITAR]"));
 
@@ -153,7 +158,7 @@ public class CustomArmorMenus {
 
                         ItemStack pageButton = new ItemStack(Material.BOOK);
                         ItemMeta pageMeta = pageButton.getItemMeta();
-                        pageMeta.setDisplayName(CC.translate("&f&lPágina " + page + "/" + totalPages));
+                        pageMeta.setDisplayName(CC.translate("&f&lPágina " + page + "/" + Math.max(1, totalPages)));
                         pageButton.setItemMeta(pageMeta);
                         contents.set(4, 4, ClickableItem.empty(pageButton));
 
@@ -183,12 +188,12 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&b&lLista Pag " + page))
+                .title(CC.translate("&b&lArmaduras #" + page))
                 .build();
     }
 
     public static SmartInventory openEditArmorMenu(String armorId) {
-        CustomArmor armor = new CustomArmorStorage().loadArmor(armorId);
+        CustomArmor armor = RegisterItem.items.get(armorId);
         if (armor == null) return null;
 
         return SmartInventory.builder()
@@ -198,6 +203,7 @@ public class CustomArmorMenus {
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
+                        // INFO DE LA ARMADURA
                         ItemStack infoItem = new ItemStack(Material.PAPER);
                         ItemMeta infoMeta = infoItem.getItemMeta();
                         infoMeta.setDisplayName(CC.translate("&b&l" + armorId));
@@ -209,11 +215,14 @@ public class CustomArmorMenus {
                         infoItem.setItemMeta(infoMeta);
                         contents.set(1, 1, ClickableItem.empty(infoItem));
 
+                        // RENOMBRAR
                         ItemStack renameButton = new ItemStack(Material.NAME_TAG);
                         ItemMeta renameMeta = renameButton.getItemMeta();
                         renameMeta.setDisplayName(CC.translate("&e&lRenombrar"));
                         renameMeta.setLore(Arrays.asList(
-                                CC.translate("&7Nombre actual: &f" + armor.getDisplayName()),
+                                CC.translate("&7Nombre actual:"),
+                                CC.translate("&f" + armor.getDisplayName()),
+                                "",
                                 CC.translate("&a[CLICK PARA RENOMBRAR]")
                         ));
                         renameButton.setItemMeta(renameMeta);
@@ -221,22 +230,42 @@ public class CustomArmorMenus {
                             ArmorEditManager.startArmorEdit(player, armorId, "rename");
                         }));
 
+                        ItemStack pastebinButton = new ItemStack(Material.ENCHANTED_BOOK);
+                        ItemMeta pastebinMeta = pastebinButton.getItemMeta();
+                        pastebinMeta.setDisplayName(CC.translate("&d&l⚡ Lore desde Pastebin"));
+                        List<String> pastebinLore = new ArrayList<>();
+                        pastebinLore.add(CC.translate("&7Carga el lore completo desde"));
+                        pastebinLore.add(CC.translate("&7una URL de Pastebin"));
+                        pastebinLore.add("");
+                        pastebinLore.add(CC.translate("&e&oLíneas actuales: &f" + (armor.getLore() != null ? armor.getLore().size() : 0)));
+                        pastebinLore.add("");
+                        pastebinLore.add(CC.translate("&a[CLICK PARA CARGAR]"));
+                        pastebinLore.add(CC.translate("&8Compatible con /ca addline"));
+                        pastebinMeta.setLore(pastebinLore);
+                        pastebinButton.setItemMeta(pastebinMeta);
+                        contents.set(1, 3, ClickableItem.of(pastebinButton, e -> {
+                            org.example.tools.pastebin.PastebinLoreManager.startPastebinInput(player, armorId, "armor");
+                        }));
+
+                        // EDITAR LORE (PASTEBIN)
                         ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
                         ItemMeta loreMeta = loreButton.getItemMeta();
-                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore (Pastebin)"));
+                        loreMeta.setDisplayName(CC.translate("&bEditar Lore"));
                         loreMeta.setLore(Arrays.asList(
                                 CC.translate("&7Líneas: &f" + (armor.getLore() != null ? armor.getLore().size() : 0)),
-                                CC.translate("&7Pega la URL de pastebin"),
-                                CC.translate("&a[CLICK PARA EDITAR]")
+                                "",
+                                CC.translate("&a[CLICK PARA EDITAR]"),
+                                CC.translate("&7Usa Pastebin para lore largo")
                         ));
                         loreButton.setItemMeta(loreMeta);
                         contents.set(1, 3, ClickableItem.of(loreButton, e -> {
-                            ArmorEditManager.startArmorEdit(player, armorId, "lore");
+                            org.example.tools.pastebin.PastebinLoreManager.startPastebinInput(player, armorId, "armor");
                         }));
 
+                        // AÑADIR STATS
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
                         ItemMeta statsMeta = statsButton.getItemMeta();
-                        statsMeta.setDisplayName(CC.translate("&a&lAñadir Stats"));
+                        statsMeta.setDisplayName(CC.translate("&aAñadir Stats"));
                         List<String> statsLore = new ArrayList<>();
                         statsLore.add(CC.translate("&7Stats actuales: &f" + armor.getValueByStat().size()));
                         armor.getValueByStat().forEach((stat, value) -> {
@@ -252,9 +281,10 @@ public class CustomArmorMenus {
                             CustomArmorBonusMenus.createStatSelectionMenu(armorId).open(player);
                         }));
 
+                        // AGREGAR EFECTOS
                         ItemStack effectsButton = new ItemStack(Material.REDSTONE_TORCH_ON);
                         ItemMeta effectsMeta = effectsButton.getItemMeta();
-                        effectsMeta.setDisplayName(CC.translate("&6&lAgregar Efectos"));
+                        effectsMeta.setDisplayName(CC.translate("&6Agregar Efectos"));
                         List<String> effectsLore = new ArrayList<>();
                         effectsLore.add(CC.translate("&7Efectos actuales: &f" + armor.getEffects().size()));
                         armor.getEffects().forEach((effect, value) -> {
@@ -268,30 +298,49 @@ public class CustomArmorMenus {
                             CustomArmorEffectsMenus.createEffectSelectionMenu(armorId).open(player);
                         }));
 
+                        // MODIFICAR DURABILIDAD
+                        ItemStack durabilityButton = new ItemStack(Material.DIAMOND_CHESTPLATE);
+                        ItemMeta durabilityMeta = durabilityButton.getItemMeta();
+                        durabilityMeta.setDisplayName(CC.translate("&d&lDurabilidad"));
+                        durabilityMeta.setLore(Arrays.asList(
+                                CC.translate("&7Modifica la durabilidad de la armadura"),
+                                "",
+                                CC.translate("&a[CLICK PARA CONFIGURAR]")
+                        ));
+                        durabilityButton.setItemMeta(durabilityMeta);
+                        contents.set(2, 1, ClickableItem.of(durabilityButton, e -> {
+                            DurabilityInputManager.startDurabilityInput(player, armorId, "armor");
+                        }));
+
+                        // DAR ARMADURA
                         ItemStack giveButton = new ItemStack(Material.APPLE);
                         ItemMeta giveMeta = giveButton.getItemMeta();
                         giveMeta.setDisplayName(CC.translate("&a&lDar Armadura"));
                         giveMeta.setLore(Arrays.asList(
                                 CC.translate("&7Recibe la armadura en tu inventario"),
-                                CC.translate("&a[CLICK PARA DAR]")
+                                "",
+                                CC.translate("&a[CLICK PARA RECIBIR]")
                         ));
                         giveButton.setItemMeta(giveMeta);
-                        contents.set(1, 6, ClickableItem.of(giveButton, e -> {
+                        contents.set(1, 7, ClickableItem.of(giveButton, e -> {
                             ArmorEditManager.giveCustomArmor(player, armorId);
                         }));
 
+                        // ELIMINAR ARMADURA
                         ItemStack deleteButton = new ItemStack(Material.ANVIL);
                         ItemMeta deleteMeta = deleteButton.getItemMeta();
                         deleteMeta.setDisplayName(CC.translate("&c&lEliminar Armadura"));
                         deleteMeta.setLore(Arrays.asList(
                                 CC.translate("&7Esta armadura será eliminada"),
-                                CC.translate("&a[CLICK PARA CONFIRMAR]")
+                                "",
+                                CC.translate("&c[CLICK PARA CONFIRMAR]")
                         ));
                         deleteButton.setItemMeta(deleteMeta);
-                        contents.set(1, 7, ClickableItem.of(deleteButton, e -> {
+                        contents.set(2, 7, ClickableItem.of(deleteButton, e -> {
                             openDeleteConfirmMenu(armorId).open(player);
                         }));
 
+                        // BOTÓN ATRÁS
                         ItemStack backButton = new ItemStack(Material.ARROW);
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&b← Atrás"));
@@ -323,7 +372,8 @@ public class CustomArmorMenus {
                         confirmMeta.setDisplayName(CC.translate("&c&l¿Estás seguro?"));
                         confirmMeta.setLore(Arrays.asList(
                                 CC.translate("&7Esta acción no puede deshacerse"),
-                                CC.translate("&7La armadura &f" + armorId + "&7 será eliminada permanentemente")
+                                CC.translate("&7La armadura &f" + armorId + "&7 será eliminada"),
+                                CC.translate("&7permanentemente")
                         ));
                         confirmItem.setItemMeta(confirmMeta);
                         contents.set(1, 4, ClickableItem.empty(confirmItem));
@@ -333,8 +383,15 @@ public class CustomArmorMenus {
                         yesMeta.setDisplayName(CC.translate("&a&lSÍ, ELIMINAR"));
                         yesButton.setItemMeta(yesMeta);
                         contents.set(2, 3, ClickableItem.of(yesButton, e -> {
-                            new CustomArmorStorage().deleteArmor(armorId);
-                            player.sendMessage(CC.translate("&aArmadura eliminada correctamente"));
+                            RegisterItem.items.remove(armorId);
+                            // Eliminar de la base de datos (si existe)
+                            try {
+                                org.example.tools.storage.CustomArmorStorage storage = new org.example.tools.storage.CustomArmorStorage();
+                                storage.deleteArmor(armorId);
+                            } catch (Exception ex) {
+                            }
+
+                            player.sendMessage(CC.translate("&a✓ Armadura eliminada correctamente"));
                             openArmorListMenu(1).open(player);
                         }));
 
@@ -352,7 +409,7 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(4, 9)
-                .title(CC.translate("&c&lConfirmar"))
+                .title(CC.translate("&c&lConfirmar Eliminación"))
                 .build();
     }
 
@@ -365,11 +422,12 @@ public class CustomArmorMenus {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
                         List<String> commands = Arrays.asList(
-                                "/ca create <id> - Crear una armadura",
-                                "/ca delete <id> - Eliminar una armadura",
-                                "/ca plus <id> <valor> <stat> - Bonus aditivo (+)",
-                                "/ca less <id> <valor> <stat> - Bonus sustractivo (-)",
-                                "/ca percentage <id> <valor> <stat> - Bonus multiplicativo (*)",
+                                "/ca create <id> - Crear armadura",
+                                "/ca delete <id> - Eliminar armadura",
+                                "/ca addline <texto> - Agregar lore",
+                                "/ca plus <id> <valor> <stat> - Bonus +",
+                                "/ca less <id> <valor> <stat> - Bonus -",
+                                "/ca percentage <id> <val> <stat> - Bonus *",
                                 "/ca effect <tipo> <valor> - Agregar efecto"
                         );
 
@@ -397,6 +455,20 @@ public class CustomArmorMenus {
                         statsItem.setItemMeta(statsMeta);
                         contents.set(1, 7, ClickableItem.empty(statsItem));
 
+                        // Información de Pastebin
+                        ItemStack pastebinInfo = new ItemStack(Material.BOOK);
+                        ItemMeta pastebinMeta = pastebinInfo.getItemMeta();
+                        pastebinMeta.setDisplayName(CC.translate("&d&lPastebin"));
+                        pastebinMeta.setLore(Arrays.asList(
+                                CC.translate("&7Puedes cargar lore desde"),
+                                CC.translate("&7pastebin.com usando el botón"),
+                                CC.translate("&7en el menú de edición"),
+                                "",
+                                CC.translate("&fFormato: Una línea por línea")
+                        ));
+                        pastebinInfo.setItemMeta(pastebinMeta);
+                        contents.set(3, 7, ClickableItem.empty(pastebinInfo));
+
                         ItemStack backButton = new ItemStack(Material.ARROW);
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&b← Atrás"));
@@ -411,7 +483,7 @@ public class CustomArmorMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&b&lAyuda"))
+                .title(CC.translate("&b&lAyuda - Comandos /ca"))
                 .build();
     }
 

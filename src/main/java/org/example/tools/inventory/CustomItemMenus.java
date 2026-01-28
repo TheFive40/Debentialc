@@ -14,6 +14,10 @@ import org.example.tools.ci.CustomItem;
 
 import java.util.*;
 
+/**
+ * Menús de gestión de items custom
+ * VERSIÓN MEJORADA: Integración completa con Pastebin para edición de lore
+ */
 public class CustomItemMenus {
 
     public static SmartInventory createMainMenu() {
@@ -79,7 +83,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(3, 9)
-                .title(CC.translate("&c&lItems"))
+                .title(CC.translate("&c&lGestión de Items Custom"))
                 .build();
     }
 
@@ -94,7 +98,7 @@ public class CustomItemMenus {
                         int totalPages = (int) Math.ceil((double) itemIds.size() / pageSize);
 
                         if (page < 1) return;
-                        if (page > totalPages) return;
+                        if (page > totalPages && totalPages > 0) return;
 
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
@@ -117,6 +121,7 @@ public class CustomItemMenus {
                             lore.add(CC.translate("&7Nombre: &f" + customItem.getDisplayName()));
                             lore.add(CC.translate("&7Stats: &f" + customItem.getValueByStat().size()));
                             lore.add(CC.translate("&7Efectos: &f" + customItem.getEffects().size()));
+                            lore.add(CC.translate("&7Lore: &f" + (customItem.getLore() != null ? customItem.getLore().size() + " líneas" : "Sin lore")));
                             lore.add("");
                             lore.add(CC.translate("&a[CLICK PARA EDITAR]"));
 
@@ -152,7 +157,7 @@ public class CustomItemMenus {
 
                         ItemStack pageButton = new ItemStack(Material.BOOK);
                         ItemMeta pageMeta = pageButton.getItemMeta();
-                        pageMeta.setDisplayName(CC.translate("&f&lPágina " + page + "/" + totalPages));
+                        pageMeta.setDisplayName(CC.translate("&f&lPágina " + page + "/" + Math.max(1, totalPages)));
                         pageButton.setItemMeta(pageMeta);
                         contents.set(4, 4, ClickableItem.empty(pageButton));
 
@@ -182,7 +187,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&c&lLista Pag " + page))
+                .title(CC.translate("&c&lItems Custom #" + page))
                 .build();
     }
 
@@ -199,6 +204,7 @@ public class CustomItemMenus {
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
+                        // INFO DEL ITEM
                         ItemStack infoItem = new ItemStack(Material.PAPER);
                         ItemMeta infoMeta = infoItem.getItemMeta();
                         infoMeta.setDisplayName(CC.translate("&c&l" + itemId));
@@ -207,14 +213,18 @@ public class CustomItemMenus {
                         infoLore.add(CC.translate("&7Nombre: &f" + item.getDisplayName()));
                         infoLore.add(CC.translate("&7Material: &f" + item.getMaterial()));
                         infoLore.add(CC.translate("&7Estado: &f" + (item.isActive() ? "Activo" : "Inactivo")));
+                        infoMeta.setLore(infoLore);
                         infoItem.setItemMeta(infoMeta);
                         contents.set(1, 1, ClickableItem.empty(infoItem));
 
+                        // RENOMBRAR
                         ItemStack renameButton = new ItemStack(Material.NAME_TAG);
                         ItemMeta renameMeta = renameButton.getItemMeta();
                         renameMeta.setDisplayName(CC.translate("&e&lRenombrar"));
                         renameMeta.setLore(Arrays.asList(
-                                CC.translate("&7Nombre actual: &f" + item.getDisplayName()),
+                                CC.translate("&7Nombre actual:"),
+                                CC.translate("&f" + item.getDisplayName()),
+                                "",
                                 CC.translate("&a[CLICK PARA RENOMBRAR]")
                         ));
                         renameButton.setItemMeta(renameMeta);
@@ -222,22 +232,25 @@ public class CustomItemMenus {
                             ItemEditManager.startItemEdit(player, itemId, "rename");
                         }));
 
+                        // EDITAR LORE (PASTEBIN)
                         ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
                         ItemMeta loreMeta = loreButton.getItemMeta();
-                        loreMeta.setDisplayName(CC.translate("&e&lEditar Lore (Pastebin)"));
-                        loreMeta.setLore(Arrays.asList(
-                                CC.translate("&7Líneas: &f" + (item.getLore() != null ? item.getLore().size() : 0)),
-                                CC.translate("&7Pega la URL de pastebin"),
-                                CC.translate("&a[CLICK PARA EDITAR]")
-                        ));
+                        loreMeta.setDisplayName(CC.translate("&bEditar Lore"));
+                        List<String> loreLoreList = new ArrayList<>();
+                        loreLoreList.add(CC.translate("&7Líneas: &f" + (item.getLore() != null ? item.getLore().size() : 0)));
+                        loreLoreList.add("");
+                        loreLoreList.add(CC.translate("&a[CLICK PARA EDITAR]"));
+                        loreLoreList.add(CC.translate("&7Usa Pastebin para lore largo"));
+                        loreMeta.setLore(loreLoreList);
                         loreButton.setItemMeta(loreMeta);
                         contents.set(1, 3, ClickableItem.of(loreButton, e -> {
-                            ItemEditManager.startItemEdit(player, itemId, "lore");
+                            org.example.tools.pastebin.PastebinLoreManager.startPastebinInput(player, itemId, "item");
                         }));
 
+                        // AÑADIR STATS
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
                         ItemMeta statsMeta = statsButton.getItemMeta();
-                        statsMeta.setDisplayName(CC.translate("&a&lAñadir Stats"));
+                        statsMeta.setDisplayName(CC.translate("&aAñadir Stats"));
                         List<String> statsLore = new ArrayList<>();
                         statsLore.add(CC.translate("&7Stats actuales: &f" + item.getValueByStat().size()));
                         item.getValueByStat().forEach((stat, value) -> {
@@ -253,9 +266,10 @@ public class CustomItemMenus {
                             CustomItemBonusMenus.createStatSelectionMenu(itemId).open(player);
                         }));
 
+                        // AGREGAR EFECTOS
                         ItemStack effectsButton = new ItemStack(Material.REDSTONE_TORCH_ON);
                         ItemMeta effectsMeta = effectsButton.getItemMeta();
-                        effectsMeta.setDisplayName(CC.translate("&6&lAgregar Efectos"));
+                        effectsMeta.setDisplayName(CC.translate("&6Agregar Efectos"));
                         List<String> effectsLore = new ArrayList<>();
                         effectsLore.add(CC.translate("&7Efectos actuales: &f" + item.getEffects().size()));
                         item.getEffects().forEach((effect, value) -> {
@@ -269,30 +283,49 @@ public class CustomItemMenus {
                             CustomItemEffectsMenu.createEffectSelectionMenu(itemId).open(player);
                         }));
 
+                        // MODIFICAR DURABILIDAD
+                        ItemStack durabilityButton = new ItemStack(Material.DIAMOND_PICKAXE);
+                        ItemMeta durabilityMeta = durabilityButton.getItemMeta();
+                        durabilityMeta.setDisplayName(CC.translate("&d&lDurabilidad"));
+                        durabilityMeta.setLore(Arrays.asList(
+                                CC.translate("&7Modifica la durabilidad del item"),
+                                "",
+                                CC.translate("&a[CLICK PARA CONFIGURAR]")
+                        ));
+                        durabilityButton.setItemMeta(durabilityMeta);
+                        contents.set(2, 1, ClickableItem.of(durabilityButton, e -> {
+                            DurabilityInputManager.startDurabilityInput(player, itemId, "item");
+                        }));
+
+                        // DAR ITEM
                         ItemStack giveButton = new ItemStack(Material.APPLE);
                         ItemMeta giveMeta = giveButton.getItemMeta();
                         giveMeta.setDisplayName(CC.translate("&a&lDar Item"));
                         giveMeta.setLore(Arrays.asList(
                                 CC.translate("&7Recibe el item en tu inventario"),
-                                CC.translate("&a[CLICK PARA DAR]")
+                                "",
+                                CC.translate("&a[CLICK PARA RECIBIR]")
                         ));
                         giveButton.setItemMeta(giveMeta);
-                        contents.set(1, 6, ClickableItem.of(giveButton, e -> {
+                        contents.set(1, 7, ClickableItem.of(giveButton, e -> {
                             ItemEditManager.giveCustomItem(player, itemId);
                         }));
 
+                        // ELIMINAR ITEM
                         ItemStack deleteButton = new ItemStack(Material.ANVIL);
                         ItemMeta deleteMeta = deleteButton.getItemMeta();
                         deleteMeta.setDisplayName(CC.translate("&c&lEliminar Item"));
                         deleteMeta.setLore(Arrays.asList(
                                 CC.translate("&7Este item será eliminado"),
-                                CC.translate("&a[CLICK PARA CONFIRMAR]")
+                                "",
+                                CC.translate("&c[CLICK PARA CONFIRMAR]")
                         ));
                         deleteButton.setItemMeta(deleteMeta);
-                        contents.set(1, 7, ClickableItem.of(deleteButton, e -> {
+                        contents.set(2, 7, ClickableItem.of(deleteButton, e -> {
                             openDeleteConfirmMenu(itemId).open(player);
                         }));
 
+                        // BOTÓN ATRÁS
                         ItemStack backButton = new ItemStack(Material.ARROW);
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&b← Atrás"));
@@ -324,7 +357,8 @@ public class CustomItemMenus {
                         confirmMeta.setDisplayName(CC.translate("&c&l¿Estás seguro?"));
                         confirmMeta.setLore(Arrays.asList(
                                 CC.translate("&7Esta acción no puede deshacerse"),
-                                CC.translate("&7El item &f" + itemId + "&7 será eliminado permanentemente")
+                                CC.translate("&7El item &f" + itemId + "&7 será eliminado"),
+                                CC.translate("&7permanentemente")
                         ));
                         confirmItem.setItemMeta(confirmMeta);
                         contents.set(1, 4, ClickableItem.empty(confirmItem));
@@ -335,7 +369,12 @@ public class CustomItemMenus {
                         yesButton.setItemMeta(yesMeta);
                         contents.set(2, 3, ClickableItem.of(yesButton, e -> {
                             CustomItemCommand.items.remove(itemId);
-                            player.sendMessage(CC.translate("&aItem eliminado correctamente"));
+
+                            // Eliminar de la base de datos
+                            org.example.tools.storage.CustomItemStorage storage = new org.example.tools.storage.CustomItemStorage();
+                            storage.deleteItem(itemId);
+
+                            player.sendMessage(CC.translate("&a✓ Item eliminado correctamente"));
                             openItemListMenu(1).open(player);
                         }));
 
@@ -353,7 +392,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(4, 9)
-                .title(CC.translate("&c&lConfirmar"))
+                .title(CC.translate("&c&lConfirmar Eliminación"))
                 .build();
     }
 
@@ -368,9 +407,10 @@ public class CustomItemMenus {
                         List<String> commands = Arrays.asList(
                                 "/ci create <id> - Crear un item",
                                 "/ci delete <id> - Eliminar un item",
-                                "/ci plus <id> <valor> <stat> - Bonus aditivo (+)",
-                                "/ci less <id> <valor> <stat> - Bonus sustractivo (-)",
-                                "/ci percentage <id> <valor> <stat> - Bonus multiplicativo (*)",
+                                "/ci addline <texto> - Agregar lore",
+                                "/ci plus <id> <valor> <stat> - Bonus +",
+                                "/ci less <id> <valor> <stat> - Bonus -",
+                                "/ci percentage <id> <val> <stat> - Bonus *",
                                 "/ci effect <tipo> <valor> - Agregar efecto"
                         );
 
@@ -398,6 +438,20 @@ public class CustomItemMenus {
                         statsItem.setItemMeta(statsMeta);
                         contents.set(1, 7, ClickableItem.empty(statsItem));
 
+                        // Información de Pastebin
+                        ItemStack pastebinInfo = new ItemStack(Material.BOOK);
+                        ItemMeta pastebinMeta = pastebinInfo.getItemMeta();
+                        pastebinMeta.setDisplayName(CC.translate("&d&lPastebin"));
+                        pastebinMeta.setLore(Arrays.asList(
+                                CC.translate("&7Puedes cargar lore desde"),
+                                CC.translate("&7pastebin.com usando el botón"),
+                                CC.translate("&7en el menú de edición"),
+                                "",
+                                CC.translate("&fFormato: Una línea por línea")
+                        ));
+                        pastebinInfo.setItemMeta(pastebinMeta);
+                        contents.set(3, 7, ClickableItem.empty(pastebinInfo));
+
                         ItemStack backButton = new ItemStack(Material.ARROW);
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&b← Atrás"));
@@ -412,7 +466,7 @@ public class CustomItemMenus {
                     }
                 })
                 .size(6, 9)
-                .title(CC.translate("&c&lAyuda"))
+                .title(CC.translate("&c&lAyuda - Comandos /ci"))
                 .build();
     }
 

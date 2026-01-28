@@ -4,16 +4,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.example.tools.CC;
 import org.example.tools.ci.CustomArmor;
-import org.example.tools.pastebin.PastebinReader;
 import org.example.tools.storage.CustomArmorStorage;
 import org.example.commands.items.RegisterItem;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 
 public class ArmorEditManager {
@@ -61,7 +55,9 @@ public class ArmorEditManager {
         if (state == null) return;
 
         if (!RegisterItem.items.containsKey(state.armorId)) {
+            player.sendMessage("");
             player.sendMessage(CC.translate("&c✗ Armadura no encontrada"));
+            player.sendMessage("");
             finishArmorEdit(player);
             return;
         }
@@ -78,39 +74,13 @@ public class ArmorEditManager {
                 player.sendMessage("");
                 break;
 
-            case "lore":
-                String pasteUrl = input.trim();
-                if (!pasteUrl.contains("pastebin.com")) {
-                    player.sendMessage("");
-                    player.sendMessage(CC.translate("&c✗ URL inválida. Debe ser de pastebin.com"));
-                    player.sendMessage("");
-                    startArmorEdit(player, state.armorId, "lore");
-                    return;
-                }
-
-                List<String> lore = fetchPastebinLore(pasteUrl);
-                if (lore == null || lore.isEmpty()) {
-                    player.sendMessage("");
-                    player.sendMessage(CC.translate("&c✗ No se pudo obtener el lore del pastebin"));
-                    player.sendMessage("");
-                    startArmorEdit(player, state.armorId, "lore");
-                    return;
-                }
-
-                armor.setLore(lore);
-                storage.saveArmor(armor);
-                player.sendMessage("");
-                player.sendMessage(CC.translate("&a✓ Lore actualizado (" + lore.size() + " líneas)"));
-                player.sendMessage("");
-                break;
-
             case "addline":
-                List<String> currentLore = armor.getLore();
-                if (currentLore == null) {
-                    currentLore = new ArrayList<>();
+                java.util.List<String> lore = armor.getLore();
+                if (lore == null) {
+                    lore = new java.util.ArrayList<>();
                 }
-                currentLore.add(CC.translate(input));
-                armor.setLore(currentLore);
+                lore.add(CC.translate(input));
+                armor.setLore(lore);
                 storage.saveArmor(armor);
                 player.sendMessage("");
                 player.sendMessage(CC.translate("&a✓ Línea agregada"));
@@ -118,14 +88,16 @@ public class ArmorEditManager {
                 break;
 
             case "setline":
-                currentLore = armor.getLore();
-                if (currentLore == null || state.lineNumber > currentLore.size() || state.lineNumber < 1) {
+                lore = armor.getLore();
+                if (lore == null || state.lineNumber > lore.size() || state.lineNumber < 1) {
+                    player.sendMessage("");
                     player.sendMessage(CC.translate("&c✗ Número de línea inválido"));
+                    player.sendMessage("");
                     finishArmorEdit(player);
                     return;
                 }
-                currentLore.set(state.lineNumber - 1, CC.translate(input));
-                armor.setLore(currentLore);
+                lore.set(state.lineNumber - 1, CC.translate(input));
+                armor.setLore(lore);
                 storage.saveArmor(armor);
                 player.sendMessage("");
                 player.sendMessage(CC.translate("&a✓ Línea actualizada"));
@@ -139,13 +111,9 @@ public class ArmorEditManager {
         }, 1L);
     }
 
-    private static List<String> fetchPastebinLore(String pasteUrl) {
-        return PastebinReader.getFromPastebin(pasteUrl);
-    }
-
     public static void cancelArmorEdit(Player player) {
         player.sendMessage("");
-        player.sendMessage(CC.translate("&c✗ Edición cancelada"));
+        player.sendMessage(CC.translate("&c✗ Cancelado"));
         player.sendMessage("");
         finishArmorEdit(player);
     }
@@ -156,7 +124,9 @@ public class ArmorEditManager {
 
     public static void giveCustomArmor(Player player, String armorId) {
         if (!RegisterItem.items.containsKey(armorId)) {
+            player.sendMessage("");
             player.sendMessage(CC.translate("&c✗ Armadura no encontrada"));
+            player.sendMessage("");
             return;
         }
 
@@ -170,12 +140,22 @@ public class ArmorEditManager {
         }
         itemStack.setItemMeta(meta);
 
+        // Aplicar durabilidad personalizada si existe
+        if (customArmor.getMaxDurability() > 0) {
+            org.example.tools.durability.CustomDurabilityManager.setCustomMaxDurability(itemStack, customArmor.getMaxDurability());
+            org.example.tools.durability.CustomDurabilityManager.addDurabilityToLore(itemStack);
+        }
+
         if (player.getInventory().firstEmpty() == -1) {
             player.getWorld().dropItem(player.getLocation(), itemStack);
-            player.sendMessage(CC.translate("&a✓ Armadura entregada (inventario lleno)"));
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Armadura entregada (soltada)"));
+            player.sendMessage("");
         } else {
             player.getInventory().addItem(itemStack);
+            player.sendMessage("");
             player.sendMessage(CC.translate("&a✓ Armadura entregada"));
+            player.sendMessage("");
         }
     }
 }

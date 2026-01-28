@@ -8,6 +8,7 @@ import org.example.tools.inventory.ItemEditManager;
 import org.example.tools.inventory.ArmorEditManager;
 import org.example.tools.inventory.EffectInputManager;
 import org.example.tools.inventory.BonusInputManager;
+import org.example.tools.inventory.DurabilityInputManager;
 
 public class ItemEditListener implements Listener {
 
@@ -56,6 +57,17 @@ public class ItemEditListener implements Listener {
                 EffectInputManager.cancelEffectInput(player);
             } else {
                 EffectInputManager.processEffectInput(player, message);
+            }
+            return;
+        }
+
+        if (DurabilityInputManager.isInputtingDurability(player)) {
+            event.setCancelled(true);
+
+            if (message.equalsIgnoreCase("cancelar")) {
+                DurabilityInputManager.cancelDurabilityInput(player);
+            } else {
+                DurabilityInputManager.processDurabilityInput(player, message);
             }
             return;
         }

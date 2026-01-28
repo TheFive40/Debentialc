@@ -1,4 +1,5 @@
 package org.example.tools.ci;
+
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.inventory.ItemStack;
@@ -21,6 +22,9 @@ public class CustomArmor {
 
     private String id;
     private boolean isArmor = true;
+
+    // Durabilidad máxima personalizada (-1 = sin durabilidad custom)
+    private int maxDurability = -1;
 
     public CustomArmor setMaterial(int material) {
         this.material = material;
@@ -49,6 +53,11 @@ public class CustomArmor {
 
     public CustomArmor setId(String id){
         this.id = id;
+        return this;
+    }
+
+    public CustomArmor setMaxDurability(int maxDurability) {
+        this.maxDurability = maxDurability;
         return this;
     }
 
