@@ -17,26 +17,28 @@ import java.util.Map;
 @Getter
 @Setter
 public class CustomizedArmor {
-    private String hash; // Identificador único de 12 caracteres
-    private String tier; // Tier de la armadura (TIER_1, TIER_2, TIER_3, VIP, etc)
-    private Map<String, Integer> attributes; // Atributos aplicados (STR:10, CON:5, etc)
-    private int materialType; // Tipo de material de la armadura
-    private String armorSlot; // HELMET, CHESTPLATE, LEGGINGS, BOOTS
-    private String displayName; // Nombre de display de la armadura
+    private String hash;
+    private String tier;
+    private Map<String, Integer> attributes;
+    private Map<String, String> operations;
+    private int materialType;
+    private String armorSlot;
+    private String displayName;
 
-    // Tags para identificar en el lore
     private static final String HASH_TAG = "§8[ID:%s]";
     private static final String TIER_TAG = "§8[TIER:%s]";
-    private static final String ATTR_TAG = "§8[ATTR:%s:%d]";
+    private static final String ATTR_TAG = "§8[ATTR:%s:%s:%d]"; // attr:op:value
 
     public CustomizedArmor() {
         this.attributes = new HashMap<>();
+        this.operations = new HashMap<>();
     }
 
     public CustomizedArmor(String hash, String tier) {
         this.hash = hash;
         this.tier = tier;
         this.attributes = new HashMap<>();
+        this.operations = new HashMap<>();
     }
 
     /**
@@ -119,11 +121,17 @@ public class CustomizedArmor {
         List<String> lore = item.getItemMeta().getLore();
         for (String line : lore) {
             if (line.contains("[ATTR:")) {
-                // Formato: §8[ATTR:STR:10]
+                // Formato NUEVO: §8[ATTR:STR:+:500] o VIEJO: §8[ATTR:STR:500]
                 String clean = line.replace("§8[ATTR:", "").replace("]", "");
                 String[] parts = clean.split(":");
                 try {
-                    attributes.put(parts[0], Integer.parseInt(parts[1]));
+                    if (parts.length >= 3) {
+                        // Formato nuevo con operación: [ATTR:STR:+:500]
+                        attributes.put(parts[0], Integer.parseInt(parts[2]));
+                    } else if (parts.length >= 2) {
+                        // Formato viejo sin operación: [ATTR:STR:500]
+                        attributes.put(parts[0], Integer.parseInt(parts[1]));
+                    }
                 } catch (Exception e) {
                     // Ignorar líneas mal formateadas
                 }
@@ -131,6 +139,34 @@ public class CustomizedArmor {
         }
 
         return attributes;
+    }
+
+    /**
+     * Extrae las OPERACIONES de una armadura ItemStack
+     * Retorna Map<String, String> donde key es el stat (STR, CON, etc) y value es la operación (+, -, *)
+     */
+    public static Map<String, String> getOperations(ItemStack item) {
+        Map<String, String> operations = new HashMap<>();
+
+        if (!item.hasItemMeta() || !item.getItemMeta().hasLore()) return operations;
+
+        List<String> lore = item.getItemMeta().getLore();
+        for (String line : lore) {
+            if (line.contains("[ATTR:")) {
+                String clean = line.replace("§8[ATTR:", "").replace("]", "");
+                String[] parts = clean.split(":");
+                try {
+                    if (parts.length >= 3) {
+                        operations.put(parts[0], parts[1]);
+                    } else if (parts.length >= 2) {
+                        operations.put(parts[0], "+");
+                    }
+                } catch (Exception e) {
+                }
+            }
+        }
+
+        return operations;
     }
 
     /**
@@ -143,7 +179,6 @@ public class CustomizedArmor {
         if (displayName != null && !displayName.isEmpty()) {
             meta.setDisplayName(displayName);
         }
-
 
         lore.removeIf(line -> {
             // Tags ocultos
@@ -159,15 +194,14 @@ public class CustomizedArmor {
                 return true;
             }
 
-            // Líneas de atributos específicos (formato: "  • Nombre: +valor")
             String cleanLine = line.replace("§7", "").replace("§f", "").replace("&7", "").replace("&f", "");
             if (cleanLine.contains("  • ") && (
-                    cleanLine.contains("Fuerza:") ||
-                            cleanLine.contains("Constitución:") ||
-                            cleanLine.contains("Destreza:") ||
-                            cleanLine.contains("Poder de Ki:") ||
-                            cleanLine.contains("Mente:") ||
-                            cleanLine.contains("Espíritu:"))) {
+                    cleanLine.contains("STR:") ||
+                            cleanLine.contains("CON:") ||
+                            cleanLine.contains("DEX:") ||
+                            cleanLine.contains("WIL:") ||
+                            cleanLine.contains("MND:") ||
+                            cleanLine.contains("SPI:"))) {
                 return true;
             }
 
@@ -192,7 +226,10 @@ public class CustomizedArmor {
         lore.add(String.format(TIER_TAG, tier));
 
         for (Map.Entry<String, Integer> entry : attributes.entrySet()) {
-            lore.add(String.format(ATTR_TAG, entry.getKey(), entry.getValue()));
+            String attr = entry.getKey();
+            int value = entry.getValue();
+            String op = operations.getOrDefault(attr, "+"); // Default a "+" si no tiene operación
+            lore.add(String.format(ATTR_TAG, attr, op, value));
         }
 
         meta.setLore(lore);
@@ -233,12 +270,12 @@ public class CustomizedArmor {
      */
     private String getAttributeDisplayName(String attr) {
         switch (attr.toUpperCase()) {
-            case "STR": return "Fuerza";
-            case "CON": return "Constitución";
-            case "DEX": return "Destreza";
-            case "WIL": return "Voluntad";
-            case "MND": return "Mente";
-            case "SPI": return "Espíritu";
+            case "STR": return "STR";
+            case "CON": return "CON";
+            case "DEX": return "DEX";
+            case "WIL": return "WIL";
+            case "MND": return "MND";
+            case "SPI": return "SPI";
             default: return attr;
         }
     }

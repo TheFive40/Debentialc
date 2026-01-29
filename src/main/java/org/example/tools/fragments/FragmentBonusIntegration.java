@@ -27,28 +27,36 @@ public class FragmentBonusIntegration {
     public static void applyFragmentBonuses(Player player) {
         UUID playerId = player.getUniqueId();
 
+        // Hashes actuales equipados
         Set<String> currentHashes = new HashSet<>();
 
+        // Revisar cada pieza de armadura equipada
         ItemStack[] armor = player.getInventory().getArmorContents();
         for (ItemStack piece : armor) {
             if (piece == null || piece.getTypeId() == 0) continue;
 
+            // ¿Es una armadura custom con hash?
             if (CustomizedArmor.isCustomized(piece)) {
                 String hash = CustomizedArmor.getHash(piece);
                 Map<String, Integer> attributes = CustomizedArmor.getAttributes(piece);
+                Map<String, String> operations = CustomizedArmor.getOperations(piece);
 
                 if (hash != null && !attributes.isEmpty()) {
                     currentHashes.add(hash);
 
-                    applyBonus(player, hash, attributes);
+                    // APLICAR BONUS con las operaciones correctas
+                    applyBonus(player, hash, attributes, operations);
                 }
             }
         }
 
+        // Obtener hashes previos
         Set<String> previousHashes = playerActiveHashes.getOrDefault(playerId, new HashSet<>());
 
+        // QUITAR BONUS de armaduras que ya no están equipadas
         for (String oldHash : previousHashes) {
             if (!currentHashes.contains(oldHash)) {
+                // Esta armadura ya no está equipada - QUITAR BONUS
                 removeBonus(player, oldHash);
             }
         }
@@ -60,18 +68,22 @@ public class FragmentBonusIntegration {
     /**
      * APLICA los bonus al jugador
      */
-    private static void applyBonus(Player player, String hash, Map<String, Integer> stats) {
+    private static void applyBonus(Player player, String hash, Map<String, Integer> stats, Map<String, String> operations) {
         try {
             IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
 
-            // Por cada stat, aplicar bonus
+            // Por cada stat, aplicar bonus CON SU OPERACIÓN
             for (Map.Entry<String, Integer> entry : stats.entrySet()) {
                 String stat = entry.getKey().toUpperCase(); // STR, CON, DEX, etc.
                 int value = entry.getValue();
 
+                // Obtener la operación para este stat (default "+")
+                String operation = operations.getOrDefault(stat, "+");
+
                 String bonusStat = General.BONUS_STATS.get(stat);
                 if (bonusStat != null) {
-                    idbcPlayer.addBonusAttribute(bonusStat, hash, "+", (double) value);
+                    // ¡USAR LA OPERACIÓN CORRECTA!
+                    idbcPlayer.addBonusAttribute(bonusStat, hash, operation, (double) value);
                 }
             }
         } catch (Exception e) {
