@@ -3,7 +3,6 @@ package org.example.tools.fragments;
 import noppes.npcs.api.entity.IDBCPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
 import org.example.tools.General;
 
 import java.util.HashMap;
@@ -12,164 +11,94 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.example.events.CustomArmor.playerArmorBonus;
-
 /**
- * Sistema de aplicación de bonus para fragmentos
- * Usa addBonusAttribute exactamente como CustomManager
+ * Sistema SIMPLE de bonus para fragmentos
+ * - Si tiene armadura con fragmentos → APLICA bonus
+ * - Si ya no la tiene → QUITA bonus
  */
 public class FragmentBonusIntegration {
 
-    // Tracking de bonus activos por jugador
-    // UUID -> hash -> {stat: value}
-    private static final Map<UUID, Map<String, Map<String, Integer>>> activeFragmentBonuses = new HashMap<>();
+    // Guarda qué hashes tiene cada jugador actualmente
+    private static final Map<UUID, Set<String>> playerActiveHashes = new HashMap<>();
 
     /**
-     * Aplica las bonificaciones de armaduras con fragmentos al jugador
-     * Se llama cada tick desde Main.armorTask()
+     * Aplica bonus de fragmentos - SE LLAMA CADA TICK
      */
     public static void applyFragmentBonuses(Player player) {
-        PlayerInventory inventory = player.getInventory();
-        ItemStack[] armorContents = inventory.getArmorContents();
-
         UUID playerId = player.getUniqueId();
-        Map<String, Map<String, Integer>> currentBonuses = new HashMap<>();
 
-        for (ItemStack armor : armorContents) {
-            if (armor == null || armor.getTypeId() == 0) continue;
+        Set<String> currentHashes = new HashSet<>();
 
-            if (!CustomizedArmor.isCustomized(armor)) continue;
+        ItemStack[] armor = player.getInventory().getArmorContents();
+        for (ItemStack piece : armor) {
+            if (piece == null || piece.getTypeId() == 0) continue;
 
-            Map<String, Integer> attributes = CustomizedArmor.getAttributes(armor);
-            String hash = CustomizedArmor.getHash(armor);
+            if (CustomizedArmor.isCustomized(piece)) {
+                String hash = CustomizedArmor.getHash(piece);
+                Map<String, Integer> attributes = CustomizedArmor.getAttributes(piece);
 
-            if (hash == null || attributes.isEmpty()) continue;
+                if (hash != null && !attributes.isEmpty()) {
+                    currentHashes.add(hash);
 
-            currentBonuses.put(hash, new HashMap<>(attributes));
-        }
-
-        Map<String, Map<String, Integer>> previousBonuses = activeFragmentBonuses.get(playerId);
-
-        if (previousBonuses != null && bonusesAreEqual(previousBonuses, currentBonuses)) {
-            return;
-        }
-
-        if (previousBonuses != null) {
-            for (String hash : previousBonuses.keySet()) {
-                if (!currentBonuses.containsKey(hash)) {
-                    removeBonusFromPlayer(player, hash);
+                    applyBonus(player, hash, attributes);
                 }
             }
         }
 
-        for (Map.Entry<String, Map<String, Integer>> entry : currentBonuses.entrySet()) {
-            String hash = entry.getKey();
-            Map<String, Integer> stats = entry.getValue();
+        Set<String> previousHashes = playerActiveHashes.getOrDefault(playerId, new HashSet<>());
 
-            if (previousBonuses == null || !previousBonuses.containsKey(hash) ||
-                    !statsAreEqual(previousBonuses.get(hash), stats)) {
-
-                if (previousBonuses != null && previousBonuses.containsKey(hash)) {
-                    removeBonusFromPlayer(player, hash);
-                }
-
-                applyBonusToPlayer(player, hash, stats);
+        for (String oldHash : previousHashes) {
+            if (!currentHashes.contains(oldHash)) {
+                removeBonus(player, oldHash);
             }
         }
 
-        activeFragmentBonuses.put(playerId, currentBonuses);
+        // Actualizar lista de hashes activos
+        playerActiveHashes.put(playerId, currentHashes);
     }
 
-    private static void applyBonusToPlayer(Player player, String itemId, Map<String, Integer> stats) {
+    /**
+     * APLICA los bonus al jugador
+     */
+    private static void applyBonus(Player player, String hash, Map<String, Integer> stats) {
         try {
             IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
 
-            HashMap<String, String> operations = new HashMap<>();
-            for (String stat : stats.keySet()) {
-                operations.put(stat, "+");
-            }
-
-            HashMap<String, Double> valueByStat = new HashMap<>();
+            // Por cada stat, aplicar bonus
             for (Map.Entry<String, Integer> entry : stats.entrySet()) {
-                valueByStat.put(entry.getKey(), entry.getValue().doubleValue());
-            }
+                String stat = entry.getKey().toUpperCase(); // STR, CON, DEX, etc.
+                int value = entry.getValue();
 
-            valueByStat.forEach((k, v) -> {
-                String operation = operations.get(k);
-                Set<String> bonuses = (!playerArmorBonus.containsKey(player.getUniqueId())) ?
-                        new HashSet<>() : playerArmorBonus.get(player.getUniqueId());
-
-                bonuses.add(itemId);
-                playerArmorBonus.put(player.getUniqueId(), bonuses);
-
-                try {
-                    idbcPlayer.addBonusAttribute(General.BONUS_STATS.get(k.toUpperCase()), itemId,
-                            operation, v);
-                } catch (NullPointerException ignored) {
+                String bonusStat = General.BONUS_STATS.get(stat);
+                if (bonusStat != null) {
+                    idbcPlayer.addBonusAttribute(bonusStat, hash, "+", (double) value);
                 }
-            });
+            }
         } catch (Exception e) {
+            // Ignorar errores
         }
     }
 
     /**
-     * Remueve bonus usando EXACTAMENTE el mismo código que CustomManager.removeBonusFromPlayer()
+     * QUITA los bonus del jugador
      */
-    private static void removeBonusFromPlayer(Player player, String itemId) {
+    private static void removeBonus(Player player, String hash) {
         try {
             IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
 
-            for (String stat : General.BONUS_STATS.values()) {
-                try {
-                    idbcPlayer.removeBonusAttribute(stat, itemId);
-                } catch (Exception ignored) {
-                }
-            }
-
-            if (playerArmorBonus.containsKey(player.getUniqueId())) {
-                Set<String> bonuses = playerArmorBonus.get(player.getUniqueId());
-                bonuses.remove(itemId);
-                playerArmorBonus.put(player.getUniqueId(), bonuses);
+            // Remover de TODOS los stats posibles
+            for (String bonusStat : General.BONUS_STATS.values()) {
+                idbcPlayer.removeBonusAttribute(bonusStat, hash);
             }
         } catch (Exception e) {
+            // Ignorar errores
         }
     }
 
     /**
-     * Compara si dos mapas de bonus son iguales
-     */
-    private static boolean bonusesAreEqual(Map<String, Map<String, Integer>> map1,
-                                           Map<String, Map<String, Integer>> map2) {
-        if (map1.size() != map2.size()) return false;
-
-        for (String key : map1.keySet()) {
-            if (!map2.containsKey(key)) return false;
-            if (!statsAreEqual(map1.get(key), map2.get(key))) return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Compara si dos mapas de stats son iguales
-     */
-    private static boolean statsAreEqual(Map<String, Integer> stats1, Map<String, Integer> stats2) {
-        if (stats1.size() != stats2.size()) return false;
-
-        for (Map.Entry<String, Integer> entry : stats1.entrySet()) {
-            Integer value2 = stats2.get(entry.getKey());
-            if (value2 == null || !value2.equals(entry.getValue())) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Limpia el tracking de un jugador específico
+     * Limpia el tracking cuando el jugador se desconecta
      */
     public static void clearPlayerTracking(UUID playerId) {
-        activeFragmentBonuses.remove(playerId);
+        playerActiveHashes.remove(playerId);
     }
 }
