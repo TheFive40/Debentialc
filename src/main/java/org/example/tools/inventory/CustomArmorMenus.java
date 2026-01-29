@@ -311,7 +311,48 @@ public class CustomArmorMenus {
                         contents.set(2, 1, ClickableItem.of(durabilityButton, e -> {
                             DurabilityInputManager.startDurabilityInput(player, armorId, "armor");
                         }));
+                        // HACER IRROMPIBLE
+                        ItemStack unbreakableButton = new ItemStack(Material.BEDROCK);
+                        ItemMeta unbreakableMeta = unbreakableButton.getItemMeta();
+                        unbreakableMeta.setDisplayName(CC.translate("&b&lIrrompible"));
+                        List<String> unbreakableLore = new ArrayList<>();
+                        unbreakableLore.add(CC.translate("&7La armadura no recibirá daño"));
+                        unbreakableLore.add("");
+                        if (armor.isUnbreakable()) {
+                            unbreakableLore.add(CC.translate("&a✓ ACTIVADO"));
+                            unbreakableLore.add("");
+                            unbreakableLore.add(CC.translate("&c[CLICK PARA DESACTIVAR]"));
+                        } else {
+                            unbreakableLore.add(CC.translate("&c✗ DESACTIVADO"));
+                            unbreakableLore.add("");
+                            unbreakableLore.add(CC.translate("&a[CLICK PARA ACTIVAR]"));
+                        }
+                        unbreakableMeta.setLore(unbreakableLore);
+                        unbreakableButton.setItemMeta(unbreakableMeta);
+                        contents.set(2, 2, ClickableItem.of(unbreakableButton, e -> {
+                            // Alternar estado
+                            armor.setUnbreakable(!armor.isUnbreakable());
 
+                            // Guardar
+                            org.example.tools.storage.CustomArmorStorage storage =
+                                    new org.example.tools.storage.CustomArmorStorage();
+                            storage.saveArmor(armor);
+
+                            // Actualizar en memoria
+                            RegisterItem.items.put(armorId, armor);
+
+                            // Mensaje
+                            player.sendMessage("");
+                            if (armor.isUnbreakable()) {
+                                player.sendMessage(CC.translate("&a✓ Armadura ahora es irrompible"));
+                            } else {
+                                player.sendMessage(CC.translate("&c✗ Armadura ya no es irrompible"));
+                            }
+                            player.sendMessage("");
+
+                            // Reabrir menú
+                            openEditArmorMenu(armorId).open(player);
+                        }));
                         // DAR ARMADURA
                         ItemStack giveButton = new ItemStack(Material.APPLE);
                         ItemMeta giveMeta = giveButton.getItemMeta();

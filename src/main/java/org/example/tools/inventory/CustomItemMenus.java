@@ -296,7 +296,45 @@ public class CustomItemMenus {
                         contents.set(2, 1, ClickableItem.of(durabilityButton, e -> {
                             DurabilityInputManager.startDurabilityInput(player, itemId, "item");
                         }));
+                        // HACER IRROMPIBLE
+                        ItemStack unbreakableButton = new ItemStack(Material.BEDROCK);
+                        ItemMeta unbreakableMeta = unbreakableButton.getItemMeta();
+                        unbreakableMeta.setDisplayName(CC.translate("&b&lIrrompible"));
+                        List<String> unbreakableLore = new ArrayList<>();
+                        unbreakableLore.add(CC.translate("&7El item no recibirá daño"));
+                        unbreakableLore.add("");
+                        if (item.isUnbreakable()) {
+                            unbreakableLore.add(CC.translate("&a✓ ACTIVADO"));
+                            unbreakableLore.add("");
+                            unbreakableLore.add(CC.translate("&c[CLICK PARA DESACTIVAR]"));
+                        } else {
+                            unbreakableLore.add(CC.translate("&c✗ DESACTIVADO"));
+                            unbreakableLore.add("");
+                            unbreakableLore.add(CC.translate("&a[CLICK PARA ACTIVAR]"));
+                        }
+                        unbreakableMeta.setLore(unbreakableLore);
+                        unbreakableButton.setItemMeta(unbreakableMeta);
+                        contents.set(2, 2, ClickableItem.of(unbreakableButton, e -> {
+                            // Alternar estado
+                            item.setUnbreakable(!item.isUnbreakable());
 
+                            // Guardar
+                            org.example.tools.storage.CustomItemStorage storage =
+                                    new org.example.tools.storage.CustomItemStorage();
+                            storage.saveItem(item);
+
+                            // Mensaje
+                            player.sendMessage("");
+                            if (item.isUnbreakable()) {
+                                player.sendMessage(CC.translate("&a✓ Item ahora es irrompible"));
+                            } else {
+                                player.sendMessage(CC.translate("&c✗ Item ya no es irrompible"));
+                            }
+                            player.sendMessage("");
+
+                            // Reabrir menú
+                            openEditItemMenu(itemId).open(player);
+                        }));
                         // DAR ITEM
                         ItemStack giveButton = new ItemStack(Material.APPLE);
                         ItemMeta giveMeta = giveButton.getItemMeta();
