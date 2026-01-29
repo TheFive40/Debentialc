@@ -1,16 +1,20 @@
 package org.example;
 
 import lombok.Getter;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.example.tools.ClassesRegistration;
 import org.example.tools.ci.CustomManager;
 import org.example.tools.commands.CommandFramework;
+import org.example.tools.fragments.FragmentBonusIntegration;
 import org.example.tools.storage.CustomArmorStorage;
 
 import java.io.File;
 
 import static org.example.tools.ci.CustomManager.effectsTask;
 import static org.example.tools.config.DBCConfigManager.loadAllConfigs;
+import static org.example.tools.fragments.FragmentBonusIntegration.applyFragmentBonuses;
 
 @Getter
 public class Main extends JavaPlugin {
@@ -39,6 +43,16 @@ public class Main extends JavaPlugin {
         effectsTask();
         new CustomArmorStorage();
         loadAllConfigs();
+
+        BukkitRunnable runnable = new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player onlinePlayer : Main.instance.getServer().getOnlinePlayers()) {
+                    FragmentBonusIntegration.applyFragmentBonuses(onlinePlayer);
+                }
+            }
+        };
+        runnable.runTaskTimer(Main.instance,20L,20L);
     }
 
     @Override

@@ -22,6 +22,7 @@ public class CustomizedArmor {
     private Map<String, Integer> attributes; // Atributos aplicados (STR:10, CON:5, etc)
     private int materialType; // Tipo de material de la armadura
     private String armorSlot; // HELMET, CHESTPLATE, LEGGINGS, BOOTS
+    private String displayName; // Nombre de display de la armadura
 
     // Tags para identificar en el lore
     private static final String HASH_TAG = "§8[ID:%s]";
@@ -139,6 +140,11 @@ public class CustomizedArmor {
         ItemMeta meta = item.getItemMeta();
         List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
 
+        // IMPORTANTE: Establecer displayName si existe
+        if (displayName != null && !displayName.isEmpty()) {
+            meta.setDisplayName(displayName);
+        }
+
         // Remover tags antiguos
         lore.removeIf(line -> line.contains("[ID:") || line.contains("[TIER:") || line.contains("[ATTR:"));
 
@@ -204,7 +210,7 @@ public class CustomizedArmor {
             case "STR": return "Fuerza";
             case "CON": return "Constitución";
             case "DEX": return "Destreza";
-            case "WIL": return "Voluntad";
+            case "WIL": return "Poder de Ki";
             case "MND": return "Mente";
             case "SPI": return "Espíritu";
             default: return attr;

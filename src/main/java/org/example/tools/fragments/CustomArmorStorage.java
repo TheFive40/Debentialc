@@ -63,6 +63,7 @@ public class CustomArmorStorage {
         armorConfig.set(path + ".tier", armor.getTier());
         armorConfig.set(path + ".materialType", armor.getMaterialType());
         armorConfig.set(path + ".armorSlot", armor.getArmorSlot());
+        armorConfig.set(path + ".displayName", armor.getDisplayName());
 
         // Guardar atributos
         for (Map.Entry<String, Integer> entry : armor.getAttributes().entrySet()) {
@@ -96,6 +97,7 @@ public class CustomArmorStorage {
 
         armor.setMaterialType(armorConfig.getInt(path + ".materialType"));
         armor.setArmorSlot(armorConfig.getString(path + ".armorSlot"));
+        armor.setDisplayName(armorConfig.getString(path + ".displayName"));
 
         // Cargar atributos
         if (armorConfig.contains(path + ".attributes")) {

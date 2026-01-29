@@ -133,6 +133,36 @@ public class TierConfig {
     }
 
     /**
+     * Establece el límite de un atributo para un tier
+     * @param tier Nombre del tier
+     * @param attribute Nombre del atributo
+     * @param limit Nuevo límite
+     * @return true si se actualizó correctamente
+     */
+    public boolean setLimit(String tier, String attribute, int limit) {
+        // Verificar que el tier existe
+        if (!tierLimits.containsKey(tier)) {
+            return false;
+        }
+
+        // Actualizar en memoria
+        Map<String, Integer> limits = tierLimits.get(tier);
+        limits.put(attribute, limit);
+        tierLimits.put(tier, limits);
+
+        // Actualizar en archivo
+        config.set("tiers." + tier + "." + attribute, limit);
+
+        try {
+            config.save(configFile);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
      * Recarga la configuración
      */
     public void reload() {

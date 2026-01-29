@@ -60,6 +60,15 @@ public class FragmentAdminCommand extends BaseCommand {
                 showLimits(player);
                 break;
 
+            case "setlimit":
+                if (command.length() < 4) {
+                    player.sendMessage(CC.translate("&cUso: /fadmin setlimit <tier> <atributo> <valor>"));
+                    player.sendMessage(CC.translate("&7Ejemplo: /fadmin setlimit TIER_1 STR 50"));
+                    return;
+                }
+                setTierLimit(player, command.getArgs(1), command.getArgs(2), command.getArgs(3));
+                break;
+
             default:
                 sendHelp(player);
                 break;
@@ -235,8 +244,70 @@ public class FragmentAdminCommand extends BaseCommand {
         player.sendMessage(CC.translate("&e/fadmin limits"));
         player.sendMessage(CC.translate("&7  Límites por tier"));
         player.sendMessage("");
+        player.sendMessage(CC.translate("&e/fadmin setlimit <tier> <attr> <valor>"));
+        player.sendMessage(CC.translate("&7  Modifica límite de tier"));
+        player.sendMessage("");
         player.sendMessage(CC.translate("&e/fadmin reload"));
         player.sendMessage(CC.translate("&7  Recarga config"));
         player.sendMessage(CC.translate("&8&m--------------------"));
+    }
+
+    private void setTierLimit(Player player, String tier, String attribute, String valueStr) {
+        tier = tier.toUpperCase();
+        attribute = attribute.toUpperCase();
+
+        // Validar tier
+        Map<String, Map<String, Integer>> tiers = FragmentManager.getInstance()
+                .getTierConfig().getAllTiers();
+
+        if (!tiers.containsKey(tier)) {
+            player.sendMessage(CC.translate("&c✗ Tier inválido"));
+            player.sendMessage(CC.translate("&7Disponibles: " + String.join(", ", tiers.keySet())));
+            return;
+        }
+
+        // Validar atributo
+        String[] validAttrs = {"STR", "CON", "DEX", "WIL", "MND", "SPI"};
+        boolean validAttr = false;
+        for (String attr : validAttrs) {
+            if (attr.equals(attribute)) {
+                validAttr = true;
+                break;
+            }
+        }
+
+        if (!validAttr) {
+            player.sendMessage(CC.translate("&c✗ Atributo inválido"));
+            player.sendMessage(CC.translate("&7Válidos: STR, CON, DEX, WIL, MND, SPI"));
+            return;
+        }
+
+        // Validar valor
+        int value;
+        try {
+            value = Integer.parseInt(valueStr);
+            if (value < 0) {
+                player.sendMessage(CC.translate("&c✗ El valor debe ser mayor o igual a 0"));
+                return;
+            }
+        } catch (NumberFormatException e) {
+            player.sendMessage(CC.translate("&c✗ Valor inválido"));
+            return;
+        }
+
+        // Aplicar cambio
+        boolean success = FragmentManager.getInstance().getTierConfig()
+                .setLimit(tier, attribute, value);
+
+        if (success) {
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Límite actualizado"));
+            player.sendMessage(CC.translate("&7Tier: &f" + tier));
+            player.sendMessage(CC.translate("&7Atributo: &f" + attribute));
+            player.sendMessage(CC.translate("&7Nuevo límite: &f" + value));
+            player.sendMessage("");
+        } else {
+            player.sendMessage(CC.translate("&c✗ Error al actualizar el límite"));
+        }
     }
 }

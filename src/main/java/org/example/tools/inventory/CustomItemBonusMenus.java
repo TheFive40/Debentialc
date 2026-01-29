@@ -163,7 +163,6 @@ public class CustomItemBonusMenus {
                                 BonusFlowManager.setSelectedOperation(player, operation);
                                 BonusFlowManager.nextStep(player);
 
-                                // ⭐ NUEVO: Inicia input por chat en lugar de mostrar menú de valores
                                 player.closeInventory();
                                 BonusInputManager.startBonusInput(player, itemId,
                                         playerState.selectedStat, operation, "item");
