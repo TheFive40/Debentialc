@@ -57,8 +57,9 @@ public class FragmentBonusIntegration {
 
         Map<String, Map<String, Double>> previousBonuses = activeFragmentBonuses.get(playerId);
 
+        // PASO 3: Comparar - Si no hay cambios, salir inmediatamente
         if (previousBonuses != null && bonusesAreEqual(previousBonuses, currentBonuses)) {
-            return;
+            return; // No hay cambios, no hacer nada
         }
 
         if (previousBonuses != null) {
@@ -70,21 +71,26 @@ public class FragmentBonusIntegration {
             }
         }
 
+        // PASO 5: Aplicar bonuses nuevos o actualizados
         for (Map.Entry<String, Map<String, Double>> entry : currentBonuses.entrySet()) {
             String hash = entry.getKey();
             Map<String, Double> stats = entry.getValue();
 
+            // Solo aplicar si es nuevo o si cambió
             if (previousBonuses == null || !previousBonuses.containsKey(hash) ||
                     !statsAreEqual(previousBonuses.get(hash), stats)) {
 
+                // Si existía antes con valores diferentes, removerlo primero
                 if (previousBonuses != null && previousBonuses.containsKey(hash)) {
                     removeBonusFromPlayer(player, hash, previousBonuses.get(hash));
                 }
 
+                // Aplicar el nuevo bonus
                 applyBonusToPlayer(player, hash, stats);
             }
         }
 
+        // PASO 6: Actualizar tracking
         activeFragmentBonuses.put(playerId, currentBonuses);
     }
 

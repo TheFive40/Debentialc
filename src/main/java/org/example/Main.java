@@ -59,7 +59,7 @@ public class Main extends JavaPlugin {
                 }
             }
         };
-        runnable.runTaskTimer(Main.instance, 20L, 20L);
+        runnable.runTaskTimer(Main.instance, 1L, 1L);
     }
 
     @Override

@@ -17,10 +17,6 @@ import org.example.tools.fragments.FragmentBonusIntegration;
  */
 public class FragmentArmorEquipListener implements Listener {
 
-    /**
-     * Limpiar el tracking cuando el jugador se desconecta
-     * No es necesario remover bonus manualmente ya que el jugador está desconectándose
-     */
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
