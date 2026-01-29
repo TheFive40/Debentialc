@@ -140,15 +140,41 @@ public class CustomizedArmor {
         ItemMeta meta = item.getItemMeta();
         List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
 
-        // IMPORTANTE: Establecer displayName si existe
         if (displayName != null && !displayName.isEmpty()) {
             meta.setDisplayName(displayName);
         }
 
-        // Remover tags antiguos
-        lore.removeIf(line -> line.contains("[ID:") || line.contains("[TIER:") || line.contains("[ATTR:"));
 
-        // Agregar lore visible de atributos
+        lore.removeIf(line -> {
+            // Tags ocultos
+            if (line.contains("[ID:") || line.contains("[TIER:") || line.contains("[ATTR:")) {
+                return true;
+            }
+
+            // Lore visible de fragmentos
+            if (line.contains("&8&m--------------------") || line.contains("§8§m--------------------")) {
+                return true;
+            }
+            if (line.contains("⚔ Atributos:")) {
+                return true;
+            }
+
+            // Líneas de atributos específicos (formato: "  • Nombre: +valor")
+            String cleanLine = line.replace("§7", "").replace("§f", "").replace("&7", "").replace("&f", "");
+            if (cleanLine.contains("  • ") && (
+                    cleanLine.contains("Fuerza:") ||
+                            cleanLine.contains("Constitución:") ||
+                            cleanLine.contains("Destreza:") ||
+                            cleanLine.contains("Poder de Ki:") ||
+                            cleanLine.contains("Mente:") ||
+                            cleanLine.contains("Espíritu:"))) {
+                return true;
+            }
+
+            return false;
+        });
+
+        // PASO 2: Agregar el lore visible ACTUALIZADO de atributos
         if (!attributes.isEmpty()) {
             lore.add(CC.translate("&8&m--------------------"));
             lore.add(CC.translate("&3⚔ Atributos:"));
@@ -161,7 +187,7 @@ public class CustomizedArmor {
             lore.add(CC.translate("&8&m--------------------"));
         }
 
-        // Agregar tags ocultos
+        // PASO 3: Agregar tags ocultos al final
         lore.add(String.format(HASH_TAG, hash));
         lore.add(String.format(TIER_TAG, tier));
 
@@ -210,7 +236,7 @@ public class CustomizedArmor {
             case "STR": return "Fuerza";
             case "CON": return "Constitución";
             case "DEX": return "Destreza";
-            case "WIL": return "Poder de Ki";
+            case "WIL": return "Voluntad";
             case "MND": return "Mente";
             case "SPI": return "Espíritu";
             default: return attr;

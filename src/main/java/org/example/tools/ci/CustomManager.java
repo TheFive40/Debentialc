@@ -13,6 +13,7 @@ import org.example.commands.items.CustomItemCommand;
 import org.example.commands.items.RegisterItem;
 import org.example.tools.CC;
 import org.example.tools.General;
+import org.example.tools.fragments.FragmentBonusIntegration;
 import org.example.tools.stats.StatsCalculator;
 
 import java.util.*;
@@ -256,6 +257,11 @@ public class CustomManager {
 
                     applyArmorBonus(player);
                     applyHandItemBonus(player);
+
+                    // INTEGRACIÓN CON SISTEMA DE FRAGMENTOS
+                    // Este método compara automáticamente el estado anterior con el actual
+                    // y solo aplica/remueve bonus cuando detecta cambios
+                    FragmentBonusIntegration.applyFragmentBonuses(player);
 
                     if (playerArmorBonus.containsKey(player.getUniqueId())) {
                         Set<String> activeBonus = new HashSet<>(playerArmorBonus.get(player.getUniqueId()));

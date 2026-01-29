@@ -28,32 +28,27 @@ public class FragmentBonusIntegration {
         PlayerInventory inventory = player.getInventory();
         ItemStack[] armorContents = inventory.getArmorContents();
 
-        // Procesar cada pieza de armadura
         for (ItemStack armor : armorContents) {
             if (armor == null || armor.getTypeId() == 0) continue;
 
-            // Solo procesar armaduras con fragmentos (custom)
             if (!CustomizedArmor.isCustomized(armor)) continue;
 
-            // Obtener atributos de la armadura
             Map<String, Integer> attributes = CustomizedArmor.getAttributes(armor);
             String hash = CustomizedArmor.getHash(armor);
 
             if (hash == null || attributes.isEmpty()) continue;
 
-            // Convertir a formato HashMap<String, Double> para compatibilidad
             HashMap<String, Double> bonusStats = new HashMap<>();
             HashMap<String, String> operations = new HashMap<>();
 
             for (Map.Entry<String, Integer> entry : attributes.entrySet()) {
-                String stat = entry.getKey(); // Ya viene en mayúsculas (STR, CON, DEX, etc)
+                String stat = entry.getKey();
                 double value = entry.getValue().doubleValue();
 
                 bonusStats.put(stat, value);
-                operations.put(stat, "+"); // Siempre suma aditiva
+                operations.put(stat, "+");
             }
 
-            // Aplicar bonus usando el mismo método que CustomManager
             applyBonusToPlayer(player, hash, bonusStats, operations);
         }
     }
@@ -103,17 +98,13 @@ public class FragmentBonusIntegration {
             stats.forEach((k, v) -> {
                 String operation = operations.get(k);
 
-                // Obtener o crear el Set de bonus activos para este jugador
                 Set<String> bonuses = (!playerArmorBonus.containsKey(player.getUniqueId())) ?
                         new HashSet<>() : playerArmorBonus.get(player.getUniqueId());
 
-                // Agregar este itemId a los bonus activos
                 bonuses.add(itemId);
                 playerArmorBonus.put(player.getUniqueId(), bonuses);
 
                 try {
-                    // Aplicar el bonus al atributo
-                    // General.BONUS_STATS mapea: STR -> "strength", CON -> "constitution", etc
                     idbcPlayer.addBonusAttribute(
                             General.BONUS_STATS.get(k.toUpperCase()),
                             itemId,
@@ -121,11 +112,10 @@ public class FragmentBonusIntegration {
                             v
                     );
                 } catch (NullPointerException ignored) {
-                    // Stat no existe en BONUS_STATS, ignorar
                 }
             });
         } catch (Exception e) {
-            // Silenciosamente ignorar errores de DBC
         }
     }
+
 }
