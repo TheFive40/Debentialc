@@ -258,11 +258,6 @@ public class CustomManager {
                     applyArmorBonus(player);
                     applyHandItemBonus(player);
 
-                    // INTEGRACIÓN CON SISTEMA DE FRAGMENTOS
-                    // Este método compara automáticamente el estado anterior con el actual
-                    // y solo aplica/remueve bonus cuando detecta cambios
-                    FragmentBonusIntegration.applyFragmentBonuses(player);
-
                     if (playerArmorBonus.containsKey(player.getUniqueId())) {
                         Set<String> activeBonus = new HashSet<>(playerArmorBonus.get(player.getUniqueId()));
                         for (String bonus : activeBonus) {

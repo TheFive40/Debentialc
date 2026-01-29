@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.example.events.CustomArmor.playerArmorBonus;
 
@@ -19,14 +20,20 @@ import static org.example.events.CustomArmor.playerArmorBonus;
  */
 public class FragmentBonusIntegration {
 
+    // Tracking de bonus activos por jugador
+    // UUID -> hash -> {stat: value}
+    private static final Map<UUID, Map<String, Map<String, Double>>> activeFragmentBonuses = new HashMap<>();
+
     /**
      * Aplica las bonificaciones de armaduras con fragmentos al jugador
-     * Este método debe ser llamado desde CustomManager.applyArmorBonus()
-     * DESPUÉS de procesar las armaduras normales
+     * Este método debe ser llamado desde CustomManager.armorTask()
      */
     public static void applyFragmentBonuses(Player player) {
         PlayerInventory inventory = player.getInventory();
         ItemStack[] armorContents = inventory.getArmorContents();
+
+        UUID playerId = player.getUniqueId();
+        Map<String, Map<String, Double>> currentBonuses = new HashMap<>();
 
         for (ItemStack armor : armorContents) {
             if (armor == null || armor.getTypeId() == 0) continue;
@@ -38,26 +45,84 @@ public class FragmentBonusIntegration {
 
             if (hash == null || attributes.isEmpty()) continue;
 
-            HashMap<String, Double> bonusStats = new HashMap<>();
-            HashMap<String, String> operations = new HashMap<>();
-
+            Map<String, Double> bonusStats = new HashMap<>();
             for (Map.Entry<String, Integer> entry : attributes.entrySet()) {
                 String stat = entry.getKey();
                 double value = entry.getValue().doubleValue();
-
                 bonusStats.put(stat, value);
-                operations.put(stat, "+");
             }
 
-            applyBonusToPlayer(player, hash, bonusStats, operations);
+            currentBonuses.put(hash, bonusStats);
+        }
+
+        Map<String, Map<String, Double>> previousBonuses = activeFragmentBonuses.get(playerId);
+
+        if (previousBonuses != null && bonusesAreEqual(previousBonuses, currentBonuses)) {
+            return;
+        }
+
+        if (previousBonuses != null) {
+            for (String hash : previousBonuses.keySet()) {
+                if (!currentBonuses.containsKey(hash)) {
+                    Map<String, Double> statsToRemove = previousBonuses.get(hash);
+                    removeBonusFromPlayer(player, hash, statsToRemove);
+                }
+            }
+        }
+
+        for (Map.Entry<String, Map<String, Double>> entry : currentBonuses.entrySet()) {
+            String hash = entry.getKey();
+            Map<String, Double> stats = entry.getValue();
+
+            if (previousBonuses == null || !previousBonuses.containsKey(hash) ||
+                    !statsAreEqual(previousBonuses.get(hash), stats)) {
+
+                if (previousBonuses != null && previousBonuses.containsKey(hash)) {
+                    removeBonusFromPlayer(player, hash, previousBonuses.get(hash));
+                }
+
+                applyBonusToPlayer(player, hash, stats);
+            }
+        }
+
+        activeFragmentBonuses.put(playerId, currentBonuses);
+    }
+
+    /**
+     * Aplica bonificaciones al jugador usando el MISMO sistema que CustomManager
+     */
+    private static void applyBonusToPlayer(Player player, String hash, Map<String, Double> stats) {
+        try {
+            IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
+
+            stats.forEach((stat, value) -> {
+                // Añadir al tracking de bonus activos
+                Set<String> bonuses = (!playerArmorBonus.containsKey(player.getUniqueId())) ?
+                        new HashSet<>() : playerArmorBonus.get(player.getUniqueId());
+
+                bonuses.add(hash);
+                playerArmorBonus.put(player.getUniqueId(), bonuses);
+
+                try {
+                    // Aplicar bonus usando el API de DBC
+                    idbcPlayer.addBonusAttribute(
+                            General.BONUS_STATS.get(stat.toUpperCase()),
+                            hash,
+                            "+",  // Siempre suma aditiva para fragmentos
+                            value
+                    );
+                } catch (NullPointerException ignored) {
+                }
+            });
+        } catch (Exception e) {
+            // Silenciar errores
         }
     }
 
     /**
-     * Remueve las bonificaciones de una armadura con fragmentos
-     * USA EL MISMO MÉTODO que CustomManager.removeBonusFromPlayer()
+     * Remueve bonificaciones del jugador usando el MISMO sistema que CustomManager
      */
-    public static void removeFragmentBonuses(Player player, String hash) {
+    private static void removeBonusFromPlayer(Player player, String hash, Map<String, Double> stats) {
         try {
             IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
 
@@ -76,46 +141,46 @@ public class FragmentBonusIntegration {
                 playerArmorBonus.put(player.getUniqueId(), bonuses);
             }
         } catch (Exception e) {
-            // Silenciosamente ignorar errores
+            // Silenciar errores
         }
     }
 
     /**
-     * Aplica bonificaciones al jugador
-     * COPIA EXACTA del método privado CustomManager.applyBonusToPlayer()
-     *
-     * @param player Jugador
-     * @param itemId Identificador único (hash de la armadura)
-     * @param stats Mapa de stats con valores (STR -> 500.0)
-     * @param operations Mapa de operaciones (STR -> "+")
+     * Compara si dos mapas de bonus son iguales
      */
-    private static void applyBonusToPlayer(Player player, String itemId,
-                                           HashMap<String, Double> stats,
-                                           HashMap<String, String> operations) {
-        try {
-            IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
+    private static boolean bonusesAreEqual(Map<String, Map<String, Double>> map1,
+                                           Map<String, Map<String, Double>> map2) {
+        if (map1.size() != map2.size()) return false;
 
-            stats.forEach((k, v) -> {
-                String operation = operations.get(k);
-
-                Set<String> bonuses = (!playerArmorBonus.containsKey(player.getUniqueId())) ?
-                        new HashSet<>() : playerArmorBonus.get(player.getUniqueId());
-
-                bonuses.add(itemId);
-                playerArmorBonus.put(player.getUniqueId(), bonuses);
-
-                try {
-                    idbcPlayer.addBonusAttribute(
-                            General.BONUS_STATS.get(k.toUpperCase()),
-                            itemId,
-                            operation,
-                            v
-                    );
-                } catch (NullPointerException ignored) {
-                }
-            });
-        } catch (Exception e) {
+        for (String key : map1.keySet()) {
+            if (!map2.containsKey(key)) return false;
+            if (!statsAreEqual(map1.get(key), map2.get(key))) return false;
         }
+
+        return true;
     }
 
+    /**
+     * Compara si dos mapas de stats son iguales
+     */
+    private static boolean statsAreEqual(Map<String, Double> stats1, Map<String, Double> stats2) {
+        if (stats1.size() != stats2.size()) return false;
+
+        for (Map.Entry<String, Double> entry : stats1.entrySet()) {
+            Double value2 = stats2.get(entry.getKey());
+            if (value2 == null || !value2.equals(entry.getValue())) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Limpia el tracking de un jugador específico
+     * Usado cuando el jugador se desconecta
+     */
+    public static void clearPlayerTracking(UUID playerId) {
+        activeFragmentBonuses.remove(playerId);
+    }
 }
