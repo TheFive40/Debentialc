@@ -126,6 +126,26 @@ public class TierConfig {
     }
 
     /**
+     * Establece el tier por defecto
+     */
+    public boolean setDefaultTier(String tier) {
+        // Verificar que el tier existe
+        if (!tierLimits.containsKey(tier)) {
+            return false;
+        }
+
+        config.set("default_tier", tier);
+
+        try {
+            config.save(configFile);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
      * Obtiene todos los tiers disponibles
      */
     public Map<String, Map<String, Integer>> getAllTiers() {
@@ -140,9 +160,9 @@ public class TierConfig {
      * @return true si se actualizó correctamente
      */
     public boolean setLimit(String tier, String attribute, int limit) {
-        // Verificar que el tier existe
+        // Si el tier no existe, crearlo
         if (!tierLimits.containsKey(tier)) {
-            return false;
+            tierLimits.put(tier, new HashMap<>());
         }
 
         // Actualizar en memoria
@@ -152,6 +172,69 @@ public class TierConfig {
 
         // Actualizar en archivo
         config.set("tiers." + tier + "." + attribute, limit);
+
+        try {
+            config.save(configFile);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Elimina un tier completo
+     * @param tier Nombre del tier a eliminar
+     * @return true si se eliminó correctamente
+     */
+    public boolean deleteTier(String tier) {
+        // Verificar que el tier existe
+        if (!tierLimits.containsKey(tier)) {
+            return false;
+        }
+
+        // No permitir eliminar el tier por defecto
+        if (tier.equals(getDefaultTier())) {
+            return false;
+        }
+
+        // Eliminar de memoria
+        tierLimits.remove(tier);
+
+        // Eliminar del archivo
+        config.set("tiers." + tier, null);
+
+        try {
+            config.save(configFile);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Crea un nuevo tier con límites por defecto
+     * @param tierName Nombre del nuevo tier
+     * @param defaultLimit Límite por defecto para todos los atributos
+     * @return true si se creó correctamente
+     */
+    public boolean createTier(String tierName, int defaultLimit) {
+        // Verificar que el tier no existe
+        if (tierLimits.containsKey(tierName)) {
+            return false;
+        }
+
+        // Crear tier con límites por defecto
+        String[] attributes = {"STR", "CON", "DEX", "WIL", "MND", "SPI"};
+        Map<String, Integer> limits = new HashMap<>();
+
+        for (String attr : attributes) {
+            limits.put(attr, defaultLimit);
+            config.set("tiers." + tierName + "." + attr, defaultLimit);
+        }
+
+        tierLimits.put(tierName, limits);
 
         try {
             config.save(configFile);

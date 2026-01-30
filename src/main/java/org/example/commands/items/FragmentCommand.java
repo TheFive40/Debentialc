@@ -238,13 +238,17 @@ public class FragmentCommand extends BaseCommand {
         }
     }
 
+    /**
+     * Valida el valor del fragmento
+     * Permite: números positivos, negativos, y porcentajes
+     */
     private void validateValue(String value) throws Exception {
         if (value.endsWith("%")) {
-            // Porcentaje
+            // Porcentaje - puede ser positivo o negativo
             String numStr = value.substring(0, value.length() - 1);
-            Double.parseDouble(numStr);
+            Double.parseDouble(numStr); // Solo verifica que sea un número válido
         } else {
-            // Número entero (positivo o negativo)
+            // Número entero - puede ser positivo o negativo
             Integer.parseInt(value);
         }
     }
@@ -261,11 +265,11 @@ public class FragmentCommand extends BaseCommand {
 
     private String getOperationColor(String value) {
         if (value.endsWith("%")) {
-            return "&b"; // Azul para multiplicativo
+            return "&b";
         } else if (value.startsWith("-")) {
-            return "&c"; // Rojo para resta
+            return "&c";
         } else {
-            return "&a"; // Verde para suma
+            return "&a";
         }
     }
 }

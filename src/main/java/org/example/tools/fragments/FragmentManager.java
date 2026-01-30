@@ -83,27 +83,25 @@ public class FragmentManager {
                 break;
             case "*":
                 // Multiplicativo (porcentaje)
-                newValue = currentValue + (int) (currentValue * value);
+                // Si value es 0.15 (15%), multiplicamos currentValue por 1.15
+                // Ejemplo: currentValue = 100, value = 0.15 → newValue = 100 * 1.15 = 115
+                newValue = (int) Math.round(currentValue * (1.0 + value));
                 break;
             default:
                 newValue = currentValue + (int) value;
                 break;
         }
 
-        // Para validar límites, usamos el nuevo valor
-        if (!tierConfig.canApply(customArmor.getTier(), attribute, 0, newValue)) {
-            int limit = tierConfig.getLimit(customArmor.getTier(), attribute);
-            player.sendMessage(CC.translate("&c✗ El valor excedería el límite"));
-            player.sendMessage(CC.translate("&7Actual: &f" + currentValue + " &7| Nuevo: &f" + newValue + " &7| Límite: &f" + limit));
-            player.sendMessage(CC.translate("&7Tier: &f" + customArmor.getTier()));
-            return false;
-        }
-
-        // Si el nuevo valor es negativo, no permitir
-        if (newValue < 0) {
-            player.sendMessage(CC.translate("&c✗ El atributo no puede ser negativo"));
-            player.sendMessage(CC.translate("&7Actual: &f" + currentValue + " &7| Operación: &f" + operation + valueRaw));
-            return false;
+        // Validar límites del tier (solo si el nuevo valor es positivo y mayor al actual)
+        // Permitimos valores negativos sin restricción de límite
+        if (newValue > 0 && newValue > currentValue) {
+            if (!tierConfig.canApply(customArmor.getTier(), attribute, 0, newValue)) {
+                int limit = tierConfig.getLimit(customArmor.getTier(), attribute);
+                player.sendMessage(CC.translate("&c✗ El valor excedería el límite"));
+                player.sendMessage(CC.translate("&7Actual: &f" + currentValue + " &7| Nuevo: &f" + newValue + " &7| Límite: &f" + limit));
+                player.sendMessage(CC.translate("&7Tier: &f" + customArmor.getTier()));
+                return false;
+            }
         }
 
         // Aplicar el fragmento

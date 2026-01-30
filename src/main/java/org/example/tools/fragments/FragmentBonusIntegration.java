@@ -35,12 +35,11 @@ public class FragmentBonusIntegration {
         for (ItemStack piece : armor) {
             if (piece == null || piece.getTypeId() == 0) continue;
 
-            // ¿Es una armadura custom con hash?
             if (CustomizedArmor.isCustomized(piece)) {
                 String hash = CustomizedArmor.getHash(piece);
                 Map<String, Integer> attributes = CustomizedArmor.getAttributes(piece);
                 Map<String, String> operations = CustomizedArmor.getOperations(piece);
-
+                System.out.println("Operacion: " + operations);
                 if (hash != null && !attributes.isEmpty()) {
                     currentHashes.add(hash);
 
@@ -72,17 +71,14 @@ public class FragmentBonusIntegration {
         try {
             IDBCPlayer idbcPlayer = General.getDBCPlayer(player.getName());
 
-            // Por cada stat, aplicar bonus CON SU OPERACIÓN
             for (Map.Entry<String, Integer> entry : stats.entrySet()) {
                 String stat = entry.getKey().toUpperCase(); // STR, CON, DEX, etc.
                 int value = entry.getValue();
 
-                // Obtener la operación para este stat (default "+")
                 String operation = operations.getOrDefault(stat, "+");
 
                 String bonusStat = General.BONUS_STATS.get(stat);
                 if (bonusStat != null) {
-                    // ¡USAR LA OPERACIÓN CORRECTA!
                     idbcPlayer.addBonusAttribute(bonusStat, hash, operation, (double) value);
                 }
             }
