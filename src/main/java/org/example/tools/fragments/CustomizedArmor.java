@@ -112,6 +112,10 @@ public class CustomizedArmor {
 
     /**
      * Extrae los atributos de una armadura ItemStack
+     * Lee los tags ocultos del formato: §8[ATTR:STR:*:115]
+     *
+     * IMPORTANTE: Retorna el valor TAL CUAL está guardado (115, 500, etc.)
+     * NO hace ninguna conversión aquí
      */
     public static Map<String, Integer> getAttributes(ItemStack item) {
         Map<String, Integer> attributes = new HashMap<>();
@@ -121,12 +125,15 @@ public class CustomizedArmor {
         List<String> lore = item.getItemMeta().getLore();
         for (String line : lore) {
             if (line.contains("[ATTR:")) {
-                // Formato NUEVO: §8[ATTR:STR:+:500] o VIEJO: §8[ATTR:STR:500]
+                // Formato: §8[ATTR:STR:*:115] o §8[ATTR:CON:+:500]
                 String clean = line.replace("§8[ATTR:", "").replace("]", "");
                 String[] parts = clean.split(":");
                 try {
                     if (parts.length >= 3) {
-                        // Formato nuevo con operación: [ATTR:STR:+:500]
+                        // Formato nuevo con operación: [ATTR:STR:*:115]
+                        // parts[0] = "STR"
+                        // parts[1] = "*" (operación)
+                        // parts[2] = "115" (valor guardado)
                         attributes.put(parts[0], Integer.parseInt(parts[2]));
                     } else if (parts.length >= 2) {
                         // Formato viejo sin operación: [ATTR:STR:500]
@@ -171,6 +178,8 @@ public class CustomizedArmor {
 
     /**
      * Aplica los tags de personalización al lore de un ItemStack
+     *
+     * CORRECCIÓN: Para multiplicadores, mostrar el porcentaje correcto en el lore
      */
     public void applyToItemStack(ItemStack item) {
         ItemMeta meta = item.getItemMeta();
@@ -214,20 +223,28 @@ public class CustomizedArmor {
             lore.add(CC.translate("&3⚔ Atributos:"));
             for (Map.Entry<String, Integer> entry : attributes.entrySet()) {
                 String attrName = getAttributeDisplayName(entry.getKey());
-                int value = entry.getValue();
+                int storedValue = entry.getValue();
                 String operation = operations.getOrDefault(entry.getKey(), "+");
 
-                // Formatear correctamente según la operación
+                // CORRECCIÓN: Formatear correctamente según la operación
                 String displayValue;
                 if (operation.equals("*")) {
-                    // Multiplicador: mostrar como porcentaje
-                    displayValue = "&b*" + value + "%";
+                    // MULTIPLICADOR: Convertir de vuelta a porcentaje
+                    // storedValue = 115 -> mostrar 15%
+                    double multiplier = storedValue / 100.0; // 115 -> 1.15
+                    double percentage = (multiplier - 1.0) * 100.0; // 1.15 -> 15
+
+                    if (percentage >= 0) {
+                        displayValue = "&b+" + String.format("%.0f", percentage) + "%";
+                    } else {
+                        displayValue = "&b" + String.format("%.0f", percentage) + "%";
+                    }
                 } else if (operation.equals("-")) {
                     // Resta: mostrar con signo negativo
-                    displayValue = "&c-" + value;
+                    displayValue = "&c-" + storedValue;
                 } else {
                     // Suma: mostrar con signo positivo
-                    displayValue = "&a+" + value;
+                    displayValue = "&a+" + storedValue;
                 }
 
                 lore.add(CC.translate("&7  • " + attrName + ": " + displayValue));
@@ -242,7 +259,7 @@ public class CustomizedArmor {
         for (Map.Entry<String, Integer> entry : attributes.entrySet()) {
             String attr = entry.getKey();
             int value = entry.getValue();
-            String op = operations.getOrDefault(attr, "+"); // Default a "+" si no tiene operación
+            String op = operations.getOrDefault(attr, "+");
             lore.add(String.format(ATTR_TAG, attr, op, value));
         }
 
@@ -252,6 +269,7 @@ public class CustomizedArmor {
 
     /**
      * Crea un CustomizedArmor desde un ItemStack existente
+     * Lee todos los datos de los tags ocultos del lore
      */
     public static CustomizedArmor fromItemStack(ItemStack item) {
         String hash = getHash(item);
@@ -262,7 +280,10 @@ public class CustomizedArmor {
         CustomizedArmor armor = new CustomizedArmor(hash, tier);
         armor.setMaterialType(item.getTypeId());
         armor.setArmorSlot(getArmorSlotFromItem(item));
+
+        // Cargar atributos Y operaciones
         armor.attributes.putAll(getAttributes(item));
+        armor.operations.putAll(getOperations(item));
 
         return armor;
     }

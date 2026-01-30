@@ -8,9 +8,6 @@ import org.example.tools.CC;
 
 import java.util.Set;
 
-/**
- * Gestor principal del sistema de fragmentos de armadura
- */
 public class FragmentManager {
     private static FragmentManager instance;
     private TierConfig tierConfig;
@@ -53,8 +50,8 @@ public class FragmentManager {
         CustomizedArmor customArmor;
 
         if (CustomizedArmor.isCustomized(armor)) {
-            String hash = CustomizedArmor.getHash(armor);
-            customArmor = armorStorage.loadArmor(hash);
+            // Cargar desde el ItemStack directamente para tener los valores actuales
+            customArmor = CustomizedArmor.fromItemStack(armor);
 
             if (customArmor == null) {
                 player.sendMessage(CC.translate("&c✗ Error al cargar la armadura personalizada"));
@@ -65,48 +62,81 @@ public class FragmentManager {
             player.sendMessage(CC.translate("&a✓ Armadura convertida a personalizada"));
         }
 
-        // Calcular nuevo valor según operación
+        // Obtener valor actual
         int currentValue = customArmor.getAttributeValue(attribute);
         int newValue;
 
+        // CALCULAR NUEVO VALOR SEGÚN OPERACIÓN
         switch (operation) {
             case "+":
-                // Suma directa: +500 = currentValue + 500
+                // SUMA: currentValue + value
                 newValue = currentValue + (int) value;
                 break;
             case "-":
-                // Resta directa: -100 = currentValue - 100
+                // RESTA: currentValue - value
                 newValue = currentValue - (int) value;
                 break;
             case "*":
-                // Multiplicador: 15% se almacena como 15 (el valor entero del porcentaje)
-                // NO lo convertimos, lo dejamos como 15 para que DBC lo use como multiplicador
-                newValue = currentValue + (int) value;
+                // MULTIPLICADOR: Convertir a valor escalado y SUMAR
+                // value = 1.15 (del fragmento), escalado = 115
+                // currentValue = 115 (ya guardado previamente)
+                // newValue = 115 + 115 = 230 (que sería 30% total al DBC)
+
+                int scaledFragmentValue = (int) Math.round(value * 100);
+
+                // Si NO hay valor previo con operación *, simplemente usar el del fragmento
+                String currentOp = customArmor.getOperations().get(attribute);
+                if (currentOp == null || !currentOp.equals("*")) {
+                    // Primera vez con multiplicador en este atributo
+                    newValue = scaledFragmentValue;
+                } else {
+                    // Ya existe multiplicador, SUMAR
+                    newValue = currentValue + scaledFragmentValue;
+                }
                 break;
             default:
                 newValue = currentValue + (int) value;
                 break;
         }
 
-        // Para validar límites, usamos el nuevo valor
-        if (!tierConfig.canApply(customArmor.getTier(), attribute, 0, newValue)) {
-            int limit = tierConfig.getLimit(customArmor.getTier(), attribute);
+        // VALIDAR LÍMITES DEL TIER
+        // IMPORTANTE: Para multiplicadores, validamos el resultado final
+        int limit = tierConfig.getLimit(customArmor.getTier(), attribute);
+
+        if (newValue > limit) {
             player.sendMessage(CC.translate("&c✗ El valor excedería el límite"));
             player.sendMessage(CC.translate("&7Actual: &f" + currentValue + " &7| Nuevo: &f" + newValue + " &7| Límite: &f" + limit));
             player.sendMessage(CC.translate("&7Tier: &f" + customArmor.getTier()));
+
+            // Mostrar detalle de la operación
+            if (operation.equals("*")) {
+                player.sendMessage(CC.translate("&7Multiplicador: &f" + value + "x &7(" + valueRaw + ")"));
+            }
+
             return false;
         }
 
-        // Si el nuevo valor es negativo, no permitir
+        // Validar que no sea negativo
         if (newValue < 0) {
             player.sendMessage(CC.translate("&c✗ El atributo no puede ser negativo"));
             player.sendMessage(CC.translate("&7Actual: &f" + currentValue + " &7| Operación: &f" + operation + valueRaw));
             return false;
         }
 
-        // Aplicar el fragmento (valor Y operación)
-        customArmor.getAttributes().put(attribute, newValue);
+        // APLICAR EL FRAGMENTO
+        // Para multiplicadores, guardamos el valor escalado (1.15 * 100 = 115)
+        // Esto permite almacenar como entero y luego dividir por 100 al enviar al DBC
+        if (operation.equals("*")) {
+            // Guardar valor * 100 para mantener precisión
+            int scaledValue = (int) Math.round(value * 100);
+            customArmor.getAttributes().put(attribute, scaledValue);
+        } else {
+            customArmor.getAttributes().put(attribute, newValue);
+        }
+
+        // Guardar la operación
         customArmor.getOperations().put(attribute, operation);
+
         customArmor.applyToItemStack(armor);
 
         // Guardar en almacenamiento
@@ -119,13 +149,35 @@ public class FragmentManager {
             player.setItemInHand(new ItemStack(Material.AIR));
         }
 
-        // Feedback
-        String operationSymbol = operation.equals("*") ? valueRaw : operation + valueRaw;
+        // Feedback detallado
+        String operationSymbol;
+        String actualValue;
+
+        if (operation.equals("*")) {
+            operationSymbol = valueRaw; // Mostrar "15%" tal cual
+            // El valor guardado es escalado (115), mostrar el multiplicador real
+            int scaledValue = (int) Math.round(value * 100);
+            actualValue = String.format("%.2f", scaledValue / 100.0); // 115 -> "1.15"
+        } else if (operation.equals("-")) {
+            operationSymbol = "-" + valueRaw;
+            actualValue = String.valueOf(newValue);
+        } else {
+            operationSymbol = "+" + valueRaw;
+            actualValue = String.valueOf(newValue);
+        }
+
         player.sendMessage("");
         player.sendMessage(CC.translate("&a✓ Fragmento aplicado exitosamente"));
         player.sendMessage(CC.translate("&7Atributo: &f" + attribute + " &7Operación: &f" + operationSymbol));
-        player.sendMessage(CC.translate("&7Antes: &f" + currentValue + " &7→ Ahora: &f" + newValue));
-        player.sendMessage(CC.translate("&7Límite del tier: &f" + tierConfig.getLimit(customArmor.getTier(), attribute)));
+
+        if (operation.equals("*")) {
+            player.sendMessage(CC.translate("&7Multiplicador DBC: &fx" + actualValue));
+            player.sendMessage(CC.translate("&7Valor en lore: &f" + valueRaw));
+        } else {
+            player.sendMessage(CC.translate("&7Antes: &f" + currentValue + " &7→ Ahora: &f" + newValue));
+        }
+
+        player.sendMessage(CC.translate("&7Límite del tier: &f" + limit));
         player.sendMessage("");
 
         player.playSound(player.getLocation(), Sound.LEVEL_UP, 1.0f, 1.0f);
@@ -134,7 +186,7 @@ public class FragmentManager {
     }
 
     /**
-     * Convierte una armadura en armadura personalizada
+     * Convierte una armadura vanilla en armadura personalizada
      */
     private CustomizedArmor convertVanillaArmor(ItemStack armor) {
         // Generar hash único

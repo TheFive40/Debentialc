@@ -11,6 +11,11 @@ import java.util.List;
 
 /**
  * Representa un fragmento de mejora de atributo
+ *
+ * SISTEMA DE VALORES:
+ * - Porcentajes (ej: "20%"): Se convierten a multiplicador 1.20 internamente
+ * - Positivos (ej: "500"): Operación de suma (+500)
+ * - Negativos (ej: "-200"): Operación de resta (-200)
  */
 @Getter
 @Setter
@@ -19,7 +24,7 @@ public class ArmorFragment {
     private String attribute; // STR, CON, DEX, WIL, MND, SPI
     private String value; // Valor con operador: "500", "-500", "15%"
     private String operation; // "+", "-", "*"
-    private double numericValue; // Valor numérico procesado
+    private double numericValue; // Valor numérico REAL a aplicar
     private String displayName;
     private int materialId;
     private short materialData;
@@ -38,22 +43,33 @@ public class ArmorFragment {
 
     /**
      * Parsea el valor para determinar operación y valor numérico
-     * Ejemplos: "500" -> +500, "-500" -> -500, "15%" -> *15
+     *
+     * SISTEMA CORRECTO:
+     * - "15%" -> operación "*", valor numérico 1.15 (multiplicador para DBC)
+     * - "-20%" -> operación "*", valor numérico 0.80 (multiplicador para DBC)
+     * - "500" -> operación "+", valor 500
+     * - "-200" -> operación "-", valor 200
      */
     private void parseValue(String value) {
         value = value.trim();
 
         if (value.endsWith("%")) {
-            // Multiplicativo: "15%" -> operación "*", valor 15 (NO 0.15)
+            // MULTIPLICATIVO: Convertir % a multiplicador
             this.operation = "*";
             String numStr = value.substring(0, value.length() - 1);
-            this.numericValue = Double.parseDouble(numStr); // Guardamos 15, no 0.15
+            double percentage = Double.parseDouble(numStr);
+
+            // CONVERSIÓN A MULTIPLICADOR:
+            // 15% -> 1.0 + (15/100) = 1.15
+            // -20% -> 1.0 + (-20/100) = 0.80
+            // 100% -> 1.0 + (100/100) = 2.0
+            this.numericValue = 1.0 + (percentage / 100.0);
         } else if (value.startsWith("-")) {
-            // Resta: "-500" -> operación "-", valor 500
+            // RESTA: "-500" -> operación "-", valor 500
             this.operation = "-";
             this.numericValue = Math.abs(Double.parseDouble(value));
         } else {
-            // Suma: "500" -> operación "+", valor 500
+            // SUMA: "500" -> operación "+", valor 500
             this.operation = "+";
             this.numericValue = Double.parseDouble(value);
         }
@@ -148,7 +164,8 @@ public class ArmorFragment {
     }
 
     /**
-     * Extrae el valor raw de un fragmento ItemStack
+     * Extrae el valor RAW (original) de un fragmento ItemStack
+     * Este es el valor que se muestra al usuario (ej: "20%", "500", "-200")
      */
     public static String getFragmentValueRaw(ItemStack item) {
         if (!isFragment(item)) return "0";
@@ -166,21 +183,32 @@ public class ArmorFragment {
     }
 
     /**
-     * Extrae el valor numérico procesado de un fragmento
-     * Para multiplicadores: "15%" retorna 15 (NO 0.15)
+     * Extrae el valor numérico REAL procesado de un fragmento
+     *
+     * SISTEMA CORRECTO PARA DBC:
+     * - "15%" retorna 1.15 (multiplicador para DBC)
+     * - "-20%" retorna 0.80 (multiplicador para DBC)
+     * - "500" retorna 500 (valor aditivo)
+     * - "-200" retorna 200 (valor sustractivo)
      */
     public static double getFragmentValue(ItemStack item) {
         String raw = getFragmentValueRaw(item);
 
         try {
             if (raw.endsWith("%")) {
+                // PORCENTAJE: Convertir a multiplicador
                 String numStr = raw.substring(0, raw.length() - 1);
-                return Double.parseDouble(numStr);
+                double percentage = Double.parseDouble(numStr);
+
+                // 15% -> 1.0 + (15/100) = 1.15
+                // -20% -> 1.0 + (-20/100) = 0.80
+                return 1.0 + (percentage / 100.0);
             } else {
+                // VALOR DIRECTO: +500 o -200
                 return Math.abs(Double.parseDouble(raw));
             }
         } catch (Exception e) {
-            return 0;
+            return 0.0;
         }
     }
 }

@@ -12,9 +12,12 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Sistema SIMPLE de bonus para fragmentos
- * - Si tiene armadura con fragmentos → APLICA bonus
- * - Si ya no la tiene → QUITA bonus
+ * Sistema de bonus para fragmentos con soporte CORRECTO de multiplicadores
+ *
+ * MANEJO DE MULTIPLICADORES:
+ * - En la armadura se guarda: 115 (valor escalado * 100)
+ * - Al DBC se envía: 1.15 (dividiendo por 100)
+ * - El usuario ve en el lore: "15%"
  */
 public class FragmentBonusIntegration {
 
@@ -39,6 +42,7 @@ public class FragmentBonusIntegration {
                 String hash = CustomizedArmor.getHash(piece);
                 Map<String, Integer> attributes = CustomizedArmor.getAttributes(piece);
                 Map<String, String> operations = CustomizedArmor.getOperations(piece);
+
                 if (hash != null && !attributes.isEmpty()) {
                     currentHashes.add(hash);
 
@@ -65,6 +69,10 @@ public class FragmentBonusIntegration {
 
     /**
      * APLICA los bonus al jugador
+     *
+     * CONVERSIÓN DE MULTIPLICADORES:
+     * - Si operación es "*" y el valor es 115, se envía 1.15 al DBC
+     * - Si operación es "+" y el valor es 500, se envía 500 al DBC
      */
     private static void applyBonus(Player player, String hash, Map<String, Integer> stats, Map<String, String> operations) {
         try {
@@ -72,13 +80,24 @@ public class FragmentBonusIntegration {
 
             for (Map.Entry<String, Integer> entry : stats.entrySet()) {
                 String stat = entry.getKey().toUpperCase(); // STR, CON, DEX, etc.
-                int value = entry.getValue();
+                int storedValue = entry.getValue();
 
                 String operation = operations.getOrDefault(stat, "+");
 
                 String bonusStat = General.BONUS_STATS.get(stat);
                 if (bonusStat != null) {
-                    idbcPlayer.addBonusAttribute(bonusStat, hash, operation, (double) value);
+                    double valueToSend;
+
+                    if (operation.equals("*")) {
+                        // MULTIPLICADOR: Dividir por 100
+                        // 115 -> 1.15
+                        valueToSend = storedValue / 100.0;
+                    } else {
+                        // ADITIVO/SUSTRACTIVO: Usar valor directo
+                        valueToSend = (double) storedValue;
+                    }
+
+                    idbcPlayer.addBonusAttribute(bonusStat, hash, operation, valueToSend);
                 }
             }
         } catch (Exception e) {

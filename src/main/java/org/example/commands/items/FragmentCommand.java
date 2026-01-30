@@ -14,6 +14,12 @@ import java.util.Arrays;
 
 /**
  * Comando para crear fragmentos de mejora
+ *
+ * EJEMPLOS DE USO:
+ * - /fragment create STR 20% 388/0    -> Aumenta STR en 20% (multiplica por 1.20)
+ * - /fragment create CON 500 388/0    -> Aumenta CON en +500
+ * - /fragment create DEX -100 388/0   -> Reduce DEX en -100
+ * - /fragment create WIL -15% 388/0   -> Reduce WIL en 15% (multiplica por 0.85)
  */
 public class FragmentCommand extends BaseCommand {
 
@@ -33,9 +39,11 @@ public class FragmentCommand extends BaseCommand {
             case "create":
                 if (command.length() < 4) {
                     player.sendMessage(CC.translate("&cUso: /fragment create <atributo> <valor> <material>"));
-                    player.sendMessage(CC.translate("&7Ejemplo: /fragment create STR 500 4149/0"));
-                    player.sendMessage(CC.translate("&7Ejemplo: /fragment create CON -100 4149/2"));
-                    player.sendMessage(CC.translate("&7Ejemplo: /fragment create DEX 15% 4149/4"));
+                    player.sendMessage(CC.translate("&7Ejemplos:"));
+                    player.sendMessage(CC.translate("&f  /fragment create STR 20% 388/0 &7(suma +20 con op *)"));
+                    player.sendMessage(CC.translate("&f  /fragment create CON 500 388/0 &7(suma +500)"));
+                    player.sendMessage(CC.translate("&f  /fragment create DEX -100 388/0 &7(resta -100)"));
+                    player.sendMessage(CC.translate("&f  /fragment create WIL -15% 388/0 &7(resta -15 con op *)"));
                     return;
                 }
                 createFragment(player, command.getArgs(1), command.getArgs(2), command.getArgs(3));
@@ -68,19 +76,23 @@ public class FragmentCommand extends BaseCommand {
             return;
         }
 
-        // Validar valor (puede ser: 500, -500, 15%)
+        // Validar valor (puede ser: 500, -500, 15%, -15%)
         try {
             validateValue(value);
         } catch (Exception e) {
             player.sendMessage(CC.translate("&c✗ Valor inválido: " + e.getMessage()));
-            player.sendMessage(CC.translate("&7Ejemplos: 500, -100, 15%"));
+            player.sendMessage(CC.translate("&7Ejemplos válidos:"));
+            player.sendMessage(CC.translate("&f  500 &7(suma +500)"));
+            player.sendMessage(CC.translate("&f  -100 &7(resta -100)"));
+            player.sendMessage(CC.translate("&f  20% &7(suma +20 con operación *)"));
+            player.sendMessage(CC.translate("&f  -15% &7(resta -15 con operación *)"));
             return;
         }
 
         // Validar material (formato ID/DATA)
         if (!materialStr.matches("\\d+(/\\d+)?")) {
             player.sendMessage(CC.translate("&c✗ Formato de material inválido"));
-            player.sendMessage(CC.translate("&7Formato: ID/DATA (ej: 4149/0)"));
+            player.sendMessage(CC.translate("&7Formato: ID/DATA (ej: 388/0)"));
             return;
         }
 
@@ -194,6 +206,7 @@ public class FragmentCommand extends BaseCommand {
         String attr = ArmorFragment.getFragmentAttribute(item);
         String op = ArmorFragment.getFragmentOperation(item);
         String valueRaw = ArmorFragment.getFragmentValueRaw(item);
+        double valueNumeric = ArmorFragment.getFragmentValue(item);
 
         String operationDisplay = getOperationDisplay(valueRaw);
 
@@ -221,8 +234,14 @@ public class FragmentCommand extends BaseCommand {
         player.sendMessage(CC.translate("&7  Info del fragmento en mano"));
         player.sendMessage("");
         player.sendMessage(CC.translate("&7Atributos: &fSTR, CON, DEX, WIL, MND, SPI"));
-        player.sendMessage(CC.translate("&7Valores: &f500 &7(suma), &f-100 &7(resta), &f15% &7(%)"));
-        player.sendMessage(CC.translate("&7Material: &fID/DATA &7(ej: 4149/0)"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&3Tipos de valores:"));
+        player.sendMessage(CC.translate("&f  500 &7→ Suma +500"));
+        player.sendMessage(CC.translate("&f  -100 &7→ Resta -100"));
+        player.sendMessage(CC.translate("&f  20% &7→ Suma +20 con operación *"));
+        player.sendMessage(CC.translate("&f  -15% &7→ Resta -15 con operación *"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&7Material: &fID/DATA &7(ej: 388/0)"));
         player.sendMessage(CC.translate("&8&m--------------------"));
     }
 
@@ -240,7 +259,7 @@ public class FragmentCommand extends BaseCommand {
 
     /**
      * Valida el valor del fragmento
-     * Permite: números positivos, negativos, y porcentajes
+     * Permite: números positivos, negativos, y porcentajes (positivos y negativos)
      */
     private void validateValue(String value) throws Exception {
         if (value.endsWith("%")) {
