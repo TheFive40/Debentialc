@@ -39,7 +39,6 @@ public class FragmentBonusIntegration {
                 String hash = CustomizedArmor.getHash(piece);
                 Map<String, Integer> attributes = CustomizedArmor.getAttributes(piece);
                 Map<String, String> operations = CustomizedArmor.getOperations(piece);
-                System.out.println("Operacion: " + operations);
                 if (hash != null && !attributes.isEmpty()) {
                     currentHashes.add(hash);
 

@@ -38,16 +38,16 @@ public class ArmorFragment {
 
     /**
      * Parsea el valor para determinar operación y valor numérico
-     * Ejemplos: "500" -> +500, "-500" -> -500, "15%" -> *1.15
+     * Ejemplos: "500" -> +500, "-500" -> -500, "15%" -> *15
      */
     private void parseValue(String value) {
         value = value.trim();
 
         if (value.endsWith("%")) {
-            // Multiplicativo: "15%" -> operación "*", valor 0.15
+            // Multiplicativo: "15%" -> operación "*", valor 15 (NO 0.15)
             this.operation = "*";
             String numStr = value.substring(0, value.length() - 1);
-            this.numericValue = Double.parseDouble(numStr) / 100.0;
+            this.numericValue = Double.parseDouble(numStr); // Guardamos 15, no 0.15
         } else if (value.startsWith("-")) {
             // Resta: "-500" -> operación "-", valor 500
             this.operation = "-";
@@ -167,16 +167,15 @@ public class ArmorFragment {
 
     /**
      * Extrae el valor numérico procesado de un fragmento
+     * Para multiplicadores: "15%" retorna 15 (NO 0.15)
      */
     public static double getFragmentValue(ItemStack item) {
         String raw = getFragmentValueRaw(item);
-        String op = getFragmentOperation(item);
 
         try {
             if (raw.endsWith("%")) {
-                // Multiplicativo
                 String numStr = raw.substring(0, raw.length() - 1);
-                return Double.parseDouble(numStr) / 100.0;
+                return Double.parseDouble(numStr);
             } else {
                 return Math.abs(Double.parseDouble(raw));
             }

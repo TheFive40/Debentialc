@@ -215,8 +215,22 @@ public class CustomizedArmor {
             for (Map.Entry<String, Integer> entry : attributes.entrySet()) {
                 String attrName = getAttributeDisplayName(entry.getKey());
                 int value = entry.getValue();
-                String sign = value >= 0 ? "+" : "";
-                lore.add(CC.translate("&7  • " + attrName + ": &f" + sign + value));
+                String operation = operations.getOrDefault(entry.getKey(), "+");
+
+                // Formatear correctamente según la operación
+                String displayValue;
+                if (operation.equals("*")) {
+                    // Multiplicador: mostrar como porcentaje
+                    displayValue = "&b*" + value + "%";
+                } else if (operation.equals("-")) {
+                    // Resta: mostrar con signo negativo
+                    displayValue = "&c-" + value;
+                } else {
+                    // Suma: mostrar con signo positivo
+                    displayValue = "&a+" + value;
+                }
+
+                lore.add(CC.translate("&7  • " + attrName + ": " + displayValue));
             }
             lore.add(CC.translate("&8&m--------------------"));
         }

@@ -71,13 +71,17 @@ public class FragmentManager {
 
         switch (operation) {
             case "+":
+                // Suma directa: +500 = currentValue + 500
                 newValue = currentValue + (int) value;
                 break;
             case "-":
+                // Resta directa: -100 = currentValue - 100
                 newValue = currentValue - (int) value;
                 break;
             case "*":
-                newValue = currentValue + (int) (currentValue * value);
+                // Multiplicador: 15% se almacena como 15 (el valor entero del porcentaje)
+                // NO lo convertimos, lo dejamos como 15 para que DBC lo use como multiplicador
+                newValue = currentValue + (int) value;
                 break;
             default:
                 newValue = currentValue + (int) value;
@@ -102,7 +106,7 @@ public class FragmentManager {
 
         // Aplicar el fragmento (valor Y operación)
         customArmor.getAttributes().put(attribute, newValue);
-        customArmor.getOperations().put(attribute, operation); // ← ESTO FALTABA
+        customArmor.getOperations().put(attribute, operation);
         customArmor.applyToItemStack(armor);
 
         // Guardar en almacenamiento
@@ -149,7 +153,6 @@ public class FragmentManager {
         if (armor.hasItemMeta() && armor.getItemMeta().hasDisplayName()) {
             displayName = armor.getItemMeta().getDisplayName();
         } else {
-            // Crear displayName genérico basado en el material
             displayName = getDefaultArmorName(armor.getTypeId());
         }
         customArmor.setDisplayName(displayName);
@@ -157,12 +160,7 @@ public class FragmentManager {
         return customArmor;
     }
 
-    /**
-     * Obtiene el slot de armadura según el material ID
-     * Compatible con armaduras de mods
-     */
     private String getArmorSlotFromMaterial(int materialId) {
-
         if (materialId == 298 || materialId == 302 || materialId == 306 ||
                 materialId == 310 || materialId == 314) {
             return "HELMET";
@@ -176,103 +174,53 @@ public class FragmentManager {
                 materialId == 313 || materialId == 317) {
             return "BOOTS";
         }
-
-        // Para armaduras de mods, intentar detectar por nombre del tipo
-        // Si no se puede detectar, usar UNKNOWN
         return "UNKNOWN";
     }
 
-    /**
-     * Obtiene un nombre por defecto para armaduras sin displayName
-     * @param materialId ID del material
-     * @return DisplayName por defecto
-     */
     private String getDefaultArmorName(int materialId) {
-        // IDs vanilla de armadura
-        // Helmets: 298 (leather), 302 (chain), 306 (iron), 310 (diamond), 314 (gold)
-        // Chestplates: 299, 303, 307, 311, 315
-        // Leggings: 300, 304, 308, 312, 316
-        // Boots: 301, 305, 309, 313, 317
-
-        // Determinar tipo de armadura
         String material = "";
         String piece = "";
 
-        // Leather (298-301)
         if (materialId >= 298 && materialId <= 301) {
             material = "Leather";
-        }
-        // Chain (302-305)
-        else if (materialId >= 302 && materialId <= 305) {
+        } else if (materialId >= 302 && materialId <= 305) {
             material = "Chain";
-        }
-        // Iron (306-309)
-        else if (materialId >= 306 && materialId <= 309) {
+        } else if (materialId >= 306 && materialId <= 309) {
             material = "Iron";
-        }
-        // Diamond (310-313)
-        else if (materialId >= 310 && materialId <= 313) {
+        } else if (materialId >= 310 && materialId <= 313) {
             material = "Diamond";
-        }
-        // Gold (314-317)
-        else if (materialId >= 314 && materialId <= 317) {
+        } else if (materialId >= 314 && materialId <= 317) {
             material = "Gold";
-        }
-        // Mod armor
-        else {
+        } else {
             material = "Custom";
         }
 
-        // Determinar pieza
         int remainder = materialId % 4;
         switch (remainder) {
-            case 2: // 298, 302, 306, 310, 314
-                piece = "Helmet";
-                break;
-            case 3: // 299, 303, 307, 311, 315
-                piece = "Chestplate";
-                break;
-            case 0: // 300, 304, 308, 312, 316
-                piece = "Leggings";
-                break;
-            case 1: // 301, 305, 309, 313, 317
-                piece = "Boots";
-                break;
-            default:
-                piece = "Armor";
-                break;
+            case 2: piece = "Helmet"; break;
+            case 3: piece = "Chestplate"; break;
+            case 0: piece = "Leggings"; break;
+            case 1: piece = "Boots"; break;
+            default: piece = "Armor"; break;
         }
 
         return CC.translate("&7" + material + " " + piece);
     }
 
-    /**
-     * Obtiene información de una armadura personalizada
-     */
     public CustomizedArmor getCustomArmor(ItemStack item) {
         if (!CustomizedArmor.isCustomized(item)) return null;
-
         String hash = CustomizedArmor.getHash(item);
         return armorStorage.loadArmor(hash);
     }
 
-    /**
-     * Obtiene la configuración de tiers
-     */
     public TierConfig getTierConfig() {
         return tierConfig;
     }
 
-    /**
-     * Obtiene el almacenamiento
-     */
     public CustomArmorStorage getArmorStorage() {
         return armorStorage;
     }
 
-    /**
-     * Recarga toda la configuración
-     */
     public void reload() {
         tierConfig.reload();
         armorStorage.reload();
