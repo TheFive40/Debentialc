@@ -15,6 +15,7 @@ import java.util.Map;
 
 /**
  * Comando de administración para el sistema de fragmentos
+ * VERSIÓN CORREGIDA: Mantiene operaciones al cambiar de tier
  */
 public class FragmentAdminCommand extends BaseCommand {
 
@@ -106,15 +107,30 @@ public class FragmentAdminCommand extends BaseCommand {
                 int limit = FragmentManager.getInstance().getTierConfig()
                         .getLimit(customArmor.getTier(), entry.getKey());
                 int value = entry.getValue();
-                String sign = value >= 0 ? "+" : "";
+                String operation = customArmor.getOperations().getOrDefault(entry.getKey(), "+");
+
+                // Formatear según operación
+                String displayValue;
+                if (operation.equals("*")) {
+                    // Mostrar como porcentaje
+                    double percentage = (value / 100.0 - 1.0) * 100.0;
+                    displayValue = String.format("%+.0f%%", percentage);
+                } else {
+                    String sign = value >= 0 ? "+" : "";
+                    displayValue = sign + value;
+                }
+
                 player.sendMessage(CC.translate("&7  " + entry.getKey() + ": &f" +
-                        sign + value + "&7/" + limit));
+                        displayValue + " &8(" + operation + ")&7 / " + limit));
             }
         }
 
         player.sendMessage(CC.translate("&8&m--------------------"));
     }
 
+    /**
+     * CORREGIDO: Mantiene las operaciones al cambiar de tier
+     */
     private void setArmorTier(Player player, String tier) {
         ItemStack armor = player.getItemInHand();
 
@@ -135,18 +151,64 @@ public class FragmentAdminCommand extends BaseCommand {
             return;
         }
 
-        CustomizedArmor customArmor = FragmentManager.getInstance().getCustomArmor(armor);
+        // Cargar armadura desde ItemStack para obtener valores actuales
+        CustomizedArmor customArmor = CustomizedArmor.fromItemStack(armor);
 
         if (customArmor == null) {
             player.sendMessage(CC.translate("&c✗ Error al cargar la armadura"));
             return;
         }
 
+        String oldTier = customArmor.getTier();
+
+        // IMPORTANTE: Solo cambiar el tier, NO tocar los atributos ni operaciones
         customArmor.setTier(tier);
+
+        // Validar que los valores actuales no excedan los límites del nuevo tier
+        boolean exceedsLimits = false;
+        StringBuilder errorMsg = new StringBuilder();
+        errorMsg.append(CC.translate("&c✗ Los siguientes atributos exceden los límites del tier " + tier + ":\n"));
+
+        for (Map.Entry<String, Integer> entry : customArmor.getAttributes().entrySet()) {
+            String attr = entry.getKey();
+            int currentValue = entry.getValue();
+            int newLimit = FragmentManager.getInstance().getTierConfig().getLimit(tier, attr);
+
+            if (currentValue > newLimit) {
+                exceedsLimits = true;
+                String operation = customArmor.getOperations().getOrDefault(attr, "+");
+
+                String displayValue;
+                if (operation.equals("*")) {
+                    double percentage = (currentValue / 100.0 - 1.0) * 100.0;
+                    displayValue = String.format("%+.0f%%", percentage);
+                } else {
+                    displayValue = (currentValue >= 0 ? "+" : "") + currentValue;
+                }
+
+                errorMsg.append(CC.translate("&7  " + attr + ": &f" + displayValue + " &7(límite: " + newLimit + ")\n"));
+            }
+        }
+
+        if (exceedsLimits) {
+            player.sendMessage(errorMsg.toString());
+            player.sendMessage(CC.translate("&7Usa fragmentos negativos para reducir los valores"));
+            return;
+        }
+
+        // Aplicar cambios al ItemStack (esto actualiza el lore correctamente)
         customArmor.applyToItemStack(armor);
+
+        // Guardar en almacenamiento
         FragmentManager.getInstance().getArmorStorage().saveArmor(customArmor);
 
-        player.sendMessage(CC.translate("&a✓ Tier actualizado a: " + tier));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&a✓ Tier actualizado"));
+        player.sendMessage(CC.translate("&7Tier anterior: &f" + oldTier));
+        player.sendMessage(CC.translate("&7Tier nuevo: &f" + tier));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&7Las operaciones y valores se han mantenido"));
+        player.sendMessage("");
     }
 
     private void resetArmor(Player player) {
@@ -233,7 +295,7 @@ public class FragmentAdminCommand extends BaseCommand {
         player.sendMessage(CC.translate("&7  Info de armadura en mano"));
         player.sendMessage("");
         player.sendMessage(CC.translate("&e/fadmin settier <tier>"));
-        player.sendMessage(CC.translate("&7  Cambia tier"));
+        player.sendMessage(CC.translate("&7  Cambia tier (mantiene valores)"));
         player.sendMessage("");
         player.sendMessage(CC.translate("&e/fadmin reset"));
         player.sendMessage(CC.translate("&7  Resetea a vanilla"));
