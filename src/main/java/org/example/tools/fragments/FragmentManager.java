@@ -50,11 +50,9 @@ public class FragmentManager {
         String valueRaw = ArmorFragment.getFragmentValueRaw(fragment);
         double value = ArmorFragment.getFragmentValue(fragment);
 
-        // Verificar si la armadura ya está personalizada
         CustomizedArmor customArmor;
 
         if (CustomizedArmor.isCustomized(armor)) {
-            // Cargar armadura existente
             String hash = CustomizedArmor.getHash(armor);
             customArmor = armorStorage.loadArmor(hash);
 
@@ -63,7 +61,6 @@ public class FragmentManager {
                 return false;
             }
         } else {
-            // Convertir armadura a custom
             customArmor = convertVanillaArmor(armor);
             player.sendMessage(CC.translate("&a✓ Armadura convertida a personalizada"));
         }
@@ -74,38 +71,38 @@ public class FragmentManager {
 
         switch (operation) {
             case "+":
-                // Suma
                 newValue = currentValue + (int) value;
                 break;
             case "-":
-                // Resta
                 newValue = currentValue - (int) value;
                 break;
             case "*":
-                // Multiplicativo (porcentaje)
-                // Si value es 0.15 (15%), multiplicamos currentValue por 1.15
-                // Ejemplo: currentValue = 100, value = 0.15 → newValue = 100 * 1.15 = 115
-                newValue = (int) Math.round(currentValue * (1.0 + value));
+                newValue = currentValue + (int) (currentValue * value);
                 break;
             default:
                 newValue = currentValue + (int) value;
                 break;
         }
 
-        // Validar límites del tier (solo si el nuevo valor es positivo y mayor al actual)
-        // Permitimos valores negativos sin restricción de límite
-        if (newValue > 0 && newValue > currentValue) {
-            if (!tierConfig.canApply(customArmor.getTier(), attribute, 0, newValue)) {
-                int limit = tierConfig.getLimit(customArmor.getTier(), attribute);
-                player.sendMessage(CC.translate("&c✗ El valor excedería el límite"));
-                player.sendMessage(CC.translate("&7Actual: &f" + currentValue + " &7| Nuevo: &f" + newValue + " &7| Límite: &f" + limit));
-                player.sendMessage(CC.translate("&7Tier: &f" + customArmor.getTier()));
-                return false;
-            }
+        // Para validar límites, usamos el nuevo valor
+        if (!tierConfig.canApply(customArmor.getTier(), attribute, 0, newValue)) {
+            int limit = tierConfig.getLimit(customArmor.getTier(), attribute);
+            player.sendMessage(CC.translate("&c✗ El valor excedería el límite"));
+            player.sendMessage(CC.translate("&7Actual: &f" + currentValue + " &7| Nuevo: &f" + newValue + " &7| Límite: &f" + limit));
+            player.sendMessage(CC.translate("&7Tier: &f" + customArmor.getTier()));
+            return false;
         }
 
-        // Aplicar el fragmento
+        // Si el nuevo valor es negativo, no permitir
+        if (newValue < 0) {
+            player.sendMessage(CC.translate("&c✗ El atributo no puede ser negativo"));
+            player.sendMessage(CC.translate("&7Actual: &f" + currentValue + " &7| Operación: &f" + operation + valueRaw));
+            return false;
+        }
+
+        // Aplicar el fragmento (valor Y operación)
         customArmor.getAttributes().put(attribute, newValue);
+        customArmor.getOperations().put(attribute, operation); // ← ESTO FALTABA
         customArmor.applyToItemStack(armor);
 
         // Guardar en almacenamiento
@@ -148,8 +145,6 @@ public class FragmentManager {
         customArmor.setMaterialType(armor.getTypeId());
         customArmor.setArmorSlot(getArmorSlotFromMaterial(armor.getTypeId()));
 
-        // IMPORTANTE: Establecer displayName
-        // Si el item ya tiene displayName, usarlo; si no, crear uno genérico
         String displayName;
         if (armor.hasItemMeta() && armor.getItemMeta().hasDisplayName()) {
             displayName = armor.getItemMeta().getDisplayName();
@@ -167,11 +162,6 @@ public class FragmentManager {
      * Compatible con armaduras de mods
      */
     private String getArmorSlotFromMaterial(int materialId) {
-        // IDs vanilla de armadura
-        // Helmets: 298, 302, 306, 310, 314
-        // Chestplates: 299, 303, 307, 311, 315
-        // Leggings: 300, 304, 308, 312, 316
-        // Boots: 301, 305, 309, 313, 317
 
         if (materialId == 298 || materialId == 302 || materialId == 306 ||
                 materialId == 310 || materialId == 314) {
