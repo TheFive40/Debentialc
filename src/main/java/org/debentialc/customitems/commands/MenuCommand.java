@@ -1,0 +1,15 @@
+package org.debentialc.customitems.commands;
+import org.debentialc.customitems.tools.commands.BaseCommand;
+import org.debentialc.customitems.tools.commands.Command;
+import org.debentialc.customitems.tools.commands.CommandArgs;
+import org.debentialc.customitems.tools.permissions.Permissions;
+
+import java.io.IOException;
+
+public class MenuCommand extends BaseCommand {
+    @Command(name = "menu", aliases = "menu", permission = Permissions.COMMAND + "menu")
+    @Override
+    public void onCommand(CommandArgs command) throws IOException {
+
+    }
+}
