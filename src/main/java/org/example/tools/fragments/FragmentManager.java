@@ -91,10 +91,12 @@ public class FragmentManager {
                 newValue = currentValue - (int) value;
                 break;
             case "*":
-                // MULTIPLICADOR: Convertir a valor escalado y SUMAR
-                // value = 1.15 (del fragmento), escalado = 115
-                // currentValue = 115 (ya guardado previamente)
-                // newValue = 115 + 115 = 230 (que sería 30% total al DBC)
+                // MULTIPLICADOR: Sumar PORCENTAJES REALES, no multiplicadores escalados
+                //
+                // Ejemplo:
+                // Armadura tiene: 120 guardado = 20% real
+                // Fragmento: 10% = 110 guardado
+                // Resultado esperado: 30% = 130 guardado
 
                 int scaledFragmentValue = (int) Math.round(value * 100);
 
@@ -104,8 +106,20 @@ public class FragmentManager {
                     // Primera vez con multiplicador en este atributo
                     newValue = scaledFragmentValue;
                 } else {
-                    // Ya existe multiplicador, SUMAR
-                    newValue = currentValue + scaledFragmentValue;
+                    // Ya existe multiplicador: SUMAR PORCENTAJES REALES
+
+                    // Convertir valores guardados a porcentajes reales
+                    // 120 guardado → (120/100 - 1) * 100 = 20%
+                    double currentPercentage = (currentValue / 100.0 - 1.0) * 100.0;
+
+                    // 110 guardado → (110/100 - 1) * 100 = 10%
+                    double fragmentPercentage = (scaledFragmentValue / 100.0 - 1.0) * 100.0;
+
+                    // Sumar porcentajes: 20% + 10% = 30%
+                    double totalPercentage = currentPercentage + fragmentPercentage;
+
+                    // Reconvertir a formato guardado: 30% → (1 + 30/100) * 100 = 130
+                    newValue = (int) Math.round((1.0 + totalPercentage / 100.0) * 100);
                 }
                 break;
             default:
@@ -113,13 +127,8 @@ public class FragmentManager {
                 break;
         }
 
-        // VALIDACIÓN CORREGIDA: Usar canApply que maneja correctamente los porcentajes
-        int valueToAdd;
-        if (operation.equals("*")) {
-            valueToAdd = (int) Math.round(value * 100) - currentValue;
-        } else {
-            valueToAdd = newValue - currentValue;
-        }
+        // VALIDACIÓN CORREGIDA: Calcular cuánto se va a agregar
+        int valueToAdd = newValue - currentValue;
 
         if (!tierConfig.canApply(customArmor.getTier(), attribute, currentValue, valueToAdd, operation)) {
             player.sendMessage(CC.translate("&c✗ El valor excedería el límite"));
@@ -157,15 +166,9 @@ public class FragmentManager {
         }
 
         // APLICAR EL FRAGMENTO
-        // Para multiplicadores, guardamos el valor escalado (1.15 * 100 = 115)
-        // Esto permite almacenar como entero y luego dividir por 100 al enviar al DBC
-        if (operation.equals("*")) {
-            // Guardar valor * 100 para mantener precisión
-            int scaledValue = (int) Math.round(value * 100);
-            customArmor.getAttributes().put(attribute, scaledValue);
-        } else {
-            customArmor.getAttributes().put(attribute, newValue);
-        }
+        // CORRECCIÓN: Siempre usar newValue que ya fue calculado correctamente
+        // newValue ya contiene la suma correcta para todas las operaciones
+        customArmor.getAttributes().put(attribute, newValue);
 
         // Guardar la operación
         customArmor.getOperations().put(attribute, operation);
