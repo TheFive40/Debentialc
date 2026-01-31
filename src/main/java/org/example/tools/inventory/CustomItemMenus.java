@@ -296,6 +296,7 @@ public class CustomItemMenus {
                         contents.set(2, 1, ClickableItem.of(durabilityButton, e -> {
                             DurabilityInputManager.startDurabilityInput(player, itemId, "item");
                         }));
+
                         // HACER IRROMPIBLE
                         ItemStack unbreakableButton = new ItemStack(Material.BEDROCK);
                         ItemMeta unbreakableMeta = unbreakableButton.getItemMeta();
@@ -335,6 +336,22 @@ public class CustomItemMenus {
                             // Reabrir menú
                             openEditItemMenu(itemId).open(player);
                         }));
+
+                        // OPCIONES AVANZADAS
+                        ItemStack advancedButton = new ItemStack(Material.NETHER_STAR);
+                        ItemMeta advancedMeta = advancedButton.getItemMeta();
+                        advancedMeta.setDisplayName(CC.translate("&5&l⚙ Opciones Avanzadas"));
+                        List<String> advancedLore = new ArrayList<>();
+                        advancedLore.add(CC.translate("&7Consumibles, Comandos,"));
+                        advancedLore.add(CC.translate("&7TPs y más opciones"));
+                        advancedLore.add("");
+                        advancedLore.add(CC.translate("&a[CLICK PARA ABRIR]"));
+                        advancedMeta.setLore(advancedLore);
+                        advancedButton.setItemMeta(advancedMeta);
+                        contents.set(2, 3, ClickableItem.of(advancedButton, e -> {
+                            CustomItemAdvancedOptionsMenu.createAdvancedOptionsMenu(itemId).open(player);
+                        }));
+
                         // DAR ITEM
                         ItemStack giveButton = new ItemStack(Material.APPLE);
                         ItemMeta giveMeta = giveButton.getItemMeta();

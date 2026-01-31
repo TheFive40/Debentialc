@@ -19,7 +19,12 @@ import java.util.List;
 
 /**
  * Listener para items consumibles
- * Maneja el consumo de items y la ejecución de comandos/TP
+ * VERSIÓN CORREGIDA: Valida correctamente si un item se debe consumir
+ *
+ * LÓGICA CORREGIDA:
+ * 1. Un item se consume si: isConsumable = true O tpValue > 0
+ * 2. Al consumir, SIEMPRE ejecuta comandos primero (si los tiene)
+ * 3. Luego, si tiene TP, otorga los TPs
  */
 public class ConsumableItemListener implements Listener {
 
@@ -46,36 +51,59 @@ public class ConsumableItemListener implements Listener {
             return;
         }
 
-        // Verificar si es consumible O tiene TP configurado
-        if (!customItem.isConsumable() && customItem.getTpValue() <= 0) {
+        // LÓGICA CORREGIDA: Un item se consume si:
+        // 1. Es consumible (isConsumable = true)
+        // 2. O tiene TP configurado (tpValue > 0)
+        // 3. O tiene comandos configurados (commands no está vacío)
+        boolean shouldConsume = customItem.isConsumable() ||
+                customItem.getTpValue() > 0 ||
+                (customItem.getCommands() != null && !customItem.getCommands().isEmpty());
+
+        if (!shouldConsume) {
+            // Si no cumple ninguna condición de consumo, no hacer nada
             return;
         }
 
         // CANCELAR el evento para que no se use normalmente
         event.setCancelled(true);
 
-        // Obtener cantidad a consumir
-        int amount = item.getAmount();
-        int consumed = 1; // Por defecto consume 1
-
-        // Si tiene TP y consume stack, consumir todo
-        if (customItem.getTpValue() > 0 && customItem.isTpConsumeStack()) {
-            consumed = amount;
-        }
-
-        // EJECUTAR COMANDOS (si tiene)
+        // PASO 1: EJECUTAR COMANDOS (si los tiene)
         if (customItem.getCommands() != null && !customItem.getCommands().isEmpty()) {
             executeCommands(player, customItem.getCommands());
+
+            // Mensaje al jugador informando que se ejecutaron comandos
+            player.sendMessage(CC.translate("&b⚡ &fComandos ejecutados"));
         }
 
-        // OTORGAR TP (si tiene)
+        // PASO 2: OTORGAR TP (si tiene)
         if (customItem.getTpValue() > 0) {
-            giveTP(player, customItem.getTpValue(), consumed);
-        }
+            // Obtener cantidad a consumir según configuración
+            int amount = item.getAmount();
+            int consumed = 1; // Por defecto consume 1
 
-        // CONSUMIR ITEM
-        if (customItem.isConsumable() || customItem.getTpValue() > 0) {
-            int remaining = amount - consumed;
+            // Si tiene TP y consume stack, consumir todo
+            if (customItem.isTpConsumeStack()) {
+                consumed = amount;
+            }
+
+            giveTP(player, customItem.getTpValue(), consumed);
+
+            // Actualizar la cantidad después de dar TP
+            amount = amount - consumed;
+
+            // CONSUMIR ITEM
+            if (amount <= 0) {
+                // Eliminar completamente
+                player.setItemInHand(null);
+            } else {
+                // Reducir cantidad
+                item.setAmount(amount);
+            }
+        }
+        // PASO 3: CONSUMIR ITEM (si es consumible pero NO tiene TP)
+        else if (customItem.isConsumable()) {
+            int amount = item.getAmount();
+            int remaining = amount - 1;
 
             if (remaining <= 0) {
                 // Eliminar completamente
@@ -88,7 +116,7 @@ public class ConsumableItemListener implements Listener {
     }
 
     /**
-     * Ejecuta los comandos configurados
+     * Ejecuta los comandos configurados en orden
      */
     private void executeCommands(Player player, List<String> commands) {
         // Obtener jugador al que apunta
@@ -186,6 +214,6 @@ public class ConsumableItemListener implements Listener {
                 .subtract(player.getLocation().toVector()).normalize();
 
         double dot = playerDirection.dot(toTarget);
-        return dot > 0.95; // Ángulo muy cerrado
+        return dot > 0.95;
     }
 }

@@ -20,6 +20,7 @@ import java.util.List;
 /**
  * Menú de opciones avanzadas para items custom
  * Incluye: Consumibles, Comandos, TPs, Scripts
+ * VERSIÓN ACTUALIZADA: Soporte completo para scripts JavaScript
  */
 public class CustomItemAdvancedOptionsMenu {
 
@@ -127,18 +128,28 @@ public class CustomItemAdvancedOptionsMenu {
                             createTPConfigMenu(itemId).open(player);
                         }));
 
-                        // SCRIPTS (Próximamente)
+                        // SCRIPTS - ACTUALIZADO
                         ItemStack scriptsButton = new ItemStack(Material.WRITTEN_BOOK);
                         ItemMeta scriptsMeta = scriptsButton.getItemMeta();
                         scriptsMeta.setDisplayName(CC.translate("&5&lScripts"));
-                        scriptsMeta.setLore(Arrays.asList(
-                                CC.translate("&7Ejecuta scripts personalizados"),
-                                "",
-                                CC.translate("&8&oPróximamente...")
-                        ));
+                        List<String> scriptsLore = new ArrayList<>();
+                        scriptsLore.add(CC.translate("&7Ejecuta scripts personalizados"));
+                        scriptsLore.add(CC.translate("&7mediante JavaScript (Rhino)"));
+                        scriptsLore.add("");
+
+                        boolean hasScript = org.example.tools.scripts.ScriptManager.getInstance().hasScript(itemId);
+                        if (hasScript) {
+                            scriptsLore.add(CC.translate("&a✓ Script asociado"));
+                        } else {
+                            scriptsLore.add(CC.translate("&7Sin script"));
+                        }
+
+                        scriptsLore.add("");
+                        scriptsLore.add(CC.translate("&a[CLICK PARA GESTIONAR]"));
+                        scriptsMeta.setLore(scriptsLore);
                         scriptsButton.setItemMeta(scriptsMeta);
                         contents.set(2, 7, ClickableItem.of(scriptsButton, e -> {
-                            player.sendMessage(CC.translate("&d⚡ Próximamente..."));
+                            org.example.tools.inventory.ScriptManagementMenu.createScriptMenu(itemId).open(player);
                         }));
 
                         // BOTÓN ATRÁS

@@ -8,6 +8,7 @@ import org.example.tools.inventory.*;
 
 /**
  * Listener para manejar todos los inputs de chat relacionados con items
+ * VERSIÓN ACTUALIZADA: Incluye soporte para scripts
  */
 public class ItemEditListener implements Listener {
 
@@ -76,7 +77,7 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // NUEVO: Command Input Manager
+        // Command Input Manager
         if (ItemCommandInputManager.isInputtingCommand(player)) {
             event.setCancelled(true);
 
@@ -88,7 +89,7 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // NUEVO: TP Input Manager
+        // TP Input Manager
         if (ItemTPInputManager.isInputtingTPValue(player)) {
             event.setCancelled(true);
 
@@ -96,6 +97,18 @@ public class ItemEditListener implements Listener {
                 ItemTPInputManager.cancelTPValueInput(player);
             } else {
                 ItemTPInputManager.processTPValueInput(player, message);
+            }
+            return;
+        }
+
+        // NUEVO: Script Input Manager
+        if (org.example.tools.scripts.ScriptInputManager.isInputtingScript(player)) {
+            event.setCancelled(true);
+
+            if (message.equalsIgnoreCase("cancelar")) {
+                org.example.tools.scripts.ScriptInputManager.cancelScriptInput(player);
+            } else {
+                org.example.tools.scripts.ScriptInputManager.processScriptInput(player, message);
             }
             return;
         }
