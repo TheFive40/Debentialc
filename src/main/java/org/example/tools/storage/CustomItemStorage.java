@@ -47,6 +47,12 @@ public class CustomItemStorage {
         itemsConfig.set(path + ".maxDurability", item.getMaxDurability());
         itemsConfig.set(path + ".unbreakable", item.isUnbreakable());
 
+        // NUEVOS CAMPOS
+        itemsConfig.set(path + ".consumable", item.isConsumable());
+        itemsConfig.set(path + ".commands", item.getCommands());
+        itemsConfig.set(path + ".tpValue", item.getTpValue());
+        itemsConfig.set(path + ".tpConsumeStack", item.isTpConsumeStack());
+
         try {
             itemsConfig.save(itemsFile);
         } catch (IOException e) {
@@ -77,6 +83,12 @@ public class CustomItemStorage {
         item.setActive(itemsConfig.getBoolean(path + ".isActive", true));
         item.setMaxDurability(itemsConfig.getInt(path + ".maxDurability", -1));
         item.setUnbreakable(itemsConfig.getBoolean(path + ".unbreakable", false));
+
+        // NUEVOS CAMPOS
+        item.setConsumable(itemsConfig.getBoolean(path + ".consumable", false));
+        item.setCommands(itemsConfig.getStringList(path + ".commands"));
+        item.setTpValue(itemsConfig.getInt(path + ".tpValue", 0));
+        item.setTpConsumeStack(itemsConfig.getBoolean(path + ".tpConsumeStack", false));
 
         // Cargar bonificaciones
         if (itemsConfig.contains(path + ".bonusStat")) {

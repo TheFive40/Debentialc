@@ -3,6 +3,7 @@ package org.example.tools.ci;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -27,6 +28,22 @@ public class CustomItem {
 
     // Item irrompible (no recibe daño)
     private boolean unbreakable = false;
+
+    // Item consumible (se consume al usarse)
+    private boolean consumable = false;
+
+    // Comandos a ejecutar al consumir el item
+    private List<String> commands = new ArrayList<>();
+
+    // Valor de TP que otorga el item
+    private int tpValue = 0;
+
+    // Si consume todo el stack al usar
+    private boolean tpConsumeStack = false;
+
+    public CustomItem() {
+        this.commands = new ArrayList<>();
+    }
 
     public CustomItem setMaterial(int material) {
         this.material = material;
@@ -80,6 +97,26 @@ public class CustomItem {
 
     public CustomItem setUnbreakable(boolean unbreakable) {
         this.unbreakable = unbreakable;
+        return this;
+    }
+
+    public CustomItem setConsumable(boolean consumable) {
+        this.consumable = consumable;
+        return this;
+    }
+
+    public CustomItem setCommands(List<String> commands) {
+        this.commands = commands;
+        return this;
+    }
+
+    public CustomItem setTpValue(int tpValue) {
+        this.tpValue = tpValue;
+        return this;
+    }
+
+    public CustomItem setTpConsumeStack(boolean tpConsumeStack) {
+        this.tpConsumeStack = tpConsumeStack;
         return this;
     }
 
