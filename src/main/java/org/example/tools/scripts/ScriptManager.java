@@ -29,6 +29,9 @@ public class ScriptManager {
     // Metadatos de scripts (itemId -> ScriptMetadata)
     private final Map<String, ScriptMetadata> scriptMetadata = new HashMap<>();
 
+    // API instances activas (itemId -> ScriptAPI) - para limpieza de eventos
+    private final Map<String, ScriptAPI> activeApis = new HashMap<>();
+
     // Carpeta donde se guardan los scripts
     private File scriptsFolder;
 
@@ -237,6 +240,12 @@ public class ScriptManager {
             // Crear scope con variables disponibles
             Scriptable scope = ctx.initStandardObjects();
 
+            // Crear o reutilizar API instance (para tracking de eventos)
+            ScriptAPI api = activeApis.computeIfAbsent(itemId, ScriptAPI::new);
+
+            // Inyectar API de utilidades
+            scope.put("api", scope, api);
+
             // Inyectar variables del contexto
             scope.put("player", scope, context.getPlayer());
             scope.put("server", scope, Bukkit.getServer());
@@ -268,6 +277,12 @@ public class ScriptManager {
      * @return true si se eliminó correctamente
      */
     public boolean deleteScript(String itemId) {
+        // Limpiar event listeners si existen
+        ScriptAPI api = activeApis.remove(itemId);
+        if (api != null) {
+            api.offAll();
+        }
+
         // Eliminar de memoria
         loadedScripts.remove(itemId);
         scriptMetadata.remove(itemId);
@@ -311,6 +326,12 @@ public class ScriptManager {
      * Recarga un script específico
      */
     public boolean reloadScript(String itemId) {
+        // Limpiar event listeners antes de recargar
+        ScriptAPI api = activeApis.remove(itemId);
+        if (api != null) {
+            api.offAll();
+        }
+
         loadedScripts.remove(itemId);
         return loadScript(itemId);
     }
@@ -319,6 +340,12 @@ public class ScriptManager {
      * Recarga todos los scripts
      */
     public void reloadAllScripts() {
+        // Limpiar todos los event listeners
+        for (ScriptAPI api : activeApis.values()) {
+            api.offAll();
+        }
+        activeApis.clear();
+
         loadedScripts.clear();
         scriptMetadata.clear();
         loadAllScripts();
