@@ -8,7 +8,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.fragments.ArmorFragment;
 import org.debentialc.customitems.tools.fragments.FragmentManager;
 

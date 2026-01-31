@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.debentialc.customitems.commands.CustomItemCommand;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.ci.CustomItem;
 import org.debentialc.customitems.tools.scripts.ScriptInputManager;
 import org.debentialc.customitems.tools.scripts.ScriptManager;

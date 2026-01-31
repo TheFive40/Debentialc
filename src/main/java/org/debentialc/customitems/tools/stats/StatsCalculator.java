@@ -4,7 +4,7 @@ import kamkeel.npcdbc.constants.DBCClass;
 import kamkeel.npcdbc.constants.DBCRace;
 import noppes.npcs.api.entity.IDBCPlayer;
 import org.debentialc.Main;
-import org.debentialc.customitems.tools.General;
+import org.debentialc.service.General;
 import org.debentialc.customitems.tools.config.DBCConfigManager;
 
 public class StatsCalculator {

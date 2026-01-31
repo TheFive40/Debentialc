@@ -1,4 +1,4 @@
-package org.debentialc.customitems.tools.commands;
+package org.debentialc.service.commands;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -24,7 +24,7 @@ import org.bukkit.help.HelpTopicComparator;
 import org.bukkit.help.IndexHelpTopic;
 import org.bukkit.plugin.SimplePluginManager;
 import org.debentialc.Main;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 
 
 public class CommandFramework implements CommandExecutor {

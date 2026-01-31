@@ -1,7 +1,7 @@
 package org.debentialc.customitems.tools.pastebin;
 
 import org.bukkit.Bukkit;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 
 import java.io.BufferedReader;
 import java.io.IOException;

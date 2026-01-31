@@ -9,7 +9,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.debentialc.Main;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 import org.mozilla.javascript.Function;
 
 import java.util.ArrayList;

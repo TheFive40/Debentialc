@@ -2,7 +2,7 @@ package org.debentialc.customitems.tools.inventory;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.ci.CustomArmor;
 import org.debentialc.customitems.commands.RegisterItem;
 

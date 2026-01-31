@@ -3,7 +3,7 @@ package org.debentialc.customitems.tools.fragments;
 import noppes.npcs.api.entity.IDBCPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.debentialc.customitems.tools.General;
+import org.debentialc.service.General;
 
 import java.util.HashMap;
 import java.util.HashSet;

@@ -2,10 +2,10 @@ package org.debentialc.customitems.commands;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.debentialc.customitems.tools.CC;
-import org.debentialc.customitems.tools.commands.BaseCommand;
-import org.debentialc.customitems.tools.commands.Command;
-import org.debentialc.customitems.tools.commands.CommandArgs;
+import org.debentialc.service.CC;
+import org.debentialc.service.commands.BaseCommand;
+import org.debentialc.service.commands.Command;
+import org.debentialc.service.commands.CommandArgs;
 import org.debentialc.customitems.tools.fragments.CustomizedArmor;
 import org.debentialc.customitems.tools.fragments.FragmentManager;
 import org.debentialc.customitems.tools.permissions.Permissions;

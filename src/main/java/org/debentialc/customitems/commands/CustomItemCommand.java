@@ -3,11 +3,11 @@ package org.debentialc.customitems.commands;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.ci.CustomItem;
-import org.debentialc.customitems.tools.commands.BaseCommand;
-import org.debentialc.customitems.tools.commands.Command;
-import org.debentialc.customitems.tools.commands.CommandArgs;
+import org.debentialc.service.commands.BaseCommand;
+import org.debentialc.service.commands.Command;
+import org.debentialc.service.commands.CommandArgs;
 import org.debentialc.customitems.tools.permissions.Permissions;
 import org.debentialc.customitems.tools.storage.CustomItemStorage;
 

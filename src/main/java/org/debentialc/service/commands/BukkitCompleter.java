@@ -1,4 +1,4 @@
-package org.debentialc.customitems.tools.commands;
+package org.debentialc.service.commands;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

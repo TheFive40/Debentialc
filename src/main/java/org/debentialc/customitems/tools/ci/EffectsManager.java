@@ -6,7 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.debentialc.Main;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 
 import java.util.*;
 

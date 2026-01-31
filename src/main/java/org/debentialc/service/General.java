@@ -1,4 +1,4 @@
-package org.debentialc.customitems.tools;
+package org.debentialc.service;
 import JinRyuu.JRMCore.JRMCoreH;
 
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -65,6 +65,15 @@ public class General {
         BONUS_STATS.put("MND", MND);
         BONUS_STATS.put("SPI", SPI);
     }
-
+    public static int getLVL(Player player) {
+        int str = JRMCoreH.getInt(toPlayerMP(player), STR);
+        int dex = JRMCoreH.getInt(toPlayerMP(player), DEX);
+        int con = JRMCoreH.getInt(toPlayerMP(player), CON);
+        int wil = JRMCoreH.getInt(toPlayerMP(player), WIL);
+        int mnd = JRMCoreH.getInt(toPlayerMP(player), MND);
+        int spi = JRMCoreH.getInt(toPlayerMP(player), SPI);
+        int lvl = (str + dex + con + wil + mnd + spi) / 5 - 11;
+        return lvl;
+    }
 
 }

@@ -10,7 +10,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.durability.CustomDurabilityManager;
 
 /**

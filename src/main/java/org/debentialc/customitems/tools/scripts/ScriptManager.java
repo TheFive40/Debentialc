@@ -2,7 +2,7 @@ package org.debentialc.customitems.tools.scripts;
 
 import org.bukkit.Bukkit;
 import org.debentialc.Main;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Script;
 import org.mozilla.javascript.Scriptable;

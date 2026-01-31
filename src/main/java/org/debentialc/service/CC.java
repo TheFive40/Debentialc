@@ -1,4 +1,4 @@
-package org.debentialc.customitems.tools;
+package org.debentialc.service;
 import org.bukkit.ChatColor;
 import java.util.List;
 import java.util.stream.Collectors;

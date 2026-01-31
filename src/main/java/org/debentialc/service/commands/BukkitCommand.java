@@ -1,4 +1,4 @@
-package org.debentialc.customitems.tools.commands;
+package org.debentialc.service.commands;
 import org.bukkit.command.Command;
 import org.bukkit.command.*;
 import org.bukkit.plugin.Plugin;

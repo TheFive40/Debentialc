@@ -10,9 +10,10 @@ import org.debentialc.boosters.core.BoosterUtils;
 import org.debentialc.boosters.managers.GlobalBoosterManager;
 import org.debentialc.boosters.managers.PersonalBoosterManager;
 import org.debentialc.boosters.models.PersonalBooster;
-import org.debentialc.customitems.tools.ClassesRegistration;
+import org.debentialc.boosters.placeholders.PlaceholderModule;
+import org.debentialc.service.ClassesRegistration;
 import org.debentialc.customitems.tools.ci.CustomManager;
-import org.debentialc.customitems.tools.commands.CommandFramework;
+import org.debentialc.service.commands.CommandFramework;
 import org.debentialc.customitems.tools.fragments.FragmentBonusIntegration;
 import org.debentialc.customitems.tools.storage.CustomArmorStorage;
 import java.io.File;
@@ -51,6 +52,7 @@ public class Main extends JavaPlugin {
         loadAllConfigs();
         armorTask();
         BoosterModule.initialize(this);
+        PlaceholderModule.initialize(this);
     }
 
     public static void armorTask() {
@@ -68,7 +70,7 @@ public class Main extends JavaPlugin {
     @Override
     public void onDisable() {
         BoosterModule.shutdown();
-
+        PlaceholderModule.shutdown();
     }
 
     public static void exampleUsage() {

@@ -11,8 +11,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BlockIterator;
 import org.debentialc.customitems.commands.CustomItemCommand;
-import org.debentialc.customitems.tools.CC;
-import org.debentialc.customitems.tools.General;
+import org.debentialc.service.CC;
+import org.debentialc.service.General;
 import org.debentialc.customitems.tools.ci.CustomItem;
 
 import java.util.List;

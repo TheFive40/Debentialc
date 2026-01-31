@@ -1,7 +1,7 @@
 package org.debentialc.customitems.tools.scripts;
 
 import org.bukkit.entity.Player;
-import org.debentialc.customitems.tools.CC;
+import org.debentialc.service.CC;
 
 import java.util.HashMap;
 import java.util.UUID;

@@ -9,8 +9,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.debentialc.Main;
 import org.debentialc.customitems.commands.CustomItemCommand;
 import org.debentialc.customitems.commands.RegisterItem;
-import org.debentialc.customitems.tools.CC;
-import org.debentialc.customitems.tools.General;
+import org.debentialc.service.CC;
+import org.debentialc.service.General;
 import org.debentialc.customitems.tools.stats.StatsCalculator;
 
 import java.util.*;
@@ -124,7 +124,7 @@ public class CustomManager {
     public static void applyEffectToItemFromChat(org.bukkit.entity.Player player, String itemId,
                                                  String effectType, double value) {
         if (!CustomItemCommand.items.containsKey(itemId)) {
-            player.sendMessage(org.debentialc.customitems.tools.CC.translate("&c✗ Item no encontrado"));
+            player.sendMessage(CC.translate("&c✗ Item no encontrado"));
             return;
         }
 
@@ -138,7 +138,7 @@ public class CustomManager {
     public static void applyEffectToArmorFromChat(org.bukkit.entity.Player player, String armorId,
                                                   String effectType, double value) {
         if (!RegisterItem.items.containsKey(armorId)) {
-            player.sendMessage(org.debentialc.customitems.tools.CC.translate("&c✗ Armadura no encontrada"));
+            player.sendMessage(CC.translate("&c✗ Armadura no encontrada"));
             return;
         }
 
@@ -154,7 +154,7 @@ public class CustomManager {
     public static void applyBonusToItemFromChat(org.bukkit.entity.Player player, String itemId,
                                                 String stat, String operation, double value) {
         if (!CustomItemCommand.items.containsKey(itemId)) {
-            player.sendMessage(org.debentialc.customitems.tools.CC.translate("&c✗ Item no encontrado"));
+            player.sendMessage(CC.translate("&c✗ Item no encontrado"));
             return;
         }
 
@@ -170,7 +170,7 @@ public class CustomManager {
     public static void applyBonusToArmorFromChat(org.bukkit.entity.Player player, String armorId,
                                                  String stat, String operation, double value) {
         if (!RegisterItem.items.containsKey(armorId)) {
-            player.sendMessage(org.debentialc.customitems.tools.CC.translate("&c✗ Armadura no encontrada"));
+            player.sendMessage(CC.translate("&c✗ Armadura no encontrada"));
             return;
         }
 
