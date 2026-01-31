@@ -6,19 +6,23 @@ import org.example.Main;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Gestiona la configuración de tiers y límites de atributos
+ * VERSIÓN CORREGIDA:
+ * - Validación correcta de porcentajes (115 guardado = 15% real)
+ * - Soporte para operaciones permitidas por tier
  */
 public class TierConfig {
     private File configFile;
     private FileConfiguration config;
     private Map<String, Map<String, Integer>> tierLimits;
+    private Map<String, List<String>> tierAllowedOperations; // Operaciones permitidas por tier
 
     public TierConfig() {
         this.tierLimits = new HashMap<>();
+        this.tierAllowedOperations = new HashMap<>();
         loadConfig();
     }
 
@@ -36,6 +40,7 @@ public class TierConfig {
 
         config = YamlConfiguration.loadConfiguration(configFile);
         loadTierLimits();
+        loadTierOperations();
     }
 
     private void createDefaultConfig() {
@@ -50,6 +55,8 @@ public class TierConfig {
             config.set("tiers.TIER_1.WIL", 10);
             config.set("tiers.TIER_1.MND", 10);
             config.set("tiers.TIER_1.SPI", 10);
+            // POR DEFECTO: Todas las operaciones permitidas
+            config.set("tiers.TIER_1.allowed_operations", Arrays.asList("+", "-", "*"));
 
             // Tier 2 - Intermedio
             config.set("tiers.TIER_2.STR", 20);
@@ -58,6 +65,7 @@ public class TierConfig {
             config.set("tiers.TIER_2.WIL", 20);
             config.set("tiers.TIER_2.MND", 20);
             config.set("tiers.TIER_2.SPI", 20);
+            config.set("tiers.TIER_2.allowed_operations", Arrays.asList("+", "-", "*"));
 
             // Tier 3 - Avanzado
             config.set("tiers.TIER_3.STR", 30);
@@ -66,6 +74,7 @@ public class TierConfig {
             config.set("tiers.TIER_3.WIL", 30);
             config.set("tiers.TIER_3.MND", 30);
             config.set("tiers.TIER_3.SPI", 30);
+            config.set("tiers.TIER_3.allowed_operations", Arrays.asList("+", "-", "*"));
 
             // Tier VIP - Premium
             config.set("tiers.VIP.STR", 50);
@@ -74,6 +83,7 @@ public class TierConfig {
             config.set("tiers.VIP.WIL", 50);
             config.set("tiers.VIP.MND", 50);
             config.set("tiers.VIP.SPI", 50);
+            config.set("tiers.VIP.allowed_operations", Arrays.asList("+", "-", "*"));
 
             // Tier por defecto para armaduras vanilla
             config.set("default_tier", "TIER_1");
@@ -91,10 +101,28 @@ public class TierConfig {
             Map<String, Integer> limits = new HashMap<>();
 
             for (String attr : config.getConfigurationSection("tiers." + tier).getKeys(false)) {
+                // Saltar la key de operaciones permitidas
+                if (attr.equals("allowed_operations")) continue;
+
                 limits.put(attr, config.getInt("tiers." + tier + "." + attr));
             }
 
             tierLimits.put(tier, limits);
+        }
+    }
+
+    private void loadTierOperations() {
+        if (!config.contains("tiers")) return;
+
+        for (String tier : config.getConfigurationSection("tiers").getKeys(false)) {
+            List<String> operations = config.getStringList("tiers." + tier + ".allowed_operations");
+
+            // Si no hay operaciones definidas, permitir todas por defecto
+            if (operations.isEmpty()) {
+                operations = Arrays.asList("+", "-", "*");
+            }
+
+            tierAllowedOperations.put(tier, operations);
         }
     }
 
@@ -111,11 +139,115 @@ public class TierConfig {
     }
 
     /**
-     * Verifica si se puede aplicar un valor a un atributo
+     * MÉTODO CORREGIDO: Valida si un valor puede ser aplicado considerando la operación
+     *
+     * IMPORTANTE: Para operaciones multiplicativas (*), el valor guardado está escalado x100
+     * Ejemplo: 115 guardado = multiplicador 1.15 = 15% real
+     *
+     * @param tier Tier a validar
+     * @param attribute Atributo (STR, CON, etc)
+     * @param currentValue Valor actual GUARDADO (puede ser escalado si es *)
+     * @param valueToAdd Valor a AGREGAR (puede ser escalado si es *)
+     * @param operation Operación del atributo ("+", "-", "*")
+     * @return true si no excede el límite
      */
-    public boolean canApply(String tier, String attribute, int currentValue, int valueToAdd) {
+    public boolean canApply(String tier, String attribute, int currentValue, int valueToAdd, String operation) {
         int limit = getLimit(tier, attribute);
-        return (currentValue + valueToAdd) <= limit;
+
+        if (operation == null || !operation.equals("*")) {
+            // Operaciones aditivas/sustractivas: validar directamente
+            return (currentValue + valueToAdd) <= limit;
+        } else {
+            // Operación multiplicativa: valores están escalados x100
+            // Convertir a porcentaje real para comparar con el límite
+            int totalScaled = currentValue + valueToAdd;
+
+            // 115 escalado = 1.15 multiplicador = 15% real
+            double percentageReal = (totalScaled / 100.0 - 1.0) * 100.0;
+
+            // El límite también está en porcentaje, así que comparar directamente
+            // Ej: límite 20 = 20%, totalScaled 115 = 15% → OK
+            return Math.abs(percentageReal) <= limit;
+        }
+    }
+
+    /**
+     * MÉTODO CORREGIDO: Verifica si un valor actual excede el límite de un tier
+     *
+     * @param tier Tier a validar
+     * @param attribute Atributo
+     * @param currentValue Valor actual GUARDADO
+     * @param operation Operación ("+" , "-", "*")
+     * @return true si excede el límite
+     */
+    public boolean exceedsLimit(String tier, String attribute, int currentValue, String operation) {
+        int limit = getLimit(tier, attribute);
+
+        if (operation == null || !operation.equals("*")) {
+            // Aditivo/Sustractivo: comparar directamente
+            return currentValue > limit;
+        } else {
+            // Multiplicativo: convertir a porcentaje real
+            double percentageReal = Math.abs((currentValue / 100.0 - 1.0) * 100.0);
+            return percentageReal > limit;
+        }
+    }
+
+    /**
+     * Verifica si una operación está permitida en un tier
+     *
+     * @param tier Nombre del tier
+     * @param operation Operación a verificar ("+", "-", "*")
+     * @return true si está permitida
+     */
+    public boolean isOperationAllowed(String tier, String operation) {
+        List<String> allowed = tierAllowedOperations.getOrDefault(tier, Arrays.asList("+", "-", "*"));
+        return allowed.contains(operation);
+    }
+
+    /**
+     * Obtiene las operaciones permitidas para un tier
+     *
+     * @param tier Nombre del tier
+     * @return Lista de operaciones permitidas
+     */
+    public List<String> getAllowedOperations(String tier) {
+        return new ArrayList<>(tierAllowedOperations.getOrDefault(tier, Arrays.asList("+", "-", "*")));
+    }
+
+    /**
+     * Establece las operaciones permitidas para un tier
+     *
+     * @param tier Nombre del tier
+     * @param operations Lista de operaciones ("+", "-", "*")
+     * @return true si se guardó correctamente
+     */
+    public boolean setAllowedOperations(String tier, List<String> operations) {
+        // Validar tier
+        if (!tierLimits.containsKey(tier)) {
+            return false;
+        }
+
+        // Validar operaciones
+        for (String op : operations) {
+            if (!op.equals("+") && !op.equals("-") && !op.equals("*")) {
+                return false;
+            }
+        }
+
+        // Actualizar en memoria
+        tierAllowedOperations.put(tier, new ArrayList<>(operations));
+
+        // Actualizar en archivo
+        config.set("tiers." + tier + ".allowed_operations", operations);
+
+        try {
+            config.save(configFile);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     /**
@@ -163,6 +295,9 @@ public class TierConfig {
         // Si el tier no existe, crearlo
         if (!tierLimits.containsKey(tier)) {
             tierLimits.put(tier, new HashMap<>());
+            // Agregar operaciones por defecto
+            tierAllowedOperations.put(tier, Arrays.asList("+", "-", "*"));
+            config.set("tiers." + tier + ".allowed_operations", Arrays.asList("+", "-", "*"));
         }
 
         // Actualizar en memoria
@@ -200,6 +335,7 @@ public class TierConfig {
 
         // Eliminar de memoria
         tierLimits.remove(tier);
+        tierAllowedOperations.remove(tier);
 
         // Eliminar del archivo
         config.set("tiers." + tier, null);
@@ -234,7 +370,11 @@ public class TierConfig {
             config.set("tiers." + tierName + "." + attr, defaultLimit);
         }
 
+        // Agregar operaciones permitidas por defecto
+        config.set("tiers." + tierName + ".allowed_operations", Arrays.asList("+", "-", "*"));
+
         tierLimits.put(tierName, limits);
+        tierAllowedOperations.put(tierName, Arrays.asList("+", "-", "*"));
 
         try {
             config.save(configFile);
@@ -251,6 +391,8 @@ public class TierConfig {
     public void reload() {
         config = YamlConfiguration.loadConfiguration(configFile);
         tierLimits.clear();
+        tierAllowedOperations.clear();
         loadTierLimits();
+        loadTierOperations();
     }
 }

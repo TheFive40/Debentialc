@@ -15,7 +15,7 @@ import java.util.Map;
 
 /**
  * Comando de administración para el sistema de fragmentos
- * VERSIÓN CORREGIDA: Mantiene operaciones al cambiar de tier
+ * VERSIÓN CORREGIDA: Validación correcta de porcentajes y operaciones permitidas
  */
 public class FragmentAdminCommand extends BaseCommand {
 
@@ -68,6 +68,25 @@ public class FragmentAdminCommand extends BaseCommand {
                     return;
                 }
                 setTierLimit(player, command.getArgs(1), command.getArgs(2), command.getArgs(3));
+                break;
+
+            case "operations":
+                if (command.length() < 2) {
+                    player.sendMessage(CC.translate("&cUso: /fadmin operations <tier>"));
+                    player.sendMessage(CC.translate("&7Muestra las operaciones permitidas"));
+                    return;
+                }
+                showAllowedOperations(player, command.getArgs(1));
+                break;
+
+            case "setoperations":
+                if (command.length() < 3) {
+                    player.sendMessage(CC.translate("&cUso: /fadmin setoperations <tier> <ops>"));
+                    player.sendMessage(CC.translate("&7Ejemplo: /fadmin setoperations TIER_1 +,*"));
+                    player.sendMessage(CC.translate("&7Ops válidas: + - *"));
+                    return;
+                }
+                setAllowedOperations(player, command.getArgs(1), command.getArgs(2));
                 break;
 
             default:
@@ -129,7 +148,7 @@ public class FragmentAdminCommand extends BaseCommand {
     }
 
     /**
-     * CORREGIDO: Mantiene las operaciones al cambiar de tier
+     * CORREGIDO: Mantiene las operaciones al cambiar de tier Y valida correctamente los porcentajes
      */
     private void setArmorTier(Player player, String tier) {
         ItemStack armor = player.getItemInHand();
@@ -164,7 +183,7 @@ public class FragmentAdminCommand extends BaseCommand {
         // IMPORTANTE: Solo cambiar el tier, NO tocar los atributos ni operaciones
         customArmor.setTier(tier);
 
-        // Validar que los valores actuales no excedan los límites del nuevo tier
+        // VALIDACIÓN CORREGIDA: Usar el método exceedsLimit que maneja correctamente los porcentajes
         boolean exceedsLimits = false;
         StringBuilder errorMsg = new StringBuilder();
         errorMsg.append(CC.translate("&c✗ Los siguientes atributos exceden los límites del tier " + tier + ":\n"));
@@ -172,11 +191,12 @@ public class FragmentAdminCommand extends BaseCommand {
         for (Map.Entry<String, Integer> entry : customArmor.getAttributes().entrySet()) {
             String attr = entry.getKey();
             int currentValue = entry.getValue();
-            int newLimit = FragmentManager.getInstance().getTierConfig().getLimit(tier, attr);
+            String operation = customArmor.getOperations().getOrDefault(attr, "+");
 
-            if (currentValue > newLimit) {
+            // CORRECCIÓN: Usar exceedsLimit que maneja correctamente los multiplicadores
+            if (FragmentManager.getInstance().getTierConfig().exceedsLimit(tier, attr, currentValue, operation)) {
                 exceedsLimits = true;
-                String operation = customArmor.getOperations().getOrDefault(attr, "+");
+                int newLimit = FragmentManager.getInstance().getTierConfig().getLimit(tier, attr);
 
                 String displayValue;
                 if (operation.equals("*")) {
@@ -193,6 +213,28 @@ public class FragmentAdminCommand extends BaseCommand {
         if (exceedsLimits) {
             player.sendMessage(errorMsg.toString());
             player.sendMessage(CC.translate("&7Usa fragmentos negativos para reducir los valores"));
+            return;
+        }
+
+        // Verificar que las operaciones actuales sean permitidas en el nuevo tier
+        boolean hasInvalidOperations = false;
+        StringBuilder opErrorMsg = new StringBuilder();
+        opErrorMsg.append(CC.translate("&c✗ Las siguientes operaciones NO están permitidas en " + tier + ":\n"));
+
+        for (Map.Entry<String, String> entry : customArmor.getOperations().entrySet()) {
+            String attr = entry.getKey();
+            String op = entry.getValue();
+
+            if (!FragmentManager.getInstance().getTierConfig().isOperationAllowed(tier, op)) {
+                hasInvalidOperations = true;
+                opErrorMsg.append(CC.translate("&7  " + attr + ": &f" + op + "\n"));
+            }
+        }
+
+        if (hasInvalidOperations) {
+            player.sendMessage(opErrorMsg.toString());
+            player.sendMessage(CC.translate("&7Operaciones permitidas: &f" +
+                    String.join(", ", FragmentManager.getInstance().getTierConfig().getAllowedOperations(tier))));
             return;
         }
 
@@ -281,10 +323,80 @@ public class FragmentAdminCommand extends BaseCommand {
                         ": &f" + attrEntry.getValue()));
             }
 
+            // Mostrar operaciones permitidas
+            java.util.List<String> ops = FragmentManager.getInstance()
+                    .getTierConfig().getAllowedOperations(tierEntry.getKey());
+            player.sendMessage(CC.translate("&7  Operaciones: &f" + String.join(", ", ops)));
+
             player.sendMessage("");
         }
 
         player.sendMessage(CC.translate("&8&m--------------------"));
+    }
+
+    private void showAllowedOperations(Player player, String tier) {
+        tier = tier.toUpperCase();
+
+        Map<String, Map<String, Integer>> tiers = FragmentManager.getInstance()
+                .getTierConfig().getAllTiers();
+
+        if (!tiers.containsKey(tier)) {
+            player.sendMessage(CC.translate("&c✗ Tier inválido"));
+            player.sendMessage(CC.translate("&7Disponibles: " + String.join(", ", tiers.keySet())));
+            return;
+        }
+
+        java.util.List<String> ops = FragmentManager.getInstance()
+                .getTierConfig().getAllowedOperations(tier);
+
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&3Operaciones permitidas en " + tier));
+        player.sendMessage(CC.translate("&7" + String.join(", ", ops)));
+        player.sendMessage("");
+    }
+
+    private void setAllowedOperations(Player player, String tier, String opsStr) {
+        tier = tier.toUpperCase();
+
+        Map<String, Map<String, Integer>> tiers = FragmentManager.getInstance()
+                .getTierConfig().getAllTiers();
+
+        if (!tiers.containsKey(tier)) {
+            player.sendMessage(CC.translate("&c✗ Tier inválido"));
+            return;
+        }
+
+        // Parsear operaciones
+        String[] opsArray = opsStr.split(",");
+        java.util.List<String> operations = new java.util.ArrayList<>();
+
+        for (String op : opsArray) {
+            op = op.trim();
+            if (op.equals("+") || op.equals("-") || op.equals("*")) {
+                operations.add(op);
+            } else {
+                player.sendMessage(CC.translate("&c✗ Operación inválida: " + op));
+                player.sendMessage(CC.translate("&7Válidas: + - *"));
+                return;
+            }
+        }
+
+        if (operations.isEmpty()) {
+            player.sendMessage(CC.translate("&c✗ Debes especificar al menos una operación"));
+            return;
+        }
+
+        boolean success = FragmentManager.getInstance().getTierConfig()
+                .setAllowedOperations(tier, operations);
+
+        if (success) {
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Operaciones actualizadas para " + tier));
+            player.sendMessage(CC.translate("&7Permitidas: &f" + String.join(", ", operations)));
+            player.sendMessage("");
+        } else {
+            player.sendMessage(CC.translate("&c✗ Error al actualizar operaciones"));
+        }
     }
 
     private void sendHelp(Player player) {
@@ -304,10 +416,16 @@ public class FragmentAdminCommand extends BaseCommand {
         player.sendMessage(CC.translate("&7  Estadísticas"));
         player.sendMessage("");
         player.sendMessage(CC.translate("&e/fadmin limits"));
-        player.sendMessage(CC.translate("&7  Límites por tier"));
+        player.sendMessage(CC.translate("&7  Límites y operaciones por tier"));
         player.sendMessage("");
         player.sendMessage(CC.translate("&e/fadmin setlimit <tier> <attr> <valor>"));
         player.sendMessage(CC.translate("&7  Modifica límite de tier"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&e/fadmin operations <tier>"));
+        player.sendMessage(CC.translate("&7  Ver operaciones permitidas"));
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&e/fadmin setoperations <tier> <ops>"));
+        player.sendMessage(CC.translate("&7  Ej: /fadmin setoperations TIER_1 +,*"));
         player.sendMessage("");
         player.sendMessage(CC.translate("&e/fadmin reload"));
         player.sendMessage(CC.translate("&7  Recarga config"));

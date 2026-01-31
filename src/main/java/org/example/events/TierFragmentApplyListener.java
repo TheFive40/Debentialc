@@ -16,7 +16,7 @@ import org.example.tools.fragments.TierFragment;
 
 /**
  * Listener para manejar la aplicación de fragmentos de tier a armaduras
- * SECUENCIAL: Solo permite upgrades de un tier al siguiente
+ * VERSIÓN CORREGIDA: Validación correcta de porcentajes y operaciones permitidas
  */
 public class TierFragmentApplyListener implements Listener {
 
@@ -98,26 +98,27 @@ public class TierFragmentApplyListener implements Listener {
             return;
         }
 
-        // Verificar que los valores actuales no excedan los límites del nuevo tier
+        // VALIDACIÓN CORREGIDA: Usar exceedsLimit que maneja correctamente los multiplicadores
         boolean exceedsLimits = false;
         StringBuilder errorMsg = new StringBuilder();
 
         for (java.util.Map.Entry<String, Integer> entry : customArmor.getAttributes().entrySet()) {
             String attr = entry.getKey();
             int currentValue = entry.getValue();
-            int newLimit = FragmentManager.getInstance().getTierConfig().getLimit(targetTier, attr);
+            String operation = customArmor.getOperations().getOrDefault(attr, "+");
 
-            if (currentValue > newLimit) {
+            // Usar el método corregido
+            if (FragmentManager.getInstance().getTierConfig().exceedsLimit(targetTier, attr, currentValue, operation)) {
                 exceedsLimits = true;
-                if (!errorMsg.toString().isEmpty()) {
-                    errorMsg.append(", ");
-                } else {
+                if (errorMsg.length() == 0) {
                     errorMsg.append(CC.translate("&c✗ Atributos exceden límites del nuevo tier:\n&7"));
+                } else {
+                    errorMsg.append(", ");
                 }
 
-                String operation = customArmor.getOperations().getOrDefault(attr, "+");
-                String displayValue;
+                int newLimit = FragmentManager.getInstance().getTierConfig().getLimit(targetTier, attr);
 
+                String displayValue;
                 if (operation.equals("*")) {
                     double percentage = (currentValue / 100.0 - 1.0) * 100.0;
                     displayValue = String.format("%+.0f%%", percentage);
@@ -135,6 +136,36 @@ public class TierFragmentApplyListener implements Listener {
             player.sendMessage(errorMsg.toString());
             player.sendMessage("");
             player.sendMessage(CC.translate("&7Usa fragmentos negativos para reducir valores"));
+            player.sendMessage("");
+            return;
+        }
+
+        // VALIDACIÓN NUEVA: Verificar operaciones permitidas en el nuevo tier
+        boolean hasInvalidOperations = false;
+        StringBuilder opErrorMsg = new StringBuilder();
+
+        for (java.util.Map.Entry<String, String> entry : customArmor.getOperations().entrySet()) {
+            String attr = entry.getKey();
+            String operation = entry.getValue();
+
+            if (!FragmentManager.getInstance().getTierConfig().isOperationAllowed(targetTier, operation)) {
+                hasInvalidOperations = true;
+                if (opErrorMsg.length() == 0) {
+                    opErrorMsg.append(CC.translate("&c✗ Operaciones NO permitidas en " + targetTier + ":\n&7"));
+                } else {
+                    opErrorMsg.append(", ");
+                }
+
+                opErrorMsg.append(attr).append(" (").append(operation).append(")");
+            }
+        }
+
+        if (hasInvalidOperations) {
+            player.sendMessage("");
+            player.sendMessage(opErrorMsg.toString());
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&7Operaciones permitidas: &f" +
+                    String.join(", ", FragmentManager.getInstance().getTierConfig().getAllowedOperations(targetTier))));
             player.sendMessage("");
             return;
         }

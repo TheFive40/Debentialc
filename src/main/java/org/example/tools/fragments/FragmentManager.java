@@ -8,6 +8,10 @@ import org.example.tools.CC;
 
 import java.util.Set;
 
+/**
+ * Gestor del sistema de fragmentos
+ * VERSIÓN CORREGIDA: Validación correcta de porcentajes y operaciones permitidas
+ */
 public class FragmentManager {
     private static FragmentManager instance;
     private TierConfig tierConfig;
@@ -27,6 +31,7 @@ public class FragmentManager {
 
     /**
      * Aplica un fragmento a una pieza de armadura
+     * VERSIÓN CORREGIDA: Valida operaciones permitidas y porcentajes correctamente
      * @return true si se aplicó exitosamente
      */
     public boolean applyFragment(Player player, ItemStack fragment, ItemStack armor) {
@@ -60,6 +65,15 @@ public class FragmentManager {
         } else {
             customArmor = convertVanillaArmor(armor);
             player.sendMessage(CC.translate("&a✓ Armadura convertida a personalizada"));
+        }
+
+        // VALIDACIÓN NUEVA: Verificar que la operación esté permitida en el tier actual
+        if (!tierConfig.isOperationAllowed(customArmor.getTier(), operation)) {
+            player.sendMessage(CC.translate("&c✗ Operación NO permitida en " + customArmor.getTier()));
+            player.sendMessage(CC.translate("&7Operación del fragmento: &f" + operation));
+            player.sendMessage(CC.translate("&7Operaciones permitidas: &f" +
+                    String.join(", ", tierConfig.getAllowedOperations(customArmor.getTier()))));
+            return false;
         }
 
         // Obtener valor actual
@@ -99,13 +113,32 @@ public class FragmentManager {
                 break;
         }
 
-        // VALIDAR LÍMITES DEL TIER
-        // IMPORTANTE: Para multiplicadores, validamos el resultado final
-        int limit = tierConfig.getLimit(customArmor.getTier(), attribute);
+        // VALIDACIÓN CORREGIDA: Usar canApply que maneja correctamente los porcentajes
+        int valueToAdd;
+        if (operation.equals("*")) {
+            valueToAdd = (int) Math.round(value * 100) - currentValue;
+        } else {
+            valueToAdd = newValue - currentValue;
+        }
 
-        if (newValue > limit) {
+        if (!tierConfig.canApply(customArmor.getTier(), attribute, currentValue, valueToAdd, operation)) {
             player.sendMessage(CC.translate("&c✗ El valor excedería el límite"));
-            player.sendMessage(CC.translate("&7Actual: &f" + currentValue + " &7| Nuevo: &f" + newValue + " &7| Límite: &f" + limit));
+
+            int limit = tierConfig.getLimit(customArmor.getTier(), attribute);
+
+            // Mostrar en el formato correcto según la operación
+            String currentDisplay, newDisplay;
+            if (operation.equals("*")) {
+                double currentPercentage = (currentValue / 100.0 - 1.0) * 100.0;
+                double newPercentage = (newValue / 100.0 - 1.0) * 100.0;
+                currentDisplay = String.format("%+.0f%%", currentPercentage);
+                newDisplay = String.format("%+.0f%%", newPercentage);
+            } else {
+                currentDisplay = String.valueOf(currentValue);
+                newDisplay = String.valueOf(newValue);
+            }
+
+            player.sendMessage(CC.translate("&7Actual: &f" + currentDisplay + " &7| Nuevo: &f" + newDisplay + " &7| Límite: &f" + limit));
             player.sendMessage(CC.translate("&7Tier: &f" + customArmor.getTier()));
 
             // Mostrar detalle de la operación
@@ -165,6 +198,8 @@ public class FragmentManager {
             operationSymbol = "+" + valueRaw;
             actualValue = String.valueOf(newValue);
         }
+
+        int limit = tierConfig.getLimit(customArmor.getTier(), attribute);
 
         player.sendMessage("");
         player.sendMessage(CC.translate("&a✓ Fragmento aplicado exitosamente"));
