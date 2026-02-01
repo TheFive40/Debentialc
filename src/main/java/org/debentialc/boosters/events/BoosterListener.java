@@ -16,15 +16,8 @@ import org.debentialc.boosters.storage.BoosterStorage;
 
 import java.util.List;
 
-/**
- * Listener de eventos del sistema de boosters
- * VERSIÓN CORREGIDA: Mejor manejo de eventos y prioridades
- */
 public class BoosterListener implements Listener {
 
-    /**
-     * Carga los boosters personales cuando un jugador entra
-     */
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
@@ -46,9 +39,6 @@ public class BoosterListener implements Listener {
         }
     }
 
-    /**
-     * Guarda los boosters personales cuando un jugador sale
-     */
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
@@ -68,9 +58,6 @@ public class BoosterListener implements Listener {
         }
     }
 
-    /**
-     * Maneja los clicks en los menús de configuración
-     */
     @EventHandler(priority = EventPriority.HIGH)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) {
@@ -104,9 +91,6 @@ public class BoosterListener implements Listener {
         }
     }
 
-    /**
-     * Maneja clicks en el menú principal
-     */
     private void handleMainMenu(Player player, int slot) {
         switch (slot) {
             case 11:
@@ -127,36 +111,24 @@ public class BoosterListener implements Listener {
         }
     }
 
-    /**
-     * Maneja clicks en el menú de booster global
-     */
     private void handleGlobalMenu(Player player, int slot) {
         if (slot == 26) {
             player.openInventory(BoosterConfigMenu.createMainMenu());
         }
     }
 
-    /**
-     * Maneja clicks en el menú de boosters personales
-     */
     private void handlePersonalMenu(Player player, int slot) {
         if (slot == 26) {
             player.openInventory(BoosterConfigMenu.createMainMenu());
         }
     }
 
-    /**
-     * Maneja clicks en el menú de multiplicadores de rango
-     */
     private void handleRankMenu(Player player, int slot) {
         if (slot == 35) {
             player.openInventory(BoosterConfigMenu.createMainMenu());
         }
     }
 
-    /**
-     * Maneja clicks en el menú de duraciones
-     */
     private void handleDurationMenu(Player player, int slot) {
         if (slot == 26) {
             player.openInventory(BoosterConfigMenu.createMainMenu());

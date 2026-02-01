@@ -1,355 +1,382 @@
 package org.debentialc.boosters.commands;
 
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.debentialc.boosters.core.BoosterParser;
 import org.debentialc.boosters.core.BoosterSettings;
 import org.debentialc.boosters.managers.GlobalBoosterManager;
 import org.debentialc.boosters.managers.PersonalBoosterManager;
 import org.debentialc.boosters.models.GlobalBooster;
 import org.debentialc.boosters.models.PersonalBooster;
 import org.debentialc.boosters.storage.BoosterStorage;
+import org.debentialc.service.CC;
+import org.debentialc.service.commands.BaseCommand;
+import org.debentialc.customitems.tools.permissions.Permissions;
+import org.debentialc.service.commands.Command;
+import org.debentialc.service.commands.CommandArgs;
 
+import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
-/**
- * Comando principal del sistema de boosters
- * VERSIÓN CORREGIDA: Mejor manejo de errores y validaciones
- */
-public class BoosterCommand implements CommandExecutor {
+public class BoosterCommand extends BaseCommand {
 
+    @Command(name = "booster", aliases = {"booster", "boosters", "boost"}, permission = Permissions.COMMAND + "booster")
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        // Verificar permisos
-        if (!sender.hasPermission("debentialc.booster.admin")) {
-            sender.sendMessage("§cNo tienes permiso para usar este comando");
-            return true;
+    public void onCommand(CommandArgs command) throws IOException {
+        Player player = command.getPlayer();
+
+        if (command.length() < 1) {
+            sendHelp(player);
+            return;
         }
 
-        if (args.length == 0) {
-            sendHelp(sender);
-            return true;
-        }
+        String arg0 = command.getArgs(0);
 
-        String subcommand = args[0].toLowerCase();
-
-        switch (subcommand) {
+        switch (arg0.toLowerCase()) {
             case "global":
-                return handleGlobalCommand(sender, args);
+                handleGlobalCommand(command);
+                break;
 
             case "personal":
-                return handlePersonalCommand(sender, args);
+                handlePersonalCommand(command);
+                break;
 
             case "config":
-                return handleConfigCommand(sender);
+                handleConfigCommand(command);
+                break;
 
             case "info":
-                return handleInfoCommand(sender);
+                handleInfoCommand(command);
+                break;
 
             case "save":
                 BoosterStorage.saveAllData();
-                sender.sendMessage("§aDatos guardados exitosamente");
-                return true;
+                command.getSender().sendMessage(CC.translate("&aDatos guardados exitosamente"));
+                break;
 
             case "load":
                 BoosterStorage.loadAllData();
-                sender.sendMessage("§aDatos cargados exitosamente");
-                return true;
+                command.getSender().sendMessage(CC.translate("&aDatos cargados exitosamente"));
+                break;
 
             case "help":
-                sendHelp(sender);
-                return true;
+                sendHelp(player);
+                break;
 
             default:
-                sender.sendMessage("§cSubcomando desconocido: " + subcommand);
-                sendHelp(sender);
-                return true;
+                command.getSender().sendMessage(CC.translate("&cSubcomando desconocido: " + arg0));
+                sendHelp(player);
+                break;
         }
     }
 
-    /**
-     * Maneja los comandos de booster global
-     */
-    private boolean handleGlobalCommand(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            sender.sendMessage("§cUso: /booster global <activate|deactivate|multiplier>");
-            return true;
+    private void handleGlobalCommand(CommandArgs command) {
+        if (command.length() < 2) {
+            command.getSender().sendMessage(CC.translate("&cUso: /booster global <activate|deactivate|info>"));
+            return;
         }
 
-        String action = args[1].toLowerCase();
+        String action = command.getArgs(1).toLowerCase();
 
         switch (action) {
             case "activate":
-                if (args.length < 3) {
-                    sender.sendMessage("§cUso: /booster global activate <multiplicador>");
-                    return true;
+                if (command.length() < 3) {
+                    command.getSender().sendMessage(CC.translate("&cUso: /booster global activate <porcentaje> [tiempo]"));
+                    command.getSender().sendMessage(CC.translate("&7Ejemplo: /booster global activate 50% 1h"));
+                    command.getSender().sendMessage(CC.translate("&7Ejemplo: /booster global activate 150% 2h30m"));
+                    command.getSender().sendMessage(CC.translate("&7Si no especificas tiempo, usa la duración por defecto"));
+                    return;
                 }
 
                 try {
-                    double multiplier = Double.parseDouble(args[2]);
+                    String percentageStr = command.getArgs(2);
+                    double multiplier = BoosterParser.parsePercentageToMultiplier(percentageStr);
 
-                    if (multiplier <= 0) {
-                        sender.sendMessage("§cEl multiplicador debe ser mayor a 0");
-                        return true;
+                    long duration = BoosterSettings.getGlobalBoosterDuration();
+
+                    if (command.length() >= 4) {
+                        String timeStr = command.getArgs(3);
+                        duration = BoosterParser.parseTimeToSeconds(timeStr);
                     }
 
-                    GlobalBoosterManager.activateBooster(multiplier, sender.getName());
-                    sender.sendMessage("§aBooster global activado con multiplicador: §6" + multiplier + "x");
-                    Bukkit.broadcastMessage("§e[BOOSTER] §aBooster Global Activado: §6" + multiplier + "x §apor " + sender.getName());
+                    GlobalBoosterManager.activateBooster(multiplier, command.getSender().getName(), duration);
 
-                } catch (NumberFormatException e) {
-                    sender.sendMessage("§cMultiplicador inválido. Debe ser un número");
+                    String percentDisplay = BoosterParser.formatMultiplierAsPercentage(multiplier);
+                    String timeDisplay = BoosterParser.formatSecondsToTime(duration);
+
+                    command.getSender().sendMessage(CC.translate("&aBooster global activado:"));
+                    command.getSender().sendMessage(CC.translate("  &6Bonus: &a+" + percentDisplay));
+                    command.getSender().sendMessage(CC.translate("  &6Multiplicador: &ax" + String.format("%.2f", multiplier)));
+                    command.getSender().sendMessage(CC.translate("  &6Duración: &a" + timeDisplay));
+
+                    Bukkit.broadcastMessage(CC.translate("&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+                    Bukkit.broadcastMessage(CC.translate("&6&l⚡ BOOSTER GLOBAL ACTIVADO ⚡"));
+                    Bukkit.broadcastMessage("");
+                    Bukkit.broadcastMessage(CC.translate("  &eBono: &a+" + percentDisplay));
+                    Bukkit.broadcastMessage(CC.translate("  &eDuración: &f" + timeDisplay));
+                    Bukkit.broadcastMessage(CC.translate("  &eActivado por: &6" + command.getSender().getName()));
+                    Bukkit.broadcastMessage("");
+                    Bukkit.broadcastMessage(CC.translate("&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+
+                } catch (IllegalArgumentException e) {
+                    command.getSender().sendMessage(CC.translate("&c✗ Error: " + e.getMessage()));
+                    command.getSender().sendMessage(CC.translate("&7Formato: /booster global activate <porcentaje> [tiempo]"));
+                    command.getSender().sendMessage(CC.translate("&7Ejemplos:"));
+                    command.getSender().sendMessage(CC.translate("&f  /booster global activate 50%"));
+                    command.getSender().sendMessage(CC.translate("&f  /booster global activate 150% 1h"));
+                    command.getSender().sendMessage(CC.translate("&f  /booster global activate 200% 2h30m"));
                 }
-                return true;
+                break;
 
             case "deactivate":
                 if (GlobalBoosterManager.isBoosterActive()) {
                     GlobalBoosterManager.deactivateBooster();
-                    sender.sendMessage("§aBooster global desactivado");
-                    Bukkit.broadcastMessage("§e[BOOSTER] §cBooster Global Desactivado");
+                    command.getSender().sendMessage(CC.translate("&aBooster global desactivado"));
+                    Bukkit.broadcastMessage(CC.translate("&e[BOOSTER] &cBooster Global Desactivado"));
                 } else {
-                    sender.sendMessage("§cNo hay ningún booster global activo");
+                    command.getSender().sendMessage(CC.translate("&cNo hay booster global activo"));
                 }
-                return true;
+                break;
 
-            case "multiplier":
             case "info":
+            case "multiplier":
                 GlobalBooster booster = GlobalBoosterManager.getActiveBooster();
                 if (booster != null) {
-                    sender.sendMessage("§6=== Booster Global ===");
-                    sender.sendMessage("§aMultiplicador: §6" + String.format("%.2f", booster.getMultiplier()) + "x");
-                    sender.sendMessage("§aTiempo restante: §6" + booster.getFormattedTime());
-                    sender.sendMessage("§aActivado por: §6" + booster.getActivatedBy());
+                    String percentDisplay = BoosterParser.formatMultiplierAsPercentage(booster.getMultiplier());
+
+                    command.getSender().sendMessage(CC.translate("&6=== Booster Global ==="));
+                    command.getSender().sendMessage(CC.translate("&aBono: &6+" + percentDisplay));
+                    command.getSender().sendMessage(CC.translate("&aMultiplicador: &6x" + String.format("%.2f", booster.getMultiplier())));
+                    command.getSender().sendMessage(CC.translate("&aTiempo restante: &6" + booster.getFormattedTime()));
+                    command.getSender().sendMessage(CC.translate("&aActivado por: &6" + booster.getActivatedBy()));
                 } else {
-                    sender.sendMessage("§cNo hay booster global activo");
+                    command.getSender().sendMessage(CC.translate("&cNo hay booster global activo"));
                 }
-                return true;
+                break;
 
             default:
-                sender.sendMessage("§cAcción desconocida: " + action);
-                sender.sendMessage("§7Acciones: activate, deactivate, multiplier");
-                return true;
+                command.getSender().sendMessage(CC.translate("&cAcción desconocida: " + action));
+                break;
         }
     }
 
-    /**
-     * Maneja los comandos de booster personal
-     */
-    private boolean handlePersonalCommand(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            sender.sendMessage("§cUso: /booster personal <add|activate|list>");
-            return true;
+    private void handlePersonalCommand(CommandArgs command) {
+        if (command.length() < 2) {
+            command.getSender().sendMessage(CC.translate("&cUso: /booster personal <add|activate|list>"));
+            return;
         }
 
-        String action = args[1].toLowerCase();
+        String action = command.getArgs(1).toLowerCase();
 
         switch (action) {
             case "add":
-                if (args.length < 4) {
-                    sender.sendMessage("§cUso: /booster personal add <jugador> <nivel>");
-                    sender.sendMessage("§7Niveles disponibles: 1-5");
-                    return true;
+                if (command.length() < 4) {
+                    command.getSender().sendMessage(CC.translate("&cUso: /booster personal add <jugador> <nivel>"));
+                    command.getSender().sendMessage(CC.translate("&7Niveles: 1-5"));
+                    return;
                 }
 
-                Player target = Bukkit.getPlayer(args[2]);
+                Player target = Bukkit.getPlayer(command.getArgs(2));
                 if (target == null) {
-                    sender.sendMessage("§cJugador no encontrado: " + args[2]);
-                    return true;
+                    command.getSender().sendMessage(CC.translate("&cJugador no encontrado: " + command.getArgs(2)));
+                    return;
                 }
 
                 try {
-                    int level = Integer.parseInt(args[3]);
+                    int level = Integer.parseInt(command.getArgs(3));
 
                     if (level < 1 || level > 5) {
-                        sender.sendMessage("§cEl nivel debe ser entre 1 y 5");
-                        return true;
+                        command.getSender().sendMessage(CC.translate("&cNivel debe ser entre 1 y 5"));
+                        return;
                     }
 
                     double mult = BoosterSettings.getPersonalBoosterMultiplier(level);
                     PersonalBooster booster = new PersonalBooster(target.getUniqueId(), level, mult);
                     PersonalBoosterManager.addBooster(booster);
 
-                    sender.sendMessage("§aBooster personal nivel §6" + level + " §aañadido a §6" + target.getName());
-                    target.sendMessage("§e§l¡Has recibido un booster personal nivel §6" + level + "!");
+                    String percentDisplay = BoosterParser.formatMultiplierAsPercentage(mult);
+
+                    command.getSender().sendMessage(CC.translate("&aBooster nivel &6" + level + " &aañadido a &6" + target.getName()));
+                    command.getSender().sendMessage(CC.translate("  &7Bonus: &a+" + percentDisplay));
+
+                    target.sendMessage(CC.translate("&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+                    target.sendMessage(CC.translate("&6&l⚡ BOOSTER RECIBIDO ⚡"));
+                    target.sendMessage("");
+                    target.sendMessage(CC.translate("  &eNivel: &6" + level));
+                    target.sendMessage(CC.translate("  &eBono: &a+" + percentDisplay));
+                    target.sendMessage("");
+                    target.sendMessage(CC.translate("&7Usa &e/booster personal list &7para ver tus boosters"));
+                    target.sendMessage(CC.translate("&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
                 } catch (NumberFormatException e) {
-                    sender.sendMessage("§cNivel inválido. Debe ser un número entre 1 y 5");
+                    command.getSender().sendMessage(CC.translate("&cNivel inválido"));
                 }
-                return true;
+                break;
 
             case "activate":
-                if (!(sender instanceof Player)) {
-                    sender.sendMessage("§cDebes ser un jugador para activar boosters personales");
-                    return true;
+                if (!command.isPlayer()) {
+                    command.getSender().sendMessage(CC.translate("&cDebes ser un jugador"));
+                    return;
                 }
 
-                Player player = (Player) sender;
+                Player player = command.getPlayer();
                 List<PersonalBooster> boosters = PersonalBoosterManager.getPlayerBoosters(player.getUniqueId());
 
                 if (boosters.isEmpty()) {
-                    player.sendMessage("§cNo tienes boosters personales disponibles");
-                    return true;
+                    player.sendMessage(CC.translate("&cNo tienes boosters personales"));
+                    return;
                 }
 
-                if (args.length < 3) {
-                    player.sendMessage("§cUso: /booster personal activate <índice>");
+                if (command.length() < 3) {
+                    player.sendMessage(CC.translate("&cUso: /booster personal activate <índice>"));
                     listPlayerBoosters(player, boosters);
-                    return true;
+                    return;
                 }
 
                 try {
-                    int index = Integer.parseInt(args[2]);
+                    int index = Integer.parseInt(command.getArgs(2));
 
                     if (index < 0 || index >= boosters.size()) {
-                        player.sendMessage("§cÍndice inválido. Usa un número entre 0 y " + (boosters.size() - 1));
+                        player.sendMessage(CC.translate("&cÍndice inválido: 0-" + (boosters.size() - 1)));
                         listPlayerBoosters(player, boosters);
-                        return true;
+                        return;
                     }
 
+                    PersonalBooster boosterToActivate = boosters.get(index);
                     PersonalBoosterManager.activateBooster(player.getUniqueId(), index);
-                    player.sendMessage("§aBooster personal activado exitosamente");
+
+                    String percentDisplay = BoosterParser.formatMultiplierAsPercentage(boosterToActivate.getMultiplier());
+                    String timeDisplay = BoosterParser.formatSecondsToTime(BoosterSettings.getPersonalBoosterDuration());
+
+                    player.sendMessage(CC.translate("&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+                    player.sendMessage(CC.translate("&b&l⚡ BOOSTER ACTIVADO ⚡"));
+                    player.sendMessage("");
+                    player.sendMessage(CC.translate("  &eNivel: &6" + boosterToActivate.getLevelName()));
+                    player.sendMessage(CC.translate("  &eBono: &a+" + percentDisplay));
+                    player.sendMessage(CC.translate("  &eDuración: &f" + timeDisplay));
+                    player.sendMessage("");
+                    player.sendMessage(CC.translate("&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
                 } catch (NumberFormatException e) {
-                    player.sendMessage("§cÍndice inválido. Debe ser un número");
+                    player.sendMessage(CC.translate("&cÍndice inválido"));
                 }
-                return true;
+                break;
 
             case "list":
-                if (!(sender instanceof Player)) {
-                    sender.sendMessage("§cDebes ser un jugador para ver tus boosters");
-                    return true;
+                if (!command.isPlayer()) {
+                    command.getSender().sendMessage(CC.translate("&cDebes ser un jugador"));
+                    return;
                 }
 
-                Player player2 = (Player) sender;
+                Player player2 = command.getPlayer();
                 List<PersonalBooster> boosters2 = PersonalBoosterManager.getPlayerBoosters(player2.getUniqueId());
 
                 if (boosters2.isEmpty()) {
-                    player2.sendMessage("§cNo tienes boosters personales");
-                    return true;
+                    player2.sendMessage(CC.translate("&cNo tienes boosters personales"));
+                    return;
                 }
 
                 listPlayerBoosters(player2, boosters2);
-                return true;
+                break;
 
             default:
-                sender.sendMessage("§cAcción desconocida: " + action);
-                sender.sendMessage("§7Acciones: add, activate, list");
-                return true;
+                command.getSender().sendMessage(CC.translate("&cAcción desconocida: " + action));
+                break;
         }
     }
 
-    /**
-     * Abre el menú de configuración
-     */
-    private boolean handleConfigCommand(CommandSender sender) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("§cDebes ser un jugador para abrir el menú de configuración");
-            return true;
+    private void handleConfigCommand(CommandArgs command) {
+        if (!command.isPlayer()) {
+            command.getSender().sendMessage(CC.translate("&cDebes ser un jugador"));
+            return;
         }
 
-        Player player = (Player) sender;
-        player.openInventory(org.debentialc.boosters.commands.BoosterConfigMenu.createMainMenu());
-        return true;
+        Player player = command.getPlayer();
+        player.openInventory(BoosterConfigMenu.createMainMenu());
     }
 
-    /**
-     * Muestra información de boosters activos
-     */
-    private boolean handleInfoCommand(CommandSender sender) {
-        sender.sendMessage("§6=== Información de Boosters ===");
-        sender.sendMessage("");
+    private void handleInfoCommand(CommandArgs command) {
+        command.getSender().sendMessage(CC.translate("&6=== Información de Boosters ==="));
+        command.getSender().sendMessage("");
 
-        // Info de booster global
-        sender.sendMessage("§aBooster Global:");
+        command.getSender().sendMessage(CC.translate("&aBooster Global:"));
         GlobalBooster global = GlobalBoosterManager.getActiveBooster();
         if (global != null) {
-            sender.sendMessage("  §e- Activo: §6" + global.getMultiplier() + "x");
-            sender.sendMessage("  §e- Tiempo restante: §6" + global.getFormattedTime());
-            sender.sendMessage("  §e- Activado por: §6" + global.getActivatedBy());
+            String percentDisplay = BoosterParser.formatMultiplierAsPercentage(global.getMultiplier());
+            command.getSender().sendMessage(CC.translate("  &e- Bono: &a+" + percentDisplay));
+            command.getSender().sendMessage(CC.translate("  &e- Multiplicador: &ax" + String.format("%.2f", global.getMultiplier())));
+            command.getSender().sendMessage(CC.translate("  &e- Tiempo: &6" + global.getFormattedTime()));
+            command.getSender().sendMessage(CC.translate("  &e- Activado por: &6" + global.getActivatedBy()));
         } else {
-            sender.sendMessage("  §cInactivo");
+            command.getSender().sendMessage(CC.translate("  &cInactivo"));
         }
 
-        sender.sendMessage("");
+        command.getSender().sendMessage("");
 
-        // Info de booster personal (si es un jugador)
-        if (sender instanceof Player) {
-            Player player = (Player) sender;
-            sender.sendMessage("§aTu Booster Personal:");
+        if (command.isPlayer()) {
+            Player player = command.getPlayer();
+            command.getSender().sendMessage(CC.translate("&aTu Booster Personal:"));
 
             PersonalBooster personal = PersonalBoosterManager.getActiveBooster(player.getUniqueId());
             if (personal != null) {
-                sender.sendMessage("  §e- Nivel: §6" + personal.getLevelName());
-                sender.sendMessage("  §e- Multiplicador: §6" + personal.getMultiplier() + "x");
-                sender.sendMessage("  §e- Bonus: §6+" + personal.getPercentageBonus() + "%");
+                String percentDisplay = BoosterParser.formatMultiplierAsPercentage(personal.getMultiplier());
+                command.getSender().sendMessage(CC.translate("  &e- Nivel: &6" + personal.getLevelName()));
+                command.getSender().sendMessage(CC.translate("  &e- Bono: &a+" + percentDisplay));
+                command.getSender().sendMessage(CC.translate("  &e- Multiplicador: &ax" + String.format("%.2f", personal.getMultiplier())));
             } else {
-                sender.sendMessage("  §cInactivo");
+                command.getSender().sendMessage(CC.translate("  &cInactivo"));
             }
         }
 
-        sender.sendMessage("");
-        return true;
+        command.getSender().sendMessage("");
     }
 
-    /**
-     * Lista los boosters personales de un jugador
-     */
     private void listPlayerBoosters(Player player, List<PersonalBooster> boosters) {
-        player.sendMessage("§6=== Tus Boosters Personales ===");
+        player.sendMessage(CC.translate("&6=== Tus Boosters Personales ==="));
 
         for (int i = 0; i < boosters.size(); i++) {
             PersonalBooster booster = boosters.get(i);
-            String status = booster.isActive() ? "§aActivo" : "§7Disponible";
+            String status = booster.isActive() ? "&aActivo" : "&7Disponible";
+            String percentDisplay = BoosterParser.formatMultiplierAsPercentage(booster.getMultiplier());
 
-            player.sendMessage(String.format("  §6[%d] §e%s §7- §6+%d%% §7(%s)",
+            player.sendMessage(CC.translate(String.format("  &6[%d] &e%s &7- &a+%s &7(%s)",
                     i,
                     booster.getLevelName(),
-                    booster.getPercentageBonus(),
-                    status));
+                    percentDisplay,
+                    status)));
         }
 
         player.sendMessage("");
-        player.sendMessage("§7Usa §e/booster personal activate <índice> §7para activar");
+        player.sendMessage(CC.translate("&7Usa &e/booster personal activate <índice> &7para activar"));
     }
 
-    /**
-     * Muestra el menú de ayuda
-     */
-    private void sendHelp(CommandSender sender) {
-        sender.sendMessage("§6=== Sistema de Boosters - Ayuda ===");
-        sender.sendMessage("");
+    private void sendHelp(Player player) {
+        player.sendMessage(CC.translate("&6=== Sistema de Boosters ==="));
+        player.sendMessage("");
 
-        sender.sendMessage("§e§lBoosters Globales:");
-        sender.sendMessage("§a/booster global activate <multiplicador>");
-        sender.sendMessage("§7  Activa un booster global");
-        sender.sendMessage("§a/booster global deactivate");
-        sender.sendMessage("§7  Desactiva el booster global");
-        sender.sendMessage("§a/booster global multiplier");
-        sender.sendMessage("§7  Muestra info del booster global");
+        player.sendMessage(CC.translate("&e&lBoosters Globales:"));
+        player.sendMessage(CC.translate("&a/booster global activate <porcentaje> [tiempo]"));
+        player.sendMessage(CC.translate("  &7Ejemplo: /booster global activate 50% 1h"));
+        player.sendMessage(CC.translate("  &7Ejemplo: /booster global activate 150% 2h30m"));
+        player.sendMessage(CC.translate("&a/booster global deactivate"));
+        player.sendMessage(CC.translate("&a/booster global info"));
 
-        sender.sendMessage("");
+        player.sendMessage("");
 
-        sender.sendMessage("§e§lBoosters Personales:");
-        sender.sendMessage("§a/booster personal add <jugador> <nivel>");
-        sender.sendMessage("§7  Da un booster personal a un jugador");
-        sender.sendMessage("§a/booster personal activate <índice>");
-        sender.sendMessage("§7  Activa uno de tus boosters");
-        sender.sendMessage("§a/booster personal list");
-        sender.sendMessage("§7  Lista tus boosters disponibles");
+        player.sendMessage(CC.translate("&e&lBoosters Personales:"));
+        player.sendMessage(CC.translate("&a/booster personal add <jugador> <nivel>"));
+        player.sendMessage(CC.translate("&a/booster personal activate <índice>"));
+        player.sendMessage(CC.translate("&a/booster personal list"));
 
-        sender.sendMessage("");
+        player.sendMessage("");
 
-        sender.sendMessage("§e§lOtros:");
-        sender.sendMessage("§a/booster config");
-        sender.sendMessage("§7  Abre el menú de configuración");
-        sender.sendMessage("§a/booster info");
-        sender.sendMessage("§7  Muestra información de boosters activos");
-        sender.sendMessage("§a/booster save/load");
-        sender.sendMessage("§7  Guarda o carga datos manualmente");
+        player.sendMessage(CC.translate("&e&lOtros:"));
+        player.sendMessage(CC.translate("&a/booster config"));
+        player.sendMessage(CC.translate("&a/booster info"));
 
-        sender.sendMessage("");
+        player.sendMessage("");
+
+        player.sendMessage(CC.translate("&7Formatos de tiempo: 1d 2h 30m 45s"));
+        player.sendMessage(CC.translate("&7d=días, h=horas, m=minutos, s=segundos"));
     }
 }

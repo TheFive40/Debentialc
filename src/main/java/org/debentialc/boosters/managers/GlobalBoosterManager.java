@@ -9,8 +9,12 @@ public class GlobalBoosterManager {
     private static volatile GlobalBooster activeBooster = null;
 
     public static void activateBooster(double multiplier, String activatedBy) {
+        activateBooster(multiplier, activatedBy, BoosterSettings.getGlobalBoosterDuration());
+    }
+
+    public static void activateBooster(double multiplier, String activatedBy, long durationSeconds) {
         Instant now = Instant.now();
-        Instant end = now.plusSeconds(BoosterSettings.getGlobalBoosterDuration());
+        Instant end = now.plusSeconds(durationSeconds);
 
         GlobalBooster booster = new GlobalBooster(multiplier, now, end, activatedBy);
         activeBooster = booster;

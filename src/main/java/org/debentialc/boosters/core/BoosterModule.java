@@ -24,10 +24,6 @@ public class BoosterModule {
 
         loadData();
 
-        registerCommands();
-
-        registerListeners();
-
         registerPlaceholders();
 
         scheduleT();
@@ -35,24 +31,7 @@ public class BoosterModule {
         plugin.getLogger().info("Sistema de Boosters inicializado correctamente");
     }
 
-    /**
-     * Registra los comandos del sistema
-     */
-    private static void registerCommands() {
-        // Registrar comando principal
-        plugin.getCommand("booster").setExecutor(new BoosterCommand());
 
-        plugin.getLogger().info("Comandos de Boosters registrados");
-    }
-
-    /**
-     * Registra los listeners del sistema
-     */
-    private static void registerListeners() {
-        Bukkit.getPluginManager().registerEvents(new BoosterListener(), plugin);
-
-        plugin.getLogger().info("Listeners de Boosters registrados");
-    }
 
     /**
      * Registra los placeholders si PlaceholderAPI está disponible

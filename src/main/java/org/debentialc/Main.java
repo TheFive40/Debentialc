@@ -41,9 +41,9 @@ public class Main extends JavaPlugin {
         System.out.println("Plugin successfully enabled");
         System.out.println("Version: 1.1.5 ");
         System.out.println("By DelawareX");
-        classesRegistration.loadCommands("org.debentialc.ci.commands.items");
-        classesRegistration.loadListeners("org.debentialc.ci.events");
-        classesRegistration.loadListeners("org.debentialc.boosters.commands");
+        classesRegistration.loadCommands("org.debentialc.customitems.commands");
+        classesRegistration.loadListeners("org.debentialc.customitems.events");
+        classesRegistration.loadCommands("org.debentialc.boosters.commands");
         classesRegistration.loadListeners("org.debentialc.boosters.events");
 
         CustomManager.armorTask();
