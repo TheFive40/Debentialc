@@ -4,6 +4,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.Bukkit;
 import org.debentialc.boosters.commands.BoosterCommand;
 import org.debentialc.boosters.events.BoosterListener;
+import org.debentialc.boosters.integration.TPConsumeListener;
 import org.debentialc.boosters.placeholders.BoosterPlaceholder;
 import org.debentialc.boosters.storage.BoosterStorage;
 
@@ -31,8 +32,10 @@ public class BoosterModule {
         plugin.getLogger().info("Sistema de Boosters inicializado correctamente");
     }
 
-
-
+    private static void startTPMonitoring() {
+        TPConsumeListener.startTPMonitoring();
+        plugin.getLogger().info("Monitoreo de TPs iniciado");
+    }
     /**
      * Registra los placeholders si PlaceholderAPI está disponible
      */
