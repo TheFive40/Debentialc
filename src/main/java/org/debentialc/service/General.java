@@ -1,8 +1,10 @@
 package org.debentialc.service;
 
 import JinRyuu.JRMCore.JRMCoreH;
+import net.minecraft.entity.INpc;
 import net.minecraft.entity.player.EntityPlayerMP;
 import noppes.npcs.api.IWorld;
+import noppes.npcs.api.entity.ICustomNpc;
 import noppes.npcs.api.entity.IDBCPlayer;
 import noppes.npcs.scripted.NpcAPI;
 import org.bukkit.entity.Player;
@@ -78,9 +80,7 @@ public class General {
     public static void spawnNpc(int x, int y, int z, int tab, String npcname, Player player) {
         IDBCPlayer idbcPlayer = NpcAPI.Instance().getPlayer(player.getName()).getDBCPlayer();
         IWorld world = idbcPlayer.getWorld();
-        world.spawnClone(x, y, z, tab, npcname);
-        //Aqui abajo colocar efectos visuales y sonido cuando spawnee el npc
-        //Claude coloca aqui el codigo y borra este comentario
+        ICustomNpc<?> npc = (ICustomNpc<?>) world.spawnClone(x, y, z, tab, npcname);
     }
 
 
