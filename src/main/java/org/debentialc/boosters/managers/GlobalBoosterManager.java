@@ -64,4 +64,17 @@ public class GlobalBoosterManager {
             deactivateBooster();
         }
     }
+
+
+    public static void restoreBooster(GlobalBooster savedBooster) {
+        if (savedBooster == null) {
+            return;
+        }
+
+        if (savedBooster.hasExpired()) {
+            return;
+        }
+
+        activeBooster = savedBooster;
+    }
 }

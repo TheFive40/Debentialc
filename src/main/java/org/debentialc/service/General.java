@@ -1,12 +1,13 @@
 package org.debentialc.service;
-import JinRyuu.JRMCore.JRMCoreH;
 
+import JinRyuu.JRMCore.JRMCoreH;
 import net.minecraft.entity.player.EntityPlayerMP;
+import noppes.npcs.api.IWorld;
 import noppes.npcs.api.entity.IDBCPlayer;
 import noppes.npcs.scripted.NpcAPI;
 import org.bukkit.entity.Player;
 
-import java.util.*;
+import java.util.HashMap;
 
 
 public class General {
@@ -14,14 +15,7 @@ public class General {
 
     public static final String[] ranks = {"founder", "developer", "manager", "admin", "moderador", "quester", "helper", "constructor", "programador", "dev"
             , "staff", "moderador-manager", "dueño", "owner", "admin-plus", "ayudante", "helper", "builder", "builder-manager"};
-    /*
-    public static String DEX = "jrmcDexI";
-    public static String SPI = "jrmcCncI";
-    public static String CON = "jrmcCnsI";
-    public static String STR = "jrmcStrI";
-    public static String WIL = "jrmcWilI";
-    public static String MND = "jrmcIntI";
-    */
+
     public static String DEX2 = "jrmcDexI";
     public static String SPI2 = "jrmcCncI";
     public static String CON2 = "jrmcCnsI";
@@ -39,24 +33,28 @@ public class General {
 
     public static HashMap<String, String> BONUS_STATS = new HashMap<>();
     public static HashMap<String, String> STATS_MAP = new HashMap<>();
+
     static {
-        STATS_MAP.put ( "STR", STR2 );
-        STATS_MAP.put ( "DEX", DEX2 );
-        STATS_MAP.put ( "CON", CON2 );
-        STATS_MAP.put ( "WIL", WIL2 );
-        STATS_MAP.put ( "MND", MND2 );
-        STATS_MAP.put ( "SPI", SPI2 );
+        STATS_MAP.put("STR", STR2);
+        STATS_MAP.put("DEX", DEX2);
+        STATS_MAP.put("CON", CON2);
+        STATS_MAP.put("WIL", WIL2);
+        STATS_MAP.put("MND", MND2);
+        STATS_MAP.put("SPI", SPI2);
     }
+
     public static IDBCPlayer getDBCPlayer(String name) {
         return NpcAPI.Instance().getPlayer(name).getDBCPlayer();
     }
-    public static int getSTAT ( String stat, Player entity ) {
-        return JRMCoreH.getInt ( toPlayerMP ( entity ), STATS_MAP.get ( stat.toUpperCase ( ) ) );
+
+    public static int getSTAT(String stat, Player entity) {
+        return JRMCoreH.getInt(toPlayerMP(entity), STATS_MAP.get(stat.toUpperCase()));
     }
 
     public static EntityPlayerMP toPlayerMP(Player player) {
-        return (EntityPlayerMP)NpcAPI.Instance().getPlayer(player.getName()).getDBCPlayer().getMCEntity();
+        return (EntityPlayerMP) NpcAPI.Instance().getPlayer(player.getName()).getDBCPlayer().getMCEntity();
     }
+
     static {
         BONUS_STATS.put("STR", STR);
         BONUS_STATS.put("DEX", DEX);
@@ -65,6 +63,7 @@ public class General {
         BONUS_STATS.put("MND", MND);
         BONUS_STATS.put("SPI", SPI);
     }
+
     public static int getLVL(Player player) {
         int str = JRMCoreH.getInt(toPlayerMP(player), STR);
         int dex = JRMCoreH.getInt(toPlayerMP(player), DEX);
@@ -75,5 +74,15 @@ public class General {
         int lvl = (str + dex + con + wil + mnd + spi) / 5 - 11;
         return lvl;
     }
+
+    public static void spawnNpc(int x, int y, int z, int tab, String npcname, Player player) {
+        IDBCPlayer idbcPlayer = NpcAPI.Instance().getPlayer(player.getName()).getDBCPlayer();
+        IWorld world = idbcPlayer.getWorld();
+        world.spawnClone(x, y, z, tab, npcname);
+        //Aqui abajo colocar efectos visuales y sonido cuando spawnee el npc
+        //Claude coloca aqui el codigo y borra este comentario
+    }
+
+
 
 }

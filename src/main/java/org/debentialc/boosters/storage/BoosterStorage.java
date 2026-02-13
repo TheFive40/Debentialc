@@ -85,10 +85,19 @@ public class BoosterStorage {
     }
 
 
+
     public static void loadAllData() {
         GlobalBooster global = loadGlobalBooster();
+
         if (global != null && !global.hasExpired()) {
-            GlobalBoosterManager.activateBooster(global.getMultiplier(), global.getActivatedBy());
+            GlobalBoosterManager.restoreBooster(global);
+
+            System.out.println("[Boosters] Booster global restaurado");
+            System.out.println("  Multiplicador: " + global.getMultiplier());
+            System.out.println("  Tiempo restante: " + global.getFormattedTime());
+            System.out.println("  Activado por: " + global.getActivatedBy());
+        } else {
+            System.out.println("[Boosters] No hay booster global guardado o ha expirado");
         }
     }
 
