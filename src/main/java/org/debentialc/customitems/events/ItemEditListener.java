@@ -8,7 +8,7 @@ import org.debentialc.customitems.tools.inventory.*;
 
 /**
  * Listener para manejar todos los inputs de chat relacionados con items
- * VERSIÓN ACTUALIZADA: Incluye soporte para scripts
+ * VERSIÓN ACTUALIZADA: Incluye soporte para scripts y cambio de ID
  */
 public class ItemEditListener implements Listener {
 
@@ -101,7 +101,7 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // NUEVO: Script Input Manager
+        // Script Input Manager
         if (org.debentialc.customitems.tools.scripts.ScriptInputManager.isInputtingScript(player)) {
             event.setCancelled(true);
 
@@ -112,5 +112,18 @@ public class ItemEditListener implements Listener {
             }
             return;
         }
+
+
+        if (ItemIdChangeManager.isChangingMaterialId(player)) {
+            event.setCancelled(true);
+
+            if (message.equalsIgnoreCase("cancelar")) {
+                ItemIdChangeManager.cancelMaterialIdChange(player);
+            } else {
+                ItemIdChangeManager.processMaterialIdChange(player, message);
+            }
+            return;
+        }
     }
 }
+

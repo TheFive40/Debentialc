@@ -310,6 +310,27 @@ public class CustomArmorMenus {
                         contents.set(2, 1, ClickableItem.of(durabilityButton, e -> {
                             DurabilityInputManager.startDurabilityInput(player, armorId, "armor");
                         }));
+
+                        // CAMBIAR ID
+                        ItemStack changeIdButton = new ItemStack(Material.NAME_TAG);
+                        ItemMeta changeIdMeta = changeIdButton.getItemMeta();
+                        changeIdMeta.setDisplayName(CC.translate("&b&lCambiar ID"));
+                        List<String> changeIdLore = new ArrayList<>();
+                        changeIdLore.add(CC.translate("&7ID actual: &f" + armorId));
+                        changeIdLore.add("");
+                        changeIdLore.add(CC.translate("&7Permite cambiar el identificador"));
+                        changeIdLore.add(CC.translate("&7Soporta IDs con tipos: id/tipo"));
+                        changeIdLore.add("");
+                        changeIdLore.add(CC.translate("&a[CLICK PARA CAMBIAR]"));
+                        changeIdMeta.setLore(changeIdLore);
+                        changeIdButton.setItemMeta(changeIdMeta);
+                        contents.set(2, 3, ClickableItem.of(changeIdButton, e -> {
+                            player.closeInventory();
+                            ItemIdChangeManager.startMaterialIdChange(player, armorId, "armor");
+                        }));
+
+                        // HACER IRROMPIBLE
+
                         // HACER IRROMPIBLE
                         ItemStack unbreakableButton = new ItemStack(Material.BEDROCK);
                         ItemMeta unbreakableMeta = unbreakableButton.getItemMeta();

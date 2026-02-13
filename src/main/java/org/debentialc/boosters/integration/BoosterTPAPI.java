@@ -5,7 +5,6 @@ import noppes.npcs.scripted.NpcAPI;
 import org.bukkit.entity.Player;
 import org.debentialc.boosters.managers.GlobalBoosterManager;
 import org.debentialc.boosters.managers.PersonalBoosterManager;
-import org.debentialc.service.CC;
 
 public class BoosterTPAPI {
 
@@ -25,13 +24,8 @@ public class BoosterTPAPI {
             double combinedMultiplier = globalMultiplier * personalMultiplier;
 
             int totalTPs = (int) Math.round(baseTPs * combinedMultiplier);
-            int bonusTPs = totalTPs - baseTPs;
 
             dbcPlayer.setTP(dbcPlayer.getTP() + totalTPs);
-
-            if (showMessage) {
-                sendTPBoosterMessage(player, baseTPs, bonusTPs, globalMultiplier, personalMultiplier, combinedMultiplier);
-            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -69,37 +63,6 @@ public class BoosterTPAPI {
         boolean hasPersonal = PersonalBoosterManager.getActiveBooster(player.getUniqueId()) != null;
 
         return hasGlobal || hasPersonal;
-    }
-
-    private static void sendTPBoosterMessage(Player player, int baseTPs, int bonusTPs,
-                                             double globalMult, double personalMult, double combinedMult) {
-        if (bonusTPs <= 0) {
-            player.sendMessage(CC.translate("&a+ " + baseTPs + " TPs"));
-            return;
-        }
-
-        player.sendMessage(CC.translate("&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-        player.sendMessage(CC.translate("&6&l⚡ BOOSTER DE TPS APLICADO ⚡"));
-        player.sendMessage("");
-        player.sendMessage(CC.translate("  &eTPs Base: &a+" + baseTPs));
-        player.sendMessage(CC.translate("  &eBonus: &6+" + bonusTPs + " TPs"));
-        player.sendMessage(CC.translate("  &eTotal: &b+" + (baseTPs + bonusTPs) + " TPs"));
-        player.sendMessage("");
-
-        if (globalMult > 1.0) {
-            String globalPercent = String.format("%.0f%%", (globalMult - 1.0) * 100);
-            player.sendMessage(CC.translate("  &6⚡ Booster Global: &a+" + globalPercent));
-        }
-
-        if (personalMult > 1.0) {
-            String personalPercent = String.format("%.0f%%", (personalMult - 1.0) * 100);
-            player.sendMessage(CC.translate("  &b⚡ Booster Personal: &a+" + personalPercent));
-        }
-
-        String totalPercent = String.format("%.0f%%", (combinedMult - 1.0) * 100);
-        player.sendMessage(CC.translate("  &a⚡ Multiplicador Total: &6x" + String.format("%.2f", combinedMult) + " &7(+" + totalPercent + ")"));
-        player.sendMessage("");
-        player.sendMessage(CC.translate("&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     }
 
     public static void giveTPsSilent(Player player, int baseTPs) {

@@ -41,10 +41,6 @@ public class BoosterCommand extends BaseCommand {
                 handlePersonalCommand(command);
                 break;
 
-            case "config":
-                handleConfigCommand(command);
-                break;
-
             case "info":
                 handleInfoCommand(command);
                 break;
@@ -289,11 +285,7 @@ public class BoosterCommand extends BaseCommand {
         if (!command.isPlayer()) {
             command.getSender().sendMessage(CC.translate("&cDebes ser un jugador"));
             return;
-        }
-
-        Player player = command.getPlayer();
-        player.openInventory(BoosterConfigMenu.createMainMenu());
-    }
+        }}
 
     private void handleInfoCommand(CommandArgs command) {
         command.getSender().sendMessage(CC.translate("&6=== Información de Boosters ==="));

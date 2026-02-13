@@ -56,7 +56,6 @@ public class ItemTPInputManager {
             return;
         }
 
-        // Validar número
         int tpValue;
         try {
             tpValue = Integer.parseInt(input.trim());
@@ -75,11 +74,9 @@ public class ItemTPInputManager {
             return;
         }
 
-        // Aplicar valor
         CustomItem item = CustomItemCommand.items.get(state.itemId);
         item.setTpValue(tpValue);
 
-        // Guardar
         CustomItemStorage storage = new CustomItemStorage();
         storage.saveItem(item);
 
@@ -91,7 +88,6 @@ public class ItemTPInputManager {
         String itemId = state.itemId;
         finishTPValueInput(player);
 
-        // Reabrir menú
         org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
                 org.debentialc.Main.instance,
                 () -> {

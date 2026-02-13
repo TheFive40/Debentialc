@@ -49,7 +49,7 @@ public class BoosterPlaceholder extends PlaceholderExpansion {
                 return GlobalBoosterManager.isBoosterActive() ? "§aActivo" : "§cInactivo";
 
             case "global_multiplier":
-                double globalMult = GlobalBoosterManager.getCurrentMultiplier();
+                double globalMult = (GlobalBoosterManager.getCurrentMultiplier() == 1.0) ? 0 : GlobalBoosterManager.getCurrentMultiplier();
                 return String.format("§6%.2fx", globalMult);
 
             case "global_percentage":

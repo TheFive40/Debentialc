@@ -351,7 +351,23 @@ public class CustomItemMenus {
                         contents.set(2, 3, ClickableItem.of(advancedButton, e -> {
                             CustomItemAdvancedOptionsMenu.createAdvancedOptionsMenu(itemId).open(player);
                         }));
-
+                        //CAMBIAR ID
+                        ItemStack changeIdButton = new ItemStack(Material.NAME_TAG);
+                        ItemMeta changeIdMeta = changeIdButton.getItemMeta();
+                        changeIdMeta.setDisplayName(CC.translate("&b&lCambiar ID"));
+                        List<String> changeIdLore = new ArrayList<>();
+                        changeIdLore.add(CC.translate("&7ID actual: &f" + itemId));
+                        changeIdLore.add("");
+                        changeIdLore.add(CC.translate("&7Permite cambiar el identificador"));
+                        changeIdLore.add(CC.translate("&7Soporta IDs con tipos: id/tipo"));
+                        changeIdLore.add("");
+                        changeIdLore.add(CC.translate("&a[CLICK PARA CAMBIAR]"));
+                        changeIdMeta.setLore(changeIdLore);
+                        changeIdButton.setItemMeta(changeIdMeta);
+                        contents.set(2, 3, ClickableItem.of(changeIdButton, e -> {
+                            player.closeInventory();
+                            ItemIdChangeManager.startMaterialIdChange(player, itemId, "item");
+                        }));
                         // DAR ITEM
                         ItemStack giveButton = new ItemStack(Material.APPLE);
                         ItemMeta giveMeta = giveButton.getItemMeta();
@@ -493,7 +509,6 @@ public class CustomItemMenus {
                         statsItem.setItemMeta(statsMeta);
                         contents.set(1, 7, ClickableItem.empty(statsItem));
 
-                        // Información de Pastebin
                         ItemStack pastebinInfo = new ItemStack(Material.BOOK);
                         ItemMeta pastebinMeta = pastebinInfo.getItemMeta();
                         pastebinMeta.setDisplayName(CC.translate("&d&lPastebin"));

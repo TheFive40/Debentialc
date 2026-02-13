@@ -9,7 +9,7 @@ import org.debentialc.boosters.managers.GlobalBoosterManager;
 import org.debentialc.boosters.managers.PersonalBoosterManager;
 import org.debentialc.boosters.models.PersonalBooster;
 import org.debentialc.boosters.core.BoosterSettings;
-import org.delaware.tools.General;
+import org.debentialc.service.General;
 
 public class DebentialcPlaceHolder extends PlaceholderExpansion {
 

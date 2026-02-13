@@ -9,7 +9,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.Material;
-import org.debentialc.boosters.commands.BoosterConfigMenu;
 import org.debentialc.boosters.managers.PersonalBoosterManager;
 import org.debentialc.boosters.models.PersonalBooster;
 import org.debentialc.boosters.storage.BoosterStorage;
@@ -58,80 +57,5 @@ public class BoosterListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) {
-            return;
-        }
 
-        Player player = (Player) event.getWhoClicked();
-        InventoryView view = event.getView();
-        String title = view.getTitle();
-
-        if (!title.contains("§6")) {
-            return;
-        }
-
-        event.setCancelled(true);
-
-        if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
-            return;
-        }
-
-        if (title.contains("Booster Configuration")) {
-            handleMainMenu(player, event.getSlot());
-        } else if (title.contains("Global Booster")) {
-            handleGlobalMenu(player, event.getSlot());
-        } else if (title.contains("Personal Booster")) {
-            handlePersonalMenu(player, event.getSlot());
-        } else if (title.contains("Rank Multipliers")) {
-            handleRankMenu(player, event.getSlot());
-        } else if (title.contains("Durations")) {
-            handleDurationMenu(player, event.getSlot());
-        }
-    }
-
-    private void handleMainMenu(Player player, int slot) {
-        switch (slot) {
-            case 11:
-                player.openInventory(BoosterConfigMenu.createGlobalBoosterMenu());
-                break;
-
-            case 13:
-                player.openInventory(BoosterConfigMenu.createPersonalBoosterMenu());
-                break;
-
-            case 15:
-                player.openInventory(BoosterConfigMenu.createRankMultiplierMenu());
-                break;
-
-            case 22:
-                player.openInventory(BoosterConfigMenu.createDurationMenu());
-                break;
-        }
-    }
-
-    private void handleGlobalMenu(Player player, int slot) {
-        if (slot == 26) {
-            player.openInventory(BoosterConfigMenu.createMainMenu());
-        }
-    }
-
-    private void handlePersonalMenu(Player player, int slot) {
-        if (slot == 26) {
-            player.openInventory(BoosterConfigMenu.createMainMenu());
-        }
-    }
-
-    private void handleRankMenu(Player player, int slot) {
-        if (slot == 35) {
-            player.openInventory(BoosterConfigMenu.createMainMenu());
-        }
-    }
-
-    private void handleDurationMenu(Player player, int slot) {
-        if (slot == 26) {
-            player.openInventory(BoosterConfigMenu.createMainMenu());
-        }
-    }
 }

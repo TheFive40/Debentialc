@@ -23,22 +23,16 @@ public class CustomItem {
     private String id;
     private boolean isActive = true;
 
-    // Durabilidad máxima personalizada (-1 = sin durabilidad custom)
     private int maxDurability = -1;
 
-    // Item irrompible (no recibe daño)
     private boolean unbreakable = false;
 
-    // Item consumible (se consume al usarse)
     private boolean consumable = false;
 
-    // Comandos a ejecutar al consumir el item
     private List<String> commands = new ArrayList<>();
 
-    // Valor de TP que otorga el item
     private int tpValue = 0;
 
-    // Si consume todo el stack al usar
     private boolean tpConsumeStack = false;
 
     public CustomItem() {
