@@ -99,7 +99,7 @@ public class CustomItemBonusMenus {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&c&lStat - " + itemId))
+                .title(CC.translate("&c&lStats "))
                 .build();
     }
 
@@ -188,7 +188,7 @@ public class CustomItemBonusMenus {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&c&lOp - " + itemId))
+                .title(CC.translate("&c&lOp"))
                 .build();
     }
 
