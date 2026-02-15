@@ -85,7 +85,7 @@ public class CustomItemEffectsMenu {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&6&lEfectos - " + itemId))
+                .title(CC.translate("&6&lEfectos"))
                 .build();
     }
 

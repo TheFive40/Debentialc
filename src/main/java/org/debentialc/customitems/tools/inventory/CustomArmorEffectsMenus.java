@@ -85,7 +85,7 @@ public class CustomArmorEffectsMenus {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&6&lEfectos - " + armorId))
+                .title(CC.translate("&6&lEfectos"))
                 .build();
     }
 

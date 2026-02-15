@@ -99,7 +99,7 @@ public class CustomArmorBonusMenus {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&b&lStat - " + armorId))
+                .title(CC.translate("&b&lStat - Armadura" ))
                 .build();
     }
 
@@ -188,7 +188,7 @@ public class CustomArmorBonusMenus {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&b&lOp - " + armorId))
+                .title(CC.translate("&b&lOp "))
                 .build();
     }
 

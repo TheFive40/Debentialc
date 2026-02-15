@@ -5,6 +5,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.entity.Player;
 import org.debentialc.customitems.tools.inventory.*;
+import org.debentialc.customitems.tools.pastebin.PastebinLoreManager;
 
 /**
  * Listener para manejar todos los inputs de chat relacionados con items
@@ -29,6 +30,16 @@ public class ItemEditListener implements Listener {
             return;
         }
 
+        if (PastebinLoreManager.isInputtingPastebin(player)) {
+            event.setCancelled(true);
+            if (message.equalsIgnoreCase("cancelar")) {
+                PastebinLoreManager.cancelPastebinInput(player);
+                return;
+            }
+
+            PastebinLoreManager.processPastebinInput(player, message);
+            return;
+        }
         // Armor Edit Manager
         if (ArmorEditManager.isEditingArmor(player)) {
             event.setCancelled(true);

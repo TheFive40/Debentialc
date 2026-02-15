@@ -1,5 +1,6 @@
 package org.debentialc;
 import lombok.Getter;
+import noppes.npcs.api.event.INpcEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -11,6 +12,8 @@ import org.debentialc.boosters.managers.GlobalBoosterManager;
 import org.debentialc.boosters.managers.PersonalBoosterManager;
 import org.debentialc.boosters.models.PersonalBooster;
 import org.debentialc.boosters.placeholders.PlaceholderModule;
+import org.debentialc.raids.events.NPCDeathListener;
+import org.debentialc.raids.events.PlayerDeathListener;
 import org.debentialc.service.ClassesRegistration;
 import org.debentialc.customitems.tools.ci.CustomManager;
 import org.debentialc.service.commands.CommandFramework;
@@ -42,9 +45,12 @@ public class Main extends JavaPlugin {
         System.out.println("Version: 1.1.5 ");
         System.out.println("By DelawareX");
         classesRegistration.loadCommands("org.debentialc.customitems.commands");
-        classesRegistration.loadListeners("org.debentialc.customitems.events");
+        classesRegistration.loadCommands("org.debentialc.raids.commands");
         classesRegistration.loadCommands("org.debentialc.boosters.commands");
+
+        classesRegistration.loadListeners("org.debentialc.customitems.events");
         classesRegistration.loadListeners("org.debentialc.boosters.events");
+        classesRegistration.loadListeners("org.debentialc.raids.events");
 
         CustomManager.armorTask();
         effectsTask();
@@ -66,7 +72,10 @@ public class Main extends JavaPlugin {
         };
         runnable.runTaskTimer(Main.instance, 1L, 1L);
     }
-
+    public static void callDeathEvent(INpcEvent.DiedEvent event){
+        NPCDeathListener npcDeathListener = new NPCDeathListener();
+        npcDeathListener.onNpcDie(event);
+    }
     @Override
     public void onDisable() {
         BoosterModule.shutdown();

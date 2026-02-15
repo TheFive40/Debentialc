@@ -12,19 +12,6 @@ public class PastebinInputListener implements Listener {
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
 
-        if (!PastebinLoreManager.isInputtingPastebin(player)) {
-            return;
-        }
 
-        event.setCancelled(true);
-
-        String message = event.getMessage().trim();
-
-        if (message.equalsIgnoreCase("cancelar")) {
-            PastebinLoreManager.cancelPastebinInput(player);
-            return;
-        }
-
-        PastebinLoreManager.processPastebinInput(player, message);
     }
 }

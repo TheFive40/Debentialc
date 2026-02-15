@@ -8,19 +8,45 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.durability.CustomDurabilityManager;
 
-/**
- * Listener para interceptar eventos de daño vanilla y aplicar durabilidad custom
- */
+
 public class CustomDurabilityListener implements Listener {
 
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerReceiveDamage(EntityDamageEvent event) {
+        if (event.isCancelled()) return;
+        if (!(event.getEntity() instanceof Player)) return;
+
+        Player player = (Player) event.getEntity();
+        ItemStack[] armorContents = player.getInventory().getArmorContents();
+
+        for (int i = 0; i < armorContents.length; i++) {
+            ItemStack armor = armorContents[i];
+
+            if (armor == null || armor.getType() == Material.AIR) continue;
+            if (CustomDurabilityManager.isUnbreakable(armor)) continue;
+            if (!CustomDurabilityManager.hasCustomDurability(armor)) continue;
+
+            boolean broken = CustomDurabilityManager.damageItem(armor, 1);
+
+            if (broken) {
+                armorContents[i] = new ItemStack(Material.AIR);
+                player.getInventory().setArmorContents(armorContents);
+                player.sendMessage(CC.translate("&c¡Tu armadura se ha roto!"));
+                player.playSound(player.getLocation(), Sound.ITEM_BREAK, 1f, 1f);
+            } else {
+                CustomDurabilityManager.updateDurabilityLore(armor);
+            }
+        }
+    }
+
     /**
-     * Previene el daño vanilla a items con durabilidad custom
-     * Este es el evento principal que captura TODO el daño de items
+     * Previene el daño vanilla a items con durabilidad custom (arma en mano)
+     * cuando el jugador ataca a otra entidad.
      */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onHit(EntityDamageByEntityEvent event) {
@@ -47,10 +73,9 @@ public class CustomDurabilityListener implements Listener {
 
     /**
      * Manejo adicional para minería de bloques
-     * Asegura que las herramientas con durabilidad custom reciban daño
      */
     @EventHandler(priority = EventPriority.MONITOR)
-    public void onBlockBreak(BlockBreakEvent event) {
+    public void onBlockBreak(org.bukkit.event.block.BlockBreakEvent event) {
         if (event.isCancelled()) return;
 
         Player player = event.getPlayer();
@@ -59,8 +84,6 @@ public class CustomDurabilityListener implements Listener {
         if (item == null || item.getTypeId() == 0) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
 
-        // El daño ya fue aplicado por PlayerItemDamageEvent
-        // Solo actualizamos el lore si es necesario
         CustomDurabilityManager.updateDurabilityLore(item);
     }
 
@@ -78,14 +101,11 @@ public class CustomDurabilityListener implements Listener {
         if (item == null || item.getTypeId() == 0) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
 
-        // El daño ya fue aplicado por PlayerItemDamageEvent
-        // Solo actualizamos el lore
         CustomDurabilityManager.updateDurabilityLore(item);
     }
 
     /**
-     * Actualiza el lore cuando el jugador interactúa (opcional)
-     * Útil para herramientas como azadas, tijeras, etc.
+     * Actualiza el lore cuando el jugador interactúa
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerInteract(PlayerInteractEvent event) {
@@ -93,7 +113,6 @@ public class CustomDurabilityListener implements Listener {
 
         if (item == null || item.getTypeId() == 0) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
-
 
         CustomDurabilityManager.updateDurabilityLore(item);
     }

@@ -22,6 +22,18 @@ public class CustomArmorStorage {
         }
         this.armorFile = new File(dataFolder, "custom_armors.yml");
         loadArmors();
+        // BUG 2 FIX: El constructor ya NO hace putAll automáticamente.
+        // Esto causaba que al crear un nuevo CustomArmorStorage() (ej: durante
+        // deleteArmor), se restauraban al mapa en memoria las armaduras
+        // recién eliminadas, requiriendo hacer el proceso dos veces.
+        // La carga inicial solo se llama explícitamente desde Main al arrancar.
+    }
+
+    /**
+     * Solo para llamarse al inicio del servidor (desde Main/plugin enable).
+     * Carga todas las armaduras del YAML al mapa estático RegisterItem.items.
+     */
+    public void initialLoad() {
         RegisterItem.items.putAll(loadAllArmors());
     }
 

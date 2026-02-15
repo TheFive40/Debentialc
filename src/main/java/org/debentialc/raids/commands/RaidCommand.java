@@ -1,15 +1,18 @@
 package org.debentialc.raids.commands;
 
-import org.debentialc.Main;
 import org.debentialc.service.commands.BaseCommand;
 import org.debentialc.service.commands.Command;
 import org.debentialc.service.commands.CommandArgs;
-import org.debentialc.raids.menus.RaidMenuManager;
-import org.debentialc.raids.menus.RaidMenus;
+import org.debentialc.raids.menus.RaidMainMenu;
+import org.debentialc.raids.menus.RaidListMenu;
+import org.debentialc.raids.menus.RaidChatInputManager;
+import org.debentialc.raids.managers.RaidStorageManager;
+import org.debentialc.service.CC;
 import org.bukkit.entity.Player;
 
 /**
  * RaidCommand - Comando /raid para acceder al sistema de raids
+ * Ahora abre menús visuales (SmartInventory) en lugar de menús de chat
  */
 public class RaidCommand extends BaseCommand {
 
@@ -24,9 +27,9 @@ public class RaidCommand extends BaseCommand {
             return;
         }
 
-        // Si no hay argumentos, abre el menú principal
+        // Si no hay argumentos, abre el menú principal visual
         if (args.length() == 0) {
-            RaidMenuManager.openMainMenu(player);
+            RaidMainMenu.createMainMenu().open(player);
             return;
         }
 
@@ -34,71 +37,52 @@ public class RaidCommand extends BaseCommand {
 
         switch (subCommand) {
             case "create":
-                RaidMenuManager.openCreateRaidMenu(player);
+                RaidChatInputManager.startCreateRaidInput(player);
                 break;
 
             case "list":
-                RaidMenuManager.openRaidListMenu(player);
+                RaidListMenu.createRaidListMenu(1).open(player);
                 break;
 
             case "menu":
-                RaidMenuManager.openMainMenu(player);
+                RaidMainMenu.createMainMenu().open(player);
                 break;
 
             case "info":
-                handleInfo(player, args);
+                sendInfoHelp(player);
                 break;
 
             case "reload":
-                handleReload(player);
+                RaidStorageManager.loadAllRaids();
+                player.sendMessage(CC.translate("&a✓ Sistema de raids recargado"));
                 break;
 
-            case "clear":
-                handleClear(player);
+            case "save":
+                RaidStorageManager.saveAllRaids();
+                RaidStorageManager.saveRaidSystemData();
+                player.sendMessage(CC.translate("&a✓ Raids guardadas"));
                 break;
 
             default:
-                RaidMenus.sendError(player, "Subcomando no reconocido: " + subCommand);
-                player.sendMessage("§eUso: §f/raid <create|list|menu|info|reload|clear>");
+                player.sendMessage(CC.translate("&c✗ Subcomando no reconocido: " + subCommand));
+                player.sendMessage(CC.translate("&eUso: &f/raid <create|list|menu|info|reload|save>"));
         }
     }
 
-    /**
-     * Muestra información del sistema de raids
-     */
-    private void handleInfo(Player player, CommandArgs args) {
+    private void sendInfoHelp(Player player) {
         player.sendMessage("");
-        player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
-        player.sendMessage("§6§l  INFORMACIÓN DEL SISTEMA DE RAIDS");
+        player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+        player.sendMessage(CC.translate("&6&l  SISTEMA DE RAIDS"));
         player.sendMessage("");
-        player.sendMessage("§eComandos disponibles:");
-        player.sendMessage("§f  /raid create §7- Crear nueva raid");
-        player.sendMessage("§f  /raid list §7- Ver todas las raids");
-        player.sendMessage("§f  /raid menu §7- Abrir menú principal");
-        player.sendMessage("§f  /raid info §7- Ver esta información");
-        player.sendMessage("§f  /raid reload §7- Recargar configuración");
-        player.sendMessage("§f  /raid clear §7- Cerrar menú actual");
+        player.sendMessage(CC.translate("&f  /raid &7- Abrir menú visual"));
+        player.sendMessage(CC.translate("&f  /raid create &7- Crear nueva raid"));
+        player.sendMessage(CC.translate("&f  /raid list &7- Ver todas las raids"));
+        player.sendMessage(CC.translate("&f  /raid menu &7- Menú principal"));
+        player.sendMessage(CC.translate("&f  /raid info &7- Esta información"));
+        player.sendMessage(CC.translate("&f  /raid reload &7- Recargar datos"));
+        player.sendMessage(CC.translate("&f  /raid save &7- Guardar todo"));
         player.sendMessage("");
-        player.sendMessage("§ePermisos necesarios:");
-        player.sendMessage("§f  dbcplugin.raids.admin §7- Para acceder a los menús");
+        player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
         player.sendMessage("");
-        player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
-        player.sendMessage("");
-    }
-
-    /**
-     * Recarga la configuración
-     */
-    private void handleReload(Player player) {
-        // TODO: Implementar recarga de configuración
-        RaidMenus.sendSuccess(player, "Sistema de raids recargado");
-    }
-
-    /**
-     * Cierra el menú actual
-     */
-    private void handleClear(Player player) {
-        RaidMenuManager.clearPlayerState(player);
-        RaidMenus.sendInfo(player, "Menú cerrado");
     }
 }

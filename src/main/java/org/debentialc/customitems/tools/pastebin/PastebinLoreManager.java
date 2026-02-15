@@ -1,5 +1,6 @@
 package org.debentialc.customitems.tools.pastebin;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.debentialc.customitems.commands.CustomItemCommand;
 import org.debentialc.customitems.commands.RegisterItem;
@@ -9,6 +10,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * BUG 4 FIX: Los problemas eran dos:
+ *
+ * 1. DOBLE LISTENER: Tanto PastebinInputListener como ItemEditListener
+ *    manejaban el mismo evento de chat para Pastebin. Al recibir el mensaje,
+ *    ambos lo procesaban: el primero limpiaba el estado (finishPastebinInput),
+ *    y el segundo fallaba porque el estado ya no existía. Esto requería enviar
+ *    la URL varias veces hasta que "ganara" el handler correcto.
+ *    SOLUCIÓN: Eliminar PastebinInputListener por completo. ItemEditListener
+ *    ya cubre este caso. (Ver nota al final de este archivo.)
+ *
+ * 2. HTTP SÍNCRONO EN HILO ASYNC DE CHAT: AsyncPlayerChatEvent corre en un
+ *    hilo async, y dentro se hacía la petición HTTP de forma bloqueante. Si
+ *    tardaba más que el timeout del hilo, fallaba silenciosamente.
+ *    SOLUCIÓN: La descarga HTTP se delega a un hilo Bukkit async separado,
+ *    y el resultado se aplica de vuelta en el hilo principal.
+ */
 public class PastebinLoreManager {
 
     public static class PastebinLoreState {
@@ -60,58 +78,74 @@ public class PastebinLoreManager {
             return;
         }
 
-        // Convertir a formato raw si es necesario
+        // Convertir a formato raw
         String rawUrl = convertToRawUrl(url);
 
-        // Descargar contenido
-        player.sendMessage("");
-        player.sendMessage(CC.translate("&7Descargando..."));
+        // Capturar datos necesarios antes de limpiar el estado
+        final String itemId = state.itemId;
+        final String type = state.type;
 
-        List<String> lines = PastebinReader.downloadPastebinContent(rawUrl);
-
-        if (lines == null || lines.isEmpty()) {
-            player.sendMessage("");
-            player.sendMessage(CC.translate("&c✗ Error al descargar"));
-            player.sendMessage(CC.translate("&7Verifica la URL"));
-            player.sendMessage("");
-            finishPastebinInput(player);
-            return;
-        }
-
-        // Aplicar lore según el tipo
-        boolean success = false;
-        if ("item".equals(state.type)) {
-            success = applyLoreToItem(player, state.itemId, lines);
-        } else if ("armor".equals(state.type)) {
-            success = applyLoreToArmor(player, state.itemId, lines);
-        }
-
-        if (success) {
-            player.sendMessage("");
-            player.sendMessage(CC.translate("&a✓ Lore actualizado"));
-            player.sendMessage(CC.translate("&7Líneas: &f" + lines.size()));
-            player.sendMessage("");
-        } else {
-            player.sendMessage("");
-            player.sendMessage(CC.translate("&c✗ Error al aplicar lore"));
-            player.sendMessage("");
-        }
-
-        String type = state.type;
-        String itemId = state.itemId;
+        // Limpiar estado AHORA, antes de entrar al hilo async,
+        // para que ningún otro handler procese más mensajes de este jugador durante la descarga.
         finishPastebinInput(player);
 
-        // Reabrir menú después de 1 segundo
-        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
+        player.sendMessage("");
+        player.sendMessage(CC.translate("&7Descargando desde Pastebin..."));
+
+        // BUG 4 FIX: Ejecutar la descarga HTTP en un hilo async de Bukkit dedicado.
+        // Antes la descarga se hacía directamente en el hilo del AsyncPlayerChatEvent,
+        // lo que podía causar conflictos con el scheduler de Bukkit y fallos silenciosos.
+        Bukkit.getScheduler().runTaskAsynchronously(
                 org.debentialc.Main.instance,
                 () -> {
-                    if ("item".equals(type)) {
-                        org.debentialc.customitems.tools.inventory.CustomItemMenus.openEditItemMenu(itemId).open(player);
-                    } else {
-                        org.debentialc.customitems.tools.inventory.CustomArmorMenus.openEditArmorMenu(itemId).open(player);
-                    }
-                },
-                20L
+                    List<String> lines = PastebinReader.downloadPastebinContent(rawUrl);
+
+                    // Volver al hilo principal para modificar datos del juego
+                    Bukkit.getScheduler().runTask(org.debentialc.Main.instance, () -> {
+                        if (lines == null || lines.isEmpty()) {
+                            player.sendMessage("");
+                            player.sendMessage(CC.translate("&c✗ Error al descargar"));
+                            player.sendMessage(CC.translate("&7Verifica la URL e inténtalo de nuevo"));
+                            player.sendMessage("");
+                            // Reabrir el input para que pueda reintentar
+                            startPastebinInput(player, itemId, type);
+                            return;
+                        }
+
+                        boolean success = false;
+                        if ("item".equals(type)) {
+                            success = applyLoreToItem(player, itemId, lines);
+                        } else if ("armor".equals(type)) {
+                            success = applyLoreToArmor(player, itemId, lines);
+                        }
+
+                        if (success) {
+                            player.sendMessage("");
+                            player.sendMessage(CC.translate("&a✓ Lore actualizado"));
+                            player.sendMessage(CC.translate("&7Líneas: &f" + lines.size()));
+                            player.sendMessage("");
+                        } else {
+                            player.sendMessage("");
+                            player.sendMessage(CC.translate("&c✗ Error al aplicar lore"));
+                            player.sendMessage("");
+                        }
+
+                        // Reabrir menú en el hilo principal
+                        Bukkit.getScheduler().scheduleSyncDelayedTask(
+                                org.debentialc.Main.instance,
+                                () -> {
+                                    if ("item".equals(type)) {
+                                        org.debentialc.customitems.tools.inventory.CustomItemMenus
+                                                .openEditItemMenu(itemId).open(player);
+                                    } else {
+                                        org.debentialc.customitems.tools.inventory.CustomArmorMenus
+                                                .openEditArmorMenu(itemId).open(player);
+                                    }
+                                },
+                                20L
+                        );
+                    });
+                }
         );
     }
 
@@ -122,7 +156,6 @@ public class PastebinLoreManager {
 
         org.debentialc.customitems.tools.ci.CustomItem item = CustomItemCommand.items.get(itemId);
 
-        // Traducir códigos de color
         List<String> translatedLines = new java.util.ArrayList<>();
         for (String line : lines) {
             translatedLines.add(CC.translate(line));
@@ -130,8 +163,8 @@ public class PastebinLoreManager {
 
         item.setLore(translatedLines);
 
-        // Guardar en BD
-        org.debentialc.customitems.tools.storage.CustomItemStorage storage = new org.debentialc.customitems.tools.storage.CustomItemStorage();
+        org.debentialc.customitems.tools.storage.CustomItemStorage storage =
+                new org.debentialc.customitems.tools.storage.CustomItemStorage();
         storage.saveItem(item);
 
         return true;
@@ -144,7 +177,6 @@ public class PastebinLoreManager {
 
         org.debentialc.customitems.tools.ci.CustomArmor armor = RegisterItem.items.get(armorId);
 
-        // Traducir códigos de color
         List<String> translatedLines = new java.util.ArrayList<>();
         for (String line : lines) {
             translatedLines.add(CC.translate(line));
@@ -152,8 +184,8 @@ public class PastebinLoreManager {
 
         armor.setLore(translatedLines);
 
-        // Guardar en BD
-        org.debentialc.customitems.tools.storage.CustomArmorStorage storage = new org.debentialc.customitems.tools.storage.CustomArmorStorage();
+        org.debentialc.customitems.tools.storage.CustomArmorStorage storage =
+                new org.debentialc.customitems.tools.storage.CustomArmorStorage();
         storage.saveArmor(armor);
 
         return true;
@@ -165,20 +197,15 @@ public class PastebinLoreManager {
     }
 
     private static String convertToRawUrl(String url) {
-        // Si es solo el código
         if (url.matches("^[a-zA-Z0-9]+$")) {
             return "https://pastebin.com/raw/" + url;
         }
-
-        // Si ya es raw
         if (url.contains("/raw/")) {
             if (!url.startsWith("http")) {
                 return "https://" + url;
             }
             return url;
         }
-
-        // Convertir a raw
         url = url.replace("https://", "").replace("http://", "").replace("www.", "");
         String code = url.replace("pastebin.com/", "");
         return "https://pastebin.com/raw/" + code;
@@ -195,3 +222,4 @@ public class PastebinLoreManager {
         playersInputting.remove(player.getUniqueId());
     }
 }
+

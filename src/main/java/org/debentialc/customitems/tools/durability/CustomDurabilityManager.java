@@ -123,12 +123,10 @@ public class CustomDurabilityManager {
         List<String> lore = item.getItemMeta().getLore();
         if (lore == null || lore.isEmpty()) return 0;
 
-        // Buscar línea con patrón X/Y (Z%)
         for (String line : lore) {
-            String cleanLine = line.replaceAll("§[0-9a-fk-or]", ""); // Remover códigos de color
+            String cleanLine = line.replaceAll("§[0-9a-fk-or]", "");
             if (cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)")) {
                 try {
-                    // Extraer el número antes de la barra "/"
                     String[] parts = cleanLine.split("/");
                     return Integer.parseInt(parts[0].trim());
                 } catch (Exception e) {
@@ -304,8 +302,7 @@ public class CustomDurabilityManager {
         List<String> lore = meta.getLore();
         if (lore == null) return;
 
-        // Remover líneas que coincidan con el patrón de durabilidad
-        // Formato: "§aX/Y (Z%)" o sin color
+
         lore.removeIf(line -> {
             String cleanLine = line.replaceAll("§[0-9a-fk-or]", ""); // Remover códigos de color
             return cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)");
@@ -324,7 +321,6 @@ public class CustomDurabilityManager {
         int current = getCustomDurability(item);
         int max = getCustomMaxDurability(item);
 
-        // setCustomDurability ya maneja la actualización del lore
         setCustomDurability(item, current, max);
     }
 }

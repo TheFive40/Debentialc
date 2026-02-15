@@ -205,8 +205,8 @@ public class CustomManager {
                         idbcPlayer.setKi(idbcPlayer.getKi() + bonus);
                     }
                     if (k.equalsIgnoreCase("STAMINAREGEN")) {
-                        int bonus = (int) (v * idbcPlayer.getStamina ( ));
-                        idbcPlayer.setStamina ( idbcPlayer.getStamina ( ) + bonus );
+                        int bonus = (int) (v * idbcPlayer.getStamina());
+                        idbcPlayer.setStamina(idbcPlayer.getStamina() + bonus);
                     }
                     if (k.equalsIgnoreCase("KIREGEN"))
                         EffectsManager.spawnHologram(player, CC.translate("&9⚡"), 1.5, -1.0);
@@ -226,6 +226,8 @@ public class CustomManager {
             @Override
             public void run() {
                 for (Player player : Main.instance.getServer().getOnlinePlayers()) {
+
+                    // BUG 1 FIX: Calcular qué items están actualmente equipados/en mano
                     Set<String> currentItemIds = new HashSet<>();
                     RegisterItem registerItem = new RegisterItem();
                     CustomItemCommand itemCmd = new CustomItemCommand();
@@ -251,8 +253,6 @@ public class CustomManager {
                         }
                     }
 
-                    applyArmorBonus(player);
-                    applyHandItemBonus(player);
 
                     if (playerArmorBonus.containsKey(player.getUniqueId())) {
                         Set<String> activeBonus = new HashSet<>(playerArmorBonus.get(player.getUniqueId()));
@@ -262,6 +262,9 @@ public class CustomManager {
                             }
                         }
                     }
+
+                    applyArmorBonus(player);
+                    applyHandItemBonus(player);
                 }
             }
         };

@@ -167,7 +167,7 @@ public class CustomItemAdvancedOptionsMenu {
                     }
                 })
                 .size(5, 9)
-                .title(CC.translate("&d&lOpciones - " + itemId))
+                .title(CC.translate("&d&lOpciones" ))
                 .build();
     }
 
