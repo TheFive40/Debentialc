@@ -326,8 +326,8 @@ public class RaidChatInputManager {
 
     private static void processPlayers(Player player, String input, RaidInputState state) {
         String[] parts = input.trim().split("\\s+");
-        if (parts.length != 2) {
-            player.sendMessage(CC.translate("&c✗ Formato: min max (ejemplo: 2 5)"));
+        if (parts.length != 1) {
+            player.sendMessage(CC.translate("&c✗ Formato: min max (ejemplo: 1 5)"));
             return;
         }
 
