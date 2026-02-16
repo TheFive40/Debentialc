@@ -28,6 +28,8 @@ public class NPCSpawnManager {
         for (SpawnPoint spawnPoint : wave.getSpawnPoints()) {
             Location loc = spawnPoint.getLocation();
             if (loc == null || loc.getWorld() == null) {
+                System.out.println("[Raids] ADVERTENCIA: SpawnPoint sin ubicación válida para NPC: "
+                        + spawnPoint.getNpcName());
                 continue;
             }
 
@@ -45,6 +47,7 @@ public class NPCSpawnManager {
         spawnedNpcIds.put(waveId, npcIds);
         spawnedNpcRefs.put(waveId, npcRefs);
 
+        System.out.println("[Raids] Spawneados " + totalSpawned + " NPCs para waveId: " + waveId);
         return totalSpawned > 0;
     }
 
@@ -53,10 +56,20 @@ public class NPCSpawnManager {
             World world = location.getWorld();
             AbstractNpcAPI api = NpcAPI.Instance();
 
+            int bx = location.getBlockX();
+            int by = location.getBlockY();
+            int bz = location.getBlockZ();
+
+            System.out.println(String.format(
+                    "[Raids] Spawneando NPC '%s' (tab=%d) en bloque %d,%d,%d (origen: %.2f,%.2f,%.2f)",
+                    npcName, npcTab, bx, by, bz,
+                    location.getX(), location.getY(), location.getZ()
+            ));
+
             ICustomNpc npc = (ICustomNpc) api.getIWorld(world.getEnvironment().getId()).spawnClone(
-                    location.getBlockX(),
-                    location.getBlockY(),
-                    location.getBlockZ(),
+                    bx,
+                    by,
+                    bz,
                     npcTab,
                     npcName
             );
@@ -64,9 +77,13 @@ public class NPCSpawnManager {
             if (npc != null) {
                 npc.setName(npcName);
                 return npc;
+            } else {
+                System.out.println("[Raids] ERROR: spawnClone retornó null para '" + npcName
+                        + "' tab=" + npcTab + " en " + bx + "," + by + "," + bz);
             }
 
         } catch (Exception e) {
+            System.out.println("[Raids] ERROR spawneando NPC '" + npcName + "': " + e.getMessage());
             e.printStackTrace();
         }
 

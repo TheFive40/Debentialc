@@ -97,32 +97,31 @@ public class NPCDeathListener implements Listener {
         int waveNumber = session.getCurrentWaveIndex() + 1;
         int totalWaves = session.getRaid().getTotalWaves();
 
+        // Guard: prevent processing the same wave completion twice
         if (rewardsGiven.contains(waveId)) {
             return;
         }
-
         rewardsGiven.add(waveId);
+
         List<Player> players = getActivePlayers(session);
+        boolean isLastWave = !session.hasNextWave();
 
-        RaidEffects.waveCompleteEffect(players, waveNumber);
-
+        // --- Sounds only (no messages from effects/title managers) ---
         for (Player player : players) {
-            RaidTitleManager.showWaveComplete(player, waveNumber);
             RaidSoundManager.playWaveCompleteSound(player);
         }
 
-        boolean isLastWave = !session.hasNextWave();
-
+        // --- Single, unified message block per player ---
         for (Player player : players) {
             player.sendMessage("");
-            player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
-            player.sendMessage("§a§l  ✓ OLEADA " + waveNumber + "/" + totalWaves + " COMPLETADA ✓");
+            player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
 
             if (isLastWave) {
-                player.sendMessage("");
                 player.sendMessage("§6§l  🎉 ¡ÚLTIMA OLEADA COMPLETADA! 🎉");
+                player.sendMessage(String.format("§a  Oleadas: §f%d/%d §a✓", totalWaves, totalWaves));
                 player.sendMessage("§e  ¡Todas las oleadas han sido derrotadas!");
             } else {
+                player.sendMessage(String.format("§a§l  ✓ OLEADA %d/%d COMPLETADA ✓", waveNumber, totalWaves));
                 player.sendMessage("");
                 player.sendMessage(String.format("§7  Progreso: §e[§a%s§7%s§e] §f%d%%",
                         repeatString("█", waveNumber),
@@ -130,11 +129,19 @@ public class NPCDeathListener implements Listener {
                         (waveNumber * 100) / totalWaves));
             }
 
-            player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
+            player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
             player.sendMessage("");
         }
 
+        // Visual effect at player locations (no messages inside RaidEffects)
+        for (Player player : players) {
+            player.getLocation().getWorld().playEffect(
+                    player.getLocation(), org.bukkit.Effect.MOBSPAWNER_FLAMES, 0);
+        }
+
+        // Execute rewards
         executeWaveRewardsOnce(session);
+
         NPCSpawnManager.clearWaveTracking(waveId);
 
         if (isLastWave) {
@@ -212,14 +219,9 @@ public class NPCDeathListener implements Listener {
                         boolean spawned = NPCSpawnManager.spawnWaveNpcs(nextWave, newWaveId);
 
                         if (spawned) {
-                            RaidEffects.waveActiveEffect(currentPlayers,
-                                    session.getCurrentWaveIndex() + 1,
-                                    session.getRaid().getTotalWaves());
-
+                            // Sounds only - no duplicate message block
                             for (Player player : currentPlayers) {
-                                RaidTitleManager.showWaveStart(player,
-                                        session.getCurrentWaveIndex() + 1,
-                                        session.getRaid().getTotalWaves());
+                                RaidSoundManager.playWaveStartSound(player);
                             }
                         }
                     }
@@ -252,20 +254,19 @@ public class NPCDeathListener implements Listener {
         String raidName = session.getRaid().getRaidName();
         List<Player> players = getActivePlayers(session);
 
-        RaidEffects.raidVictoryEffect(players, raidName);
-
+        // Sounds only
         for (Player player : players) {
             RaidSoundManager.playVictorySound(player);
-            RaidTitleManager.showVictory(player, raidName);
         }
 
         long duration = session.getDurationSeconds();
         long minutes = duration / 60;
         long seconds = duration % 60;
 
+        // Single unified victory message block
         for (Player player : players) {
             player.sendMessage("");
-            player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
+            player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
             player.sendMessage("§6§l         🏆 ¡RAID COMPLETADA! 🏆");
             player.sendMessage("");
             player.sendMessage(String.format("§e  Raid: §f%s", raidName));
@@ -277,7 +278,7 @@ public class NPCDeathListener implements Listener {
             player.sendMessage("");
             player.sendMessage("§a  ✓ Todas las recompensas han sido otorgadas");
             player.sendMessage("§7  Regresando al spawn...");
-            player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
+            player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
             player.sendMessage("");
         }
 
@@ -292,7 +293,6 @@ public class NPCDeathListener implements Listener {
     }
 
     private void updateWaveProgress(RaidSession session, int enemiesRemaining) {
-        String waveId = getWaveId(session);
         Wave wave = session.getCurrentWave();
 
         if (wave == null) {
@@ -348,15 +348,13 @@ public class NPCDeathListener implements Listener {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
 
                         RaidSoundManager.playBuffSound(player);
-                        player.getWorld().playEffect(player.getLocation(),
-                                org.bukkit.Effect.MOBSPAWNER_FLAMES, 0);
 
                         String rewardName = getRewardDisplayName(reward.getCommand());
                         player.sendMessage("");
-                        player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
+                        player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
                         player.sendMessage("§6§l  ✦ RECOMPENSA ✦");
-                        player.sendMessage("§f  " + rewardName);
-                        player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
+                        player.sendMessage("§f  /" + rewardName);
+                        player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
                         player.sendMessage("");
                     }
                 }
