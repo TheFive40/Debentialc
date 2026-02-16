@@ -11,17 +11,51 @@ import org.debentialc.raids.models.Raid;
 import org.debentialc.raids.models.PartyStatus;
 import org.debentialc.service.CC;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * PartyCommand - Comando /party para gestionar parties
- * Adaptado al nuevo sistema de menús visuales
+ * Incluye sistema de invitaciones con /party accept
  */
 public class PartyCommand extends BaseCommand {
 
+    /**
+     * Mapa de invitaciones pendientes: invitado UUID -> party ID del invitador
+     */
+    private static final Map<UUID, PendingInvite> pendingInvites = new HashMap<>();
+
+    public static class PendingInvite {
+        public final String partyId;
+        public final UUID inviterUuid;
+        public final long timestamp;
+
+        public PendingInvite(String partyId, UUID inviterUuid) {
+            this.partyId = partyId;
+            this.inviterUuid = inviterUuid;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        /** Las invitaciones expiran después de 60 segundos */
+        public boolean isExpired() {
+            return (System.currentTimeMillis() - timestamp) > 60000;
+        }
+    }
+
+    /**
+     * Limpia una invitación pendiente
+     */
+    public static void clearInvite(UUID playerId) {
+        pendingInvites.remove(playerId);
+    }
+
     @Command(name = "party",
             description = "Gestiona tu party",
-            usage = "/party <create|invite|leave|start|info|members>",
+            usage = "/party <create|invite|accept|leave|start|info|members|disband>",
             inGameOnly = true)
     public void onCommand(CommandArgs args) {
         Player player = args.getPlayer();
@@ -47,6 +81,16 @@ public class PartyCommand extends BaseCommand {
                     return;
                 }
                 handleInvite(player, args.getArgs(1));
+                break;
+
+            case "accept":
+                handleAccept(player);
+                break;
+
+            case "deny":
+            case "decline":
+            case "reject":
+                handleDeny(player);
                 break;
 
             case "leave":
@@ -90,11 +134,14 @@ public class PartyCommand extends BaseCommand {
         sendSuccess(player, "Party creada. Invita jugadores con: /party invite <jugador>");
     }
 
+    /**
+     * Envía una invitación al jugador objetivo (NO lo une directamente)
+     */
     private void handleInvite(Player player, String playerName) {
         Party party = PartyManager.getPlayerParty(player.getUniqueId());
 
         if (party == null) {
-            sendError(player, "No estás en una party");
+            sendError(player, "No estás en una party. Crea una con /party create");
             return;
         }
 
@@ -104,7 +151,7 @@ public class PartyCommand extends BaseCommand {
         }
 
         if (party.isFull()) {
-            sendError(player, "La party está llena (máximo 5)");
+            sendError(player, "La party está llena (máximo " + party.getMaxSize() + ")");
             return;
         }
 
@@ -114,18 +161,140 @@ public class PartyCommand extends BaseCommand {
             return;
         }
 
+        if (target.getUniqueId().equals(player.getUniqueId())) {
+            sendError(player, "No puedes invitarte a ti mismo");
+            return;
+        }
+
         if (PartyManager.isPlayerInParty(target.getUniqueId())) {
             sendError(player, target.getName() + " ya está en una party");
             return;
         }
 
-        boolean joined = PartyManager.joinParty(target.getUniqueId(), party);
+        // Verificar si ya tiene una invitación pendiente
+        PendingInvite existing = pendingInvites.get(target.getUniqueId());
+        if (existing != null && !existing.isExpired()) {
+            sendError(player, target.getName() + " ya tiene una invitación pendiente");
+            return;
+        }
+
+        // Crear invitación pendiente
+        pendingInvites.put(target.getUniqueId(), new PendingInvite(party.getPartyId(), player.getUniqueId()));
+
+        sendSuccess(player, "Invitación enviada a " + target.getName());
+
+        // Notificar al jugador invitado
+        target.sendMessage("");
+        target.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+        target.sendMessage(CC.translate("&6&l  INVITACIÓN DE PARTY"));
+        target.sendMessage("");
+        target.sendMessage(CC.translate("&f  " + player.getName() + " &7te invitó a su party"));
+        target.sendMessage("");
+        target.sendMessage(CC.translate("&a  /party accept &7- Aceptar"));
+        target.sendMessage(CC.translate("&c  /party deny &7- Rechazar"));
+        target.sendMessage("");
+        target.sendMessage(CC.translate("&7  La invitación expira en 60 segundos"));
+        target.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+        target.sendMessage("");
+
+        // Programar expiración de la invitación
+        final UUID targetId = target.getUniqueId();
+        Bukkit.getScheduler().scheduleSyncDelayedTask(
+                org.debentialc.Main.instance,
+                () -> {
+                    PendingInvite invite = pendingInvites.get(targetId);
+                    if (invite != null && invite.isExpired()) {
+                        pendingInvites.remove(targetId);
+                        Player targetPlayer = Bukkit.getPlayer(targetId);
+                        if (targetPlayer != null) {
+                            targetPlayer.sendMessage(CC.translate("&7La invitación de party ha expirado"));
+                        }
+                    }
+                },
+                1200L // 60 segundos = 1200 ticks
+        );
+    }
+
+    /**
+     * Acepta una invitación pendiente
+     */
+    private void handleAccept(Player player) {
+        PendingInvite invite = pendingInvites.get(player.getUniqueId());
+
+        if (invite == null) {
+            sendError(player, "No tienes invitaciones pendientes");
+            return;
+        }
+
+        if (invite.isExpired()) {
+            pendingInvites.remove(player.getUniqueId());
+            sendError(player, "La invitación ha expirado");
+            return;
+        }
+
+        if (PartyManager.isPlayerInParty(player.getUniqueId())) {
+            pendingInvites.remove(player.getUniqueId());
+            sendError(player, "Ya estás en una party. Usa /party leave primero");
+            return;
+        }
+
+        Party party = PartyManager.getPartyById(invite.partyId);
+        if (party == null) {
+            pendingInvites.remove(player.getUniqueId());
+            sendError(player, "La party ya no existe");
+            return;
+        }
+
+        if (party.isFull()) {
+            pendingInvites.remove(player.getUniqueId());
+            sendError(player, "La party está llena");
+            return;
+        }
+
+        // Unir al jugador
+        boolean joined = PartyManager.joinParty(player.getUniqueId(), party);
+        pendingInvites.remove(player.getUniqueId());
 
         if (joined) {
-            sendSuccess(player, target.getName() + " se unió a la party");
-            sendSuccess(target, "Te has unido a la party de " + player.getName());
+            sendSuccess(player, "Te has unido a la party");
+
+            // Notificar al líder y miembros
+            Player inviter = Bukkit.getPlayer(invite.inviterUuid);
+            if (inviter != null) {
+                sendSuccess(inviter, player.getName() + " aceptó la invitación");
+            }
+
+            // Notificar a todos los miembros
+            for (UUID memberId : party.getActivePlayers()) {
+                if (!memberId.equals(player.getUniqueId()) && !memberId.equals(invite.inviterUuid)) {
+                    Player member = Bukkit.getPlayer(memberId);
+                    if (member != null) {
+                        sendInfo(member, player.getName() + " se unió a la party");
+                    }
+                }
+            }
         } else {
-            sendError(player, "No se pudo agregar a " + target.getName());
+            sendError(player, "No se pudo unir a la party");
+        }
+    }
+
+    /**
+     * Rechaza una invitación pendiente
+     */
+    private void handleDeny(Player player) {
+        PendingInvite invite = pendingInvites.remove(player.getUniqueId());
+
+        if (invite == null) {
+            sendError(player, "No tienes invitaciones pendientes");
+            return;
+        }
+
+        sendSuccess(player, "Invitación rechazada");
+
+        // Notificar al invitador
+        Player inviter = Bukkit.getPlayer(invite.inviterUuid);
+        if (inviter != null) {
+            sendError(inviter, player.getName() + " rechazó la invitación");
         }
     }
 
@@ -175,14 +344,24 @@ public class PartyCommand extends BaseCommand {
             return;
         }
 
+        // Verificar que los spawns estén configurados
+        if (raid.getPlayerSpawnPoint() == null) {
+            sendError(player, "La raid no tiene un punto de spawn para jugadores configurado");
+            return;
+        }
+
+        // Crear sesión
         RaidSessionManager.createRaidSession(raid, party);
         PartyManager.setPartyStatus(party, PartyStatus.IN_RAID);
 
         sendSuccess(player, "Raid iniciada: " + raid.getRaidName());
 
-        for (java.util.UUID memberId : party.getActivePlayers()) {
+        // Teleportar a todos los jugadores al punto de spawn de jugadores
+        Location playerSpawn = raid.getPlayerSpawnPoint();
+        for (UUID memberId : party.getActivePlayers()) {
             Player member = Bukkit.getPlayer(memberId);
             if (member != null) {
+                member.teleport(playerSpawn);
                 sendInfo(member, "La raid ha comenzado. ¡Que empiece la aventura!");
             }
         }
@@ -223,6 +402,16 @@ public class PartyCommand extends BaseCommand {
             return;
         }
 
+        // Notificar a todos los miembros antes de disolver
+        for (UUID memberId : party.getActivePlayers()) {
+            if (!memberId.equals(player.getUniqueId())) {
+                Player member = Bukkit.getPlayer(memberId);
+                if (member != null) {
+                    sendError(member, "La party ha sido disuelta por el líder");
+                }
+            }
+        }
+
         PartyManager.dissolveParty(party.getPartyId());
         sendSuccess(player, "Party disuelta");
     }
@@ -234,6 +423,8 @@ public class PartyCommand extends BaseCommand {
         player.sendMessage("");
         player.sendMessage(CC.translate("&f  /party create &7- Crear nueva party"));
         player.sendMessage(CC.translate("&f  /party invite <jugador> &7- Invitar jugador"));
+        player.sendMessage(CC.translate("&f  /party accept &7- Aceptar invitación"));
+        player.sendMessage(CC.translate("&f  /party deny &7- Rechazar invitación"));
         player.sendMessage(CC.translate("&f  /party leave &7- Abandonar party"));
         player.sendMessage(CC.translate("&f  /party start <raid> &7- Iniciar raid (solo líder)"));
         player.sendMessage(CC.translate("&f  /party info &7- Ver información de party"));
@@ -243,7 +434,6 @@ public class PartyCommand extends BaseCommand {
         player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
         player.sendMessage("");
     }
-
 
     private void sendError(Player player, String message) {
         player.sendMessage("");

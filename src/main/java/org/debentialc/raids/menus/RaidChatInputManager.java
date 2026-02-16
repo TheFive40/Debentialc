@@ -16,6 +16,9 @@ import java.util.UUID;
 /**
  * Gestiona inputs de chat para el sistema de raids
  * Similar a ArmorEditManager, ItemEditManager, etc. del sistema de custom items
+ *
+ * IMPORTANTE: processInput se llama desde AsyncPlayerChatEvent (hilo async).
+ * Todas las operaciones de Bukkit (abrir menú, tp, etc.) deben ejecutarse en el hilo principal.
  */
 public class RaidChatInputManager {
 
@@ -30,6 +33,8 @@ public class RaidChatInputManager {
         public int tempNpcTab;
         public int tempQuantity;
         public String tempCommand;
+        // Para guardar la ubicación del jugador al momento de iniciar el input
+        public Location savedLocation;
 
         public RaidInputState(String inputType, String raidId) {
             this.inputType = inputType;
@@ -55,14 +60,19 @@ public class RaidChatInputManager {
     }
 
     public static void cancelInput(Player player) {
-        player.sendMessage("");
-        player.sendMessage(CC.translate("&c✗ Cancelado"));
-        player.sendMessage("");
-        playersInputting.remove(player.getUniqueId());
+        if (playersInputting.remove(player.getUniqueId()) != null) {
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&c✗ Cancelado"));
+            player.sendMessage("");
+        }
     }
 
-    private static void finishInput(Player player) {
-        playersInputting.remove(player.getUniqueId());
+    /**
+     * Finaliza el input de forma atómica. Retorna true si el jugador estaba inputting
+     * y fue removido exitosamente (previene doble procesamiento).
+     */
+    private static boolean finishInput(Player player) {
+        return playersInputting.remove(player.getUniqueId()) != null;
     }
 
     // ====== INICIAR INPUTS ======
@@ -128,11 +138,13 @@ public class RaidChatInputManager {
     public static void startSpawnPointInput(Player player, String raidId, int waveIndex) {
         RaidInputState state = new RaidInputState("spawn_point", raidId, waveIndex);
         state.step = 0;
+        // Guardar la ubicación del jugador ahora (se usará como spawn point)
+        state.savedLocation = player.getLocation().clone();
         playersInputting.put(player.getUniqueId(), state);
         player.sendMessage("");
         player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
         player.sendMessage(CC.translate("&6&l  Crear Punto de Spawn"));
-        player.sendMessage(CC.translate("&7  Tu posición se usará como spawn"));
+        player.sendMessage(CC.translate("&7  Tu posición actual se guardó como spawn"));
         player.sendMessage(CC.translate("&7  Paso 1/3: Ingresa el &fnombre del NPC"));
         player.sendMessage(CC.translate("&7  Escribe &c'cancelar' &7para abortar"));
         player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
@@ -167,36 +179,50 @@ public class RaidChatInputManager {
 
     // ====== PROCESAR INPUT ======
 
+    /**
+     * Procesa el input del jugador. Este método se llama desde el AsyncPlayerChatEvent
+     * así que sincronizamos con el hilo principal para cualquier operación Bukkit.
+     */
     public static void processInput(Player player, String input) {
         RaidInputState state = playersInputting.get(player.getUniqueId());
         if (state == null) return;
 
-        switch (state.inputType) {
-            case "create_raid":
-                processCreateRaid(player, input, state);
-                break;
-            case "rename":
-                processRename(player, input, state);
-                break;
-            case "description":
-                processDescription(player, input, state);
-                break;
-            case "cooldown":
-                processCooldown(player, input, state);
-                break;
-            case "players":
-                processPlayers(player, input, state);
-                break;
-            case "spawn_point":
-                processSpawnPoint(player, input, state);
-                break;
-            case "reward":
-                processReward(player, input, state);
-                break;
-            case "wave_desc":
-                processWaveDescription(player, input, state);
-                break;
-        }
+        // Ejecutar en el hilo principal de Bukkit para evitar problemas de concurrencia
+        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
+                org.debentialc.Main.instance,
+                () -> {
+                    // Verificar de nuevo que sigue en input (podría haber cancelado)
+                    if (!playersInputting.containsKey(player.getUniqueId())) return;
+
+                    switch (state.inputType) {
+                        case "create_raid":
+                            processCreateRaid(player, input, state);
+                            break;
+                        case "rename":
+                            processRename(player, input, state);
+                            break;
+                        case "description":
+                            processDescription(player, input, state);
+                            break;
+                        case "cooldown":
+                            processCooldown(player, input, state);
+                            break;
+                        case "players":
+                            processPlayers(player, input, state);
+                            break;
+                        case "spawn_point":
+                            processSpawnPoint(player, input, state);
+                            break;
+                        case "reward":
+                            processReward(player, input, state);
+                            break;
+                        case "wave_desc":
+                            processWaveDescription(player, input, state);
+                            break;
+                    }
+                },
+                0L
+        );
     }
 
     private static void processCreateRaid(Player player, String input, RaidInputState state) {
@@ -231,6 +257,9 @@ public class RaidChatInputManager {
                         return;
                     }
 
+                    // Finalizar input ANTES de crear la raid (previene doble procesamiento)
+                    if (!finishInput(player)) return;
+
                     Raid raid = RaidManager.createRaid(state.tempName);
                     raid.setDescription(state.tempDescription);
                     raid.setCooldownSeconds(minutes * 60L);
@@ -244,10 +273,9 @@ public class RaidChatInputManager {
                     player.sendMessage("");
 
                     final String raidId = raid.getRaidId();
-                    finishInput(player);
                     openMenuDelayed(player, () -> RaidConfigMenu.createRaidConfigMenu(raidId).open(player));
                 } catch (NumberFormatException e) {
-                    player.sendMessage(CC.translate("&c✗ Número inválido"));
+                    player.sendMessage(CC.translate("&c✗ Ingresa un número válido"));
                 }
                 break;
         }
@@ -266,12 +294,13 @@ public class RaidChatInputManager {
             return;
         }
 
+        if (!finishInput(player)) return;
+
         raid.setRaidName(input.trim());
         RaidManager.updateRaid(raid);
         RaidStorageManager.saveRaid(raid);
 
         player.sendMessage(CC.translate("&a✓ Nombre actualizado: &f" + input.trim()));
-        finishInput(player);
         openMenuDelayed(player, () -> RaidConfigMenu.createRaidConfigMenu(state.raidId).open(player));
     }
 
@@ -288,12 +317,13 @@ public class RaidChatInputManager {
             return;
         }
 
+        if (!finishInput(player)) return;
+
         raid.setDescription(input.trim());
         RaidManager.updateRaid(raid);
         RaidStorageManager.saveRaid(raid);
 
         player.sendMessage(CC.translate("&a✓ Descripción actualizada"));
-        finishInput(player);
         openMenuDelayed(player, () -> RaidConfigMenu.createRaidConfigMenu(state.raidId).open(player));
     }
 
@@ -312,22 +342,23 @@ public class RaidChatInputManager {
                 return;
             }
 
+            if (!finishInput(player)) return;
+
             raid.setCooldownSeconds(minutes * 60L);
             RaidManager.updateRaid(raid);
             RaidStorageManager.saveRaid(raid);
 
             player.sendMessage(CC.translate("&a✓ Cooldown: &f" + minutes + " minutos"));
-            finishInput(player);
             openMenuDelayed(player, () -> RaidConfigMenu.createRaidConfigMenu(state.raidId).open(player));
         } catch (NumberFormatException e) {
-            player.sendMessage(CC.translate("&c✗ Número inválido"));
+            player.sendMessage(CC.translate("&c✗ Ingresa un número válido"));
         }
     }
 
     private static void processPlayers(Player player, String input, RaidInputState state) {
         String[] parts = input.trim().split("\\s+");
-        if (parts.length != 1) {
-            player.sendMessage(CC.translate("&c✗ Formato: min max (ejemplo: 1 5)"));
+        if (parts.length != 2) {
+            player.sendMessage(CC.translate("&c✗ Formato: &fmin max &7(ejemplo: &f2 5&7)"));
             return;
         }
 
@@ -347,16 +378,17 @@ public class RaidChatInputManager {
                 return;
             }
 
+            if (!finishInput(player)) return;
+
             raid.setMinPlayers(min);
             raid.setMaxPlayers(max);
             RaidManager.updateRaid(raid);
             RaidStorageManager.saveRaid(raid);
 
             player.sendMessage(CC.translate("&a✓ Jugadores: &f" + min + "-" + max));
-            finishInput(player);
             openMenuDelayed(player, () -> RaidConfigMenu.createRaidConfigMenu(state.raidId).open(player));
         } catch (NumberFormatException e) {
-            player.sendMessage(CC.translate("&c✗ Números inválidos"));
+            player.sendMessage(CC.translate("&c✗ Ingresa dos números válidos separados por espacio"));
         }
     }
 
@@ -377,7 +409,7 @@ public class RaidChatInputManager {
                 state.tempNpcName = input.trim();
                 state.step = 1;
                 player.sendMessage(CC.translate("&a✓ NPC: &f" + state.tempNpcName));
-                player.sendMessage(CC.translate("&7Paso 2/3: Ingresa el &ftab del NPC &7(default 10)"));
+                player.sendMessage(CC.translate("&7Paso 2/3: Ingresa el &ftab del NPC &7(1-100)"));
                 break;
 
             case 1: // Tab
@@ -390,9 +422,9 @@ public class RaidChatInputManager {
                     state.tempNpcTab = tab;
                     state.step = 2;
                     player.sendMessage(CC.translate("&a✓ Tab: &f" + tab));
-                    player.sendMessage(CC.translate("&7Paso 3/3: Ingresa la &fcantidad de NPCs"));
+                    player.sendMessage(CC.translate("&7Paso 3/3: Ingresa la &fcantidad de NPCs &7(1-100)"));
                 } catch (NumberFormatException e) {
-                    player.sendMessage(CC.translate("&c✗ Número inválido"));
+                    player.sendMessage(CC.translate("&c✗ Ingresa un número válido"));
                 }
                 break;
 
@@ -404,7 +436,10 @@ public class RaidChatInputManager {
                         return;
                     }
 
-                    Location loc = player.getLocation().clone();
+                    // Finalizar input ANTES de guardar (previene doble procesamiento)
+                    if (!finishInput(player)) return;
+
+                    Location loc = state.savedLocation != null ? state.savedLocation : player.getLocation().clone();
                     Wave wave = raid.getWaveByIndex(state.waveIndex);
                     SpawnPoint spawn = new SpawnPoint(loc, state.tempNpcName, state.tempNpcTab, quantity);
                     wave.addSpawnPoint(spawn);
@@ -417,11 +452,11 @@ public class RaidChatInputManager {
                     player.sendMessage(CC.translate("&7Pos: &f" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
                     player.sendMessage("");
 
+                    final String finalRaidId = state.raidId;
                     final int waveIdx = state.waveIndex;
-                    finishInput(player);
-                    openMenuDelayed(player, () -> RaidWaveConfigMenu.createWaveConfigMenu(state.raidId, waveIdx).open(player));
+                    openMenuDelayed(player, () -> RaidWaveConfigMenu.createWaveConfigMenu(finalRaidId, waveIdx).open(player));
                 } catch (NumberFormatException e) {
-                    player.sendMessage(CC.translate("&c✗ Número inválido"));
+                    player.sendMessage(CC.translate("&c✗ Ingresa un número válido"));
                 }
                 break;
         }
@@ -457,6 +492,8 @@ public class RaidChatInputManager {
                         return;
                     }
 
+                    if (!finishInput(player)) return;
+
                     Wave wave = raid.getWaveByIndex(state.waveIndex);
                     WaveReward reward = new WaveReward(state.tempCommand, probability);
                     wave.addReward(reward);
@@ -469,11 +506,11 @@ public class RaidChatInputManager {
                     player.sendMessage(CC.translate("&7Probabilidad: &f" + probability + "%"));
                     player.sendMessage("");
 
+                    final String finalRaidId = state.raidId;
                     final int waveIdx = state.waveIndex;
-                    finishInput(player);
-                    openMenuDelayed(player, () -> RaidWaveConfigMenu.createWaveConfigMenu(state.raidId, waveIdx).open(player));
+                    openMenuDelayed(player, () -> RaidWaveConfigMenu.createWaveConfigMenu(finalRaidId, waveIdx).open(player));
                 } catch (NumberFormatException e) {
-                    player.sendMessage(CC.translate("&c✗ Número inválido"));
+                    player.sendMessage(CC.translate("&c✗ Ingresa un número válido"));
                 }
                 break;
         }
@@ -487,6 +524,8 @@ public class RaidChatInputManager {
             return;
         }
 
+        if (!finishInput(player)) return;
+
         Wave wave = raid.getWaveByIndex(state.waveIndex);
         wave.setDescription(input.trim());
         RaidManager.updateRaid(raid);
@@ -494,9 +533,9 @@ public class RaidChatInputManager {
 
         player.sendMessage(CC.translate("&a✓ Descripción de oleada actualizada"));
 
+        final String finalRaidId = state.raidId;
         final int waveIdx = state.waveIndex;
-        finishInput(player);
-        openMenuDelayed(player, () -> RaidWaveConfigMenu.createWaveConfigMenu(state.raidId, waveIdx).open(player));
+        openMenuDelayed(player, () -> RaidWaveConfigMenu.createWaveConfigMenu(finalRaidId, waveIdx).open(player));
     }
 
     /**
@@ -506,7 +545,7 @@ public class RaidChatInputManager {
         org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
                 org.debentialc.Main.instance,
                 menuOpener,
-                1L
+                2L
         );
     }
 }
