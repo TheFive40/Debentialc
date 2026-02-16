@@ -13,15 +13,8 @@ import org.bukkit.entity.Player;
 
 import java.util.*;
 
-/**
- * PartyCommand - Comando /party para gestionar parties
- * Incluye sistema de invitaciones con /party accept
- */
 public class PartyCommand extends BaseCommand {
 
-    /**
-     * Mapa de invitaciones pendientes: invitado UUID -> party ID del invitador
-     */
     private static final Map<UUID, PendingInvite> pendingInvites = new HashMap<>();
 
     public static class PendingInvite {
@@ -35,15 +28,11 @@ public class PartyCommand extends BaseCommand {
             this.timestamp = System.currentTimeMillis();
         }
 
-        /** Las invitaciones expiran después de 60 segundos */
         public boolean isExpired() {
             return (System.currentTimeMillis() - timestamp) > 60000;
         }
     }
 
-    /**
-     * Limpia una invitación pendiente
-     */
     public static void clearInvite(UUID playerId) {
         pendingInvites.remove(playerId);
     }
@@ -129,9 +118,6 @@ public class PartyCommand extends BaseCommand {
         sendSuccess(player, "Party creada. Invita jugadores con: /party invite <jugador>");
     }
 
-    /**
-     * Envía una invitación al jugador objetivo (NO lo une directamente)
-     */
     private void handleInvite(Player player, String playerName) {
         Party party = PartyManager.getPlayerParty(player.getUniqueId());
 
@@ -166,19 +152,16 @@ public class PartyCommand extends BaseCommand {
             return;
         }
 
-        // Verificar si ya tiene una invitación pendiente
         PendingInvite existing = pendingInvites.get(target.getUniqueId());
         if (existing != null && !existing.isExpired()) {
             sendError(player, target.getName() + " ya tiene una invitación pendiente");
             return;
         }
 
-        // Crear invitación pendiente
         pendingInvites.put(target.getUniqueId(), new PendingInvite(party.getPartyId(), player.getUniqueId()));
 
         sendSuccess(player, "Invitación enviada a " + target.getName());
 
-        // Notificar al jugador invitado
         target.sendMessage("");
         target.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
         target.sendMessage(CC.translate("&6&l  INVITACIÓN DE PARTY"));
@@ -192,7 +175,6 @@ public class PartyCommand extends BaseCommand {
         target.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
         target.sendMessage("");
 
-        // Programar expiración de la invitación
         final UUID targetId = target.getUniqueId();
         Bukkit.getScheduler().scheduleSyncDelayedTask(
                 org.debentialc.Main.instance,
@@ -206,13 +188,10 @@ public class PartyCommand extends BaseCommand {
                         }
                     }
                 },
-                1200L // 60 segundos = 1200 ticks
+                1200L
         );
     }
 
-    /**
-     * Acepta una invitación pendiente
-     */
     private void handleAccept(Player player) {
         PendingInvite invite = pendingInvites.get(player.getUniqueId());
 
@@ -246,20 +225,17 @@ public class PartyCommand extends BaseCommand {
             return;
         }
 
-        // Unir al jugador
         boolean joined = PartyManager.joinParty(player.getUniqueId(), party);
         pendingInvites.remove(player.getUniqueId());
 
         if (joined) {
             sendSuccess(player, "Te has unido a la party");
 
-            // Notificar al líder y miembros
             Player inviter = Bukkit.getPlayer(invite.inviterUuid);
             if (inviter != null) {
                 sendSuccess(inviter, player.getName() + " aceptó la invitación");
             }
 
-            // Notificar a todos los miembros
             for (UUID memberId : party.getActivePlayers()) {
                 if (!memberId.equals(player.getUniqueId()) && !memberId.equals(invite.inviterUuid)) {
                     Player member = Bukkit.getPlayer(memberId);
@@ -273,9 +249,6 @@ public class PartyCommand extends BaseCommand {
         }
     }
 
-    /**
-     * Rechaza una invitación pendiente
-     */
     private void handleDeny(Player player) {
         PendingInvite invite = pendingInvites.remove(player.getUniqueId());
 
@@ -286,7 +259,6 @@ public class PartyCommand extends BaseCommand {
 
         sendSuccess(player, "Invitación rechazada");
 
-        // Notificar al invitador
         Player inviter = Bukkit.getPlayer(invite.inviterUuid);
         if (inviter != null) {
             sendError(inviter, player.getName() + " rechazó la invitación");
@@ -365,32 +337,24 @@ public class PartyCommand extends BaseCommand {
                 () -> {
                     Wave firstWave = session.getCurrentWave();
                     if (firstWave != null) {
-                        // Resetear contadores
                         for (SpawnPoint sp : firstWave.getSpawnPoints()) {
                             sp.resetAliveCount();
                         }
 
                         firstWave.setStatus(WaveStatus.ACTIVE);
 
-                        // Spawnear NPCs de la primera oleada
                         String waveId = session.getSessionId() + "_wave_0";
                         boolean spawned = NPCSpawnManager.spawnWaveNpcs(firstWave, waveId);
 
                         if (spawned) {
-                            // Efectos de inicio de raid
                             RaidEffects.raidStartEffect(teleportedPlayers, playerSpawn);
 
                             for (Player member : teleportedPlayers) {
                                 RaidTitleManager.showRaidStart(member, raid.getRaidName());
                                 RaidSoundManager.playRaidStartSound(member);
-
                                 sendInfo(member, "¡La raid ha comenzado! Oleada 1/" + raid.getTotalWaves());
                             }
-
-                            System.out.println("[Raids] Primera oleada iniciada con " +
-                                    firstWave.getTotalEnemies() + " enemigos");
                         } else {
-                            // Error al spawnear
                             for (Player member : teleportedPlayers) {
                                 sendError(member, "Error al spawnear enemigos. Contacta un admin.");
                             }
@@ -398,11 +362,9 @@ public class PartyCommand extends BaseCommand {
                         }
                     }
                 },
-                40L // 2 segundos después del teleport
+                40L
         );
     }
-
-
 
     private void handleInfo(Player player) {
         Party party = PartyManager.getPlayerParty(player.getUniqueId());
@@ -439,7 +401,6 @@ public class PartyCommand extends BaseCommand {
             return;
         }
 
-        // Notificar a todos los miembros antes de disolver
         for (UUID memberId : party.getActivePlayers()) {
             if (!memberId.equals(player.getUniqueId())) {
                 Player member = Bukkit.getPlayer(memberId);

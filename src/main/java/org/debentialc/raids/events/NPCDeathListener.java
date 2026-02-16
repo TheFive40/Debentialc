@@ -1,10 +1,7 @@
 package org.debentialc.raids.events;
 
-import noppes.npcs.api.IPos;
 import noppes.npcs.api.event.INpcEvent;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.debentialc.Main;
@@ -20,99 +17,66 @@ import org.debentialc.raids.models.WaveStatus;
 
 import java.util.*;
 
-/**
- * NPCDeathListener - Escucha muertes de NPCs en CustomNPC
- * VERSIÓN CORREGIDA: Usa entity ID para tracking confiable de NPCs
- */
 public class NPCDeathListener implements Listener {
 
-    // Trackear qué oleadas ya dieron recompensas
     private static final Set<String> rewardsGiven = new HashSet<>();
-
-    // Trackear countdowns activos para evitar duplicados
     private static final Set<String> activeCountdowns = new HashSet<>();
+    private static final Map<String, Integer> countdownTasks = new HashMap<>();
 
     public void onNpcDie(INpcEvent.DiedEvent event) {
         try {
             int entityId = event.getNpc().getEntityId();
-
-            System.out.println("[Raids] NPC muerto detectado - Entity ID: " + entityId);
-
             String waveId = NPCSpawnManager.getWaveIdForNpc(entityId);
 
             if (waveId == null) {
-                System.out.println("[Raids] NPC no pertenece a ninguna raid activa");
                 return;
             }
-
-            System.out.println("[Raids] NPC pertenece a wave: " + waveId);
 
             Player killer = null;
             try {
                 UUID killerUuid = UUID.fromString(event.getSource().getUniqueID());
                 killer = Bukkit.getPlayer(killerUuid);
             } catch (Exception e) {
-                System.err.println("[Raids] Error al obtener killer: " + e.getMessage());
             }
 
-            // Obtener la sesión de raid
             RaidSession session = getSessionByWaveId(waveId);
             if (session == null) {
-                System.err.println("[Raids] No se encontró sesión para wave: " + waveId);
                 return;
             }
 
             handleNpcDeath(entityId, waveId, session, killer);
 
         } catch (Exception e) {
-            System.err.println("[Raids] Error en onNpcDie: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    /**
-     * Obtiene la sesión de raid basándose en el waveId
-     */
     private RaidSession getSessionByWaveId(String waveId) {
-        // El waveId tiene formato: sessionId_wave_X
         String sessionId = waveId.substring(0, waveId.lastIndexOf("_wave_"));
         return RaidSessionManager.getSessionById(sessionId);
     }
 
-    /**
-     * Maneja la muerte de un NPC en una raid
-     */
     private void handleNpcDeath(int entityId, String waveId, RaidSession session, Player killer) {
         Wave wave = session.getCurrentWave();
-
         if (wave == null) {
             return;
         }
 
         boolean wasTracked = NPCSpawnManager.markNpcDead(entityId, waveId);
-
         if (!wasTracked) {
-            System.out.println("[Raids] NPC ya estaba marcado como muerto");
             return;
         }
 
         playDeathEffects(session, killer);
-
         int remaining = NPCSpawnManager.getAliveNpcsCount(waveId);
 
-        System.out.println("[Raids] NPCs restantes: " + remaining);
-
         if (remaining == 0) {
-            System.out.println("[Raids] ¡Oleada completada!");
             completeWave(session, waveId);
         } else {
             updateWaveProgress(session, remaining);
         }
     }
 
-    /**
-     * Reproduce efectos cuando muere un NPC
-     */
     private void playDeathEffects(RaidSession session, Player killer) {
         for (UUID playerId : session.getActivePlayers()) {
             Player player = Bukkit.getPlayer(playerId);
@@ -129,20 +93,15 @@ public class NPCDeathListener implements Listener {
         }
     }
 
-    /**
-     * Completa la onda actual
-     */
     private void completeWave(RaidSession session, String waveId) {
         int waveNumber = session.getCurrentWaveIndex() + 1;
         int totalWaves = session.getRaid().getTotalWaves();
 
         if (rewardsGiven.contains(waveId)) {
-            System.out.println("[Raids] Oleada ya completada anteriormente");
             return;
         }
 
         rewardsGiven.add(waveId);
-
         List<Player> players = getActivePlayers(session);
 
         RaidEffects.waveCompleteEffect(players, waveNumber);
@@ -176,7 +135,6 @@ public class NPCDeathListener implements Listener {
         }
 
         executeWaveRewardsOnce(session);
-
         NPCSpawnManager.clearWaveTracking(waveId);
 
         if (isLastWave) {
@@ -189,9 +147,6 @@ public class NPCDeathListener implements Listener {
         }
     }
 
-    /**
-     * Inicia countdown de 10 segundos
-     */
     private void startWaveCountdown(RaidSession session, String previousWaveId) {
         String countdownKey = session.getSessionId() + "_countdown";
 
@@ -210,10 +165,15 @@ public class NPCDeathListener implements Listener {
         }
 
         final int[] countdown = {10};
+        final boolean[] hasStartedWave = {false};
 
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(Main.instance, new Runnable() {
+        int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(Main.instance, new Runnable() {
             @Override
             public void run() {
+                if (hasStartedWave[0]) {
+                    return;
+                }
+
                 List<Player> currentPlayers = getActivePlayers(session);
 
                 if (countdown[0] > 0) {
@@ -229,6 +189,8 @@ public class NPCDeathListener implements Listener {
 
                     countdown[0]--;
                 } else {
+                    hasStartedWave[0] = true;
+
                     for (Player player : currentPlayers) {
                         player.sendMessage("");
                         player.sendMessage("§c§l⚔ ¡OLEADA " + nextWaveNumber + " INICIADA! ⚔");
@@ -250,8 +212,6 @@ public class NPCDeathListener implements Listener {
                         boolean spawned = NPCSpawnManager.spawnWaveNpcs(nextWave, newWaveId);
 
                         if (spawned) {
-                            System.out.println("[Raids] " + NPCSpawnManager.getDebugInfo(newWaveId));
-
                             RaidEffects.waveActiveEffect(currentPlayers,
                                     session.getCurrentWaveIndex() + 1,
                                     session.getRaid().getTotalWaves());
@@ -261,21 +221,23 @@ public class NPCDeathListener implements Listener {
                                         session.getCurrentWaveIndex() + 1,
                                         session.getRaid().getTotalWaves());
                             }
-                        } else {
-                            System.err.println("[Raids] Error al spawnear oleada " + nextWaveNumber);
                         }
                     }
 
                     activeCountdowns.remove(countdownKey);
                     rewardsGiven.remove(previousWaveId);
+
+                    Integer storedTaskId = countdownTasks.remove(countdownKey);
+                    if (storedTaskId != null) {
+                        Bukkit.getScheduler().cancelTask(storedTaskId);
+                    }
                 }
             }
         }, 20L, 20L);
+
+        countdownTasks.put(countdownKey, taskId);
     }
 
-    /**
-     * Mensaje de countdown
-     */
     private String getCountdownMessage(int seconds) {
         if (seconds > 5) {
             return String.format("§e⏳ §fSiguiente oleada en §e%d §fsegundos...", seconds);
@@ -286,9 +248,6 @@ public class NPCDeathListener implements Listener {
         }
     }
 
-    /**
-     * Completa la raid con victoria
-     */
     private void completeRaidWithEffects(RaidSession session) {
         String raidName = session.getRaid().getRaidName();
         List<Player> players = getActivePlayers(session);
@@ -332,9 +291,6 @@ public class NPCDeathListener implements Listener {
         RaidSessionManager.completeRaid(session);
     }
 
-    /**
-     * Actualiza progreso de oleada
-     */
     private void updateWaveProgress(RaidSession session, int enemiesRemaining) {
         String waveId = getWaveId(session);
         Wave wave = session.getCurrentWave();
@@ -371,9 +327,6 @@ public class NPCDeathListener implements Listener {
         }
     }
 
-    /**
-     * Ejecuta recompensas UNA VEZ
-     */
     private void executeWaveRewardsOnce(RaidSession session) {
         Wave wave = session.getCurrentWave();
         if (wave == null || !wave.hasRewards()) {
@@ -470,5 +423,19 @@ public class NPCDeathListener implements Listener {
     public static void clearSessionTracking(String sessionId) {
         rewardsGiven.removeIf(id -> id.startsWith(sessionId));
         activeCountdowns.removeIf(id -> id.startsWith(sessionId));
+
+        List<String> keysToRemove = new ArrayList<>();
+        for (String key : countdownTasks.keySet()) {
+            if (key.startsWith(sessionId)) {
+                Integer taskId = countdownTasks.get(key);
+                if (taskId != null) {
+                    Bukkit.getScheduler().cancelTask(taskId);
+                }
+                keysToRemove.add(key);
+            }
+        }
+        for (String key : keysToRemove) {
+            countdownTasks.remove(key);
+        }
     }
 }
