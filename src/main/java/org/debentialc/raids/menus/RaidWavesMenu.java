@@ -114,8 +114,15 @@ public class RaidWavesMenu {
                             raid.addWave(newWave);
                             RaidManager.updateRaid(raid);
                             RaidStorageManager.saveRaid(raid);
-                            player.sendMessage(CC.translate("&a✓ Oleada " + newWave.getWaveNumber() + " creada"));
-                            createWavesMenu(raidId).open(player);
+
+                            player.sendMessage("");
+                            player.sendMessage(CC.translate("&a✓ Oleada " + newWave.getWaveNumber() + " creada exitosamente"));
+                            player.sendMessage("");
+                            org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
+                                    org.debentialc.Main.instance,
+                                    () -> createWavesMenu(raidId).open(player),
+                                    1L
+                            );
                         }));
 
                         // ATRÁS

@@ -1,10 +1,9 @@
 package org.debentialc.raids.managers;
 
-import org.debentialc.raids.models.Raid;
-import org.debentialc.raids.models.RaidSession;
-import org.debentialc.raids.models.RaidStatus;
-import org.debentialc.raids.models.WaveStatus;
-import org.debentialc.raids.models.Party;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+import org.debentialc.raids.models.*;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -111,6 +110,8 @@ public class RaidSessionManager {
         if (session.hasNextWave()) {
             session.moveToNextWave();
             session.getCurrentWave().setStatus(WaveStatus.ACTIVE);
+            spawnWaveNPCs(session);
+
             System.out.println("[Raids] Siguiente oleada iniciada: Wave " +
                     (session.getCurrentWaveIndex() + 1));
         } else {
@@ -293,7 +294,61 @@ public class RaidSessionManager {
         }
         return total;
     }
+    /**
+     * Spawns NPCs for the current wave
+     */
+    public static void spawnWaveNPCs(RaidSession session) {
+        if (session == null || session.getCurrentWave() == null) {
+            return;
+        }
 
+        Wave wave = session.getCurrentWave();
+        Location arenaSpawn = session.getRaid().getArenaSpawnPoint();
+
+        if (arenaSpawn == null) {
+            System.out.println("[Raids] ERROR: Arena spawn no configurado");
+            return;
+        }
+
+        UUID firstPlayer = session.getActivePlayers().iterator().next();
+        Player player = org.bukkit.Bukkit.getPlayer(firstPlayer);
+
+        if (player == null) {
+            System.out.println("[Raids] ERROR: No hay jugadores online para spawn ear NPCs");
+            return;
+        }
+
+        System.out.println("[Raids] Spawneando NPCs para oleada " + wave.getWaveNumber());
+
+        for (SpawnPoint spawnPoint : wave.getSpawnPoints()) {
+            Location spawnLoc = spawnPoint.getLocation();
+
+            if (spawnLoc == null) {
+                System.out.println("[Raids] ADVERTENCIA: Spawn point sin ubicación");
+                continue;
+            }
+
+            for (int i = 0; i < spawnPoint.getQuantity(); i++) {
+                org.debentialc.service.General.spawnNpc(
+                        spawnLoc.getBlockX(),
+                        spawnLoc.getBlockY(),
+                        spawnLoc.getBlockZ(),
+                        spawnPoint.getNpcTab(),
+                        spawnPoint.getNpcName(),
+                        player
+                );
+            }
+
+            System.out.println(String.format("[Raids] Spawneados %dx %s (Tab: %d) en %d,%d,%d",
+                    spawnPoint.getQuantity(),
+                    spawnPoint.getNpcName(),
+                    spawnPoint.getNpcTab(),
+                    spawnLoc.getBlockX(),
+                    spawnLoc.getBlockY(),
+                    spawnLoc.getBlockZ()
+            ));
+        }
+    }
     /**
      * Programa la eliminación de una sesión (después de 5 minutos)
      */

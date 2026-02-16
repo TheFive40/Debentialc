@@ -53,9 +53,8 @@ public class Party {
     }
 
     public boolean canStartRaid() {
-        return members.size() >= 2;
+        return !members.isEmpty();
     }
-
     public int getMemberCount() {
         return members.size();
     }

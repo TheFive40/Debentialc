@@ -1,22 +1,17 @@
 package org.debentialc.raids.commands;
 
+import org.debentialc.raids.effects.RaidEffects;
+import org.debentialc.raids.managers.*;
+import org.debentialc.raids.models.*;
 import org.debentialc.service.commands.BaseCommand;
 import org.debentialc.service.commands.Command;
 import org.debentialc.service.commands.CommandArgs;
-import org.debentialc.raids.managers.PartyManager;
-import org.debentialc.raids.managers.RaidManager;
-import org.debentialc.raids.managers.RaidSessionManager;
-import org.debentialc.raids.models.Party;
-import org.debentialc.raids.models.Raid;
-import org.debentialc.raids.models.PartyStatus;
 import org.debentialc.service.CC;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * PartyCommand - Comando /party para gestionar parties
@@ -344,28 +339,70 @@ public class PartyCommand extends BaseCommand {
             return;
         }
 
-        // Verificar que los spawns estén configurados
         if (raid.getPlayerSpawnPoint() == null) {
             sendError(player, "La raid no tiene un punto de spawn para jugadores configurado");
             return;
         }
 
-        // Crear sesión
-        RaidSessionManager.createRaidSession(raid, party);
+        RaidSession session = RaidSessionManager.createRaidSession(raid, party);
         PartyManager.setPartyStatus(party, PartyStatus.IN_RAID);
 
         sendSuccess(player, "Raid iniciada: " + raid.getRaidName());
 
-        // Teleportar a todos los jugadores al punto de spawn de jugadores
         Location playerSpawn = raid.getPlayerSpawnPoint();
+        List<Player> teleportedPlayers = new ArrayList<>();
+
         for (UUID memberId : party.getActivePlayers()) {
             Player member = Bukkit.getPlayer(memberId);
             if (member != null) {
                 member.teleport(playerSpawn);
-                sendInfo(member, "La raid ha comenzado. ¡Que empiece la aventura!");
+                teleportedPlayers.add(member);
             }
         }
+
+        Bukkit.getScheduler().scheduleSyncDelayedTask(
+                org.debentialc.Main.instance,
+                () -> {
+                    Wave firstWave = session.getCurrentWave();
+                    if (firstWave != null) {
+                        // Resetear contadores
+                        for (SpawnPoint sp : firstWave.getSpawnPoints()) {
+                            sp.resetAliveCount();
+                        }
+
+                        firstWave.setStatus(WaveStatus.ACTIVE);
+
+                        // Spawnear NPCs de la primera oleada
+                        String waveId = session.getSessionId() + "_wave_0";
+                        boolean spawned = NPCSpawnManager.spawnWaveNpcs(firstWave, waveId);
+
+                        if (spawned) {
+                            // Efectos de inicio de raid
+                            RaidEffects.raidStartEffect(teleportedPlayers, playerSpawn);
+
+                            for (Player member : teleportedPlayers) {
+                                RaidTitleManager.showRaidStart(member, raid.getRaidName());
+                                RaidSoundManager.playRaidStartSound(member);
+
+                                sendInfo(member, "¡La raid ha comenzado! Oleada 1/" + raid.getTotalWaves());
+                            }
+
+                            System.out.println("[Raids] Primera oleada iniciada con " +
+                                    firstWave.getTotalEnemies() + " enemigos");
+                        } else {
+                            // Error al spawnear
+                            for (Player member : teleportedPlayers) {
+                                sendError(member, "Error al spawnear enemigos. Contacta un admin.");
+                            }
+                            RaidSessionManager.failRaid(session);
+                        }
+                    }
+                },
+                40L // 2 segundos después del teleport
+        );
     }
+
+
 
     private void handleInfo(Player player) {
         Party party = PartyManager.getPlayerParty(player.getUniqueId());

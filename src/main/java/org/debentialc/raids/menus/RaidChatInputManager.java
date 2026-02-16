@@ -436,7 +436,7 @@ public class RaidChatInputManager {
                         return;
                     }
 
-                    // Finalizar input ANTES de guardar (previene doble procesamiento)
+                    // Finalizar input ANTES de guardar
                     if (!finishInput(player)) return;
 
                     Location loc = state.savedLocation != null ? state.savedLocation : player.getLocation().clone();
@@ -446,15 +446,25 @@ public class RaidChatInputManager {
                     RaidManager.updateRaid(raid);
                     RaidStorageManager.saveRaid(raid);
 
+                    // MEJORADO: Feedback claro
                     player.sendMessage("");
-                    player.sendMessage(CC.translate("&a✓ Spawn point creado"));
-                    player.sendMessage(CC.translate("&7NPC: &f" + state.tempNpcName + " &7x" + quantity));
-                    player.sendMessage(CC.translate("&7Pos: &f" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
+                    player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+                    player.sendMessage(CC.translate("&a&l✓ SPAWN POINT CREADO"));
+                    player.sendMessage("");
+                    player.sendMessage(CC.translate("&7NPC: &f" + state.tempNpcName));
+                    player.sendMessage(CC.translate("&7Tab: &f" + state.tempNpcTab));
+                    player.sendMessage(CC.translate("&7Cantidad: &f" + quantity));
+                    player.sendMessage(CC.translate("&7Posición: &f" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
+                    player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
                     player.sendMessage("");
 
                     final String finalRaidId = state.raidId;
                     final int waveIdx = state.waveIndex;
-                    openMenuDelayed(player, () -> RaidWaveConfigMenu.createWaveConfigMenu(finalRaidId, waveIdx).open(player));
+                    org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
+                            org.debentialc.Main.instance,
+                            () -> RaidWaveConfigMenu.createWaveConfigMenu(finalRaidId, waveIdx).open(player),
+                            5L
+                    );
                 } catch (NumberFormatException e) {
                     player.sendMessage(CC.translate("&c✗ Ingresa un número válido"));
                 }
@@ -500,15 +510,23 @@ public class RaidChatInputManager {
                     RaidManager.updateRaid(raid);
                     RaidStorageManager.saveRaid(raid);
 
+                    // MEJORADO: Feedback claro
                     player.sendMessage("");
-                    player.sendMessage(CC.translate("&a✓ Recompensa agregada"));
+                    player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
+                    player.sendMessage(CC.translate("&a&l✓ RECOMPENSA AGREGADA"));
+                    player.sendMessage("");
                     player.sendMessage(CC.translate("&7Comando: &f/" + state.tempCommand));
                     player.sendMessage(CC.translate("&7Probabilidad: &f" + probability + "%"));
+                    player.sendMessage(CC.translate("&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"));
                     player.sendMessage("");
 
                     final String finalRaidId = state.raidId;
                     final int waveIdx = state.waveIndex;
-                    openMenuDelayed(player, () -> RaidWaveConfigMenu.createWaveConfigMenu(finalRaidId, waveIdx).open(player));
+                    org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
+                            org.debentialc.Main.instance,
+                            () -> RaidWaveConfigMenu.createWaveConfigMenu(finalRaidId, waveIdx).open(player),
+                            5L
+                    );
                 } catch (NumberFormatException e) {
                     player.sendMessage(CC.translate("&c✗ Ingresa un número válido"));
                 }

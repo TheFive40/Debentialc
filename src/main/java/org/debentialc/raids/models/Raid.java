@@ -1,5 +1,6 @@
 package org.debentialc.raids.models;
 
+import com.google.gson.annotations.Expose;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
@@ -7,29 +8,49 @@ import java.util.*;
 
 /**
  * Modelo de Raid - Contiene toda la información de una raid
+ * CORREGIDO: Usa @Expose para evitar recursión infinita en GSON
  */
 @Getter
 @Setter
 public class Raid {
 
+    @Expose
     private String raidId;
+
+    @Expose
     private String raidName;
+
+    @Expose
     private String description;
 
+    @Expose
     private Location arenaSpawnPoint;
+
+    @Expose
     private Location playerSpawnPoint;
 
+    @Expose
     private List<Wave> waves;
 
+    @Expose
     private RaidStatus status;
 
+    @Expose
     private long cooldownSeconds;
 
+    @Expose
     private int minPlayers;
+
+    @Expose
     private int maxPlayers;
 
+    @Expose
     private boolean enabled;
+
+    @Expose
     private long createdAt;
+
+    @Expose
     private String createdBy;
 
     public Raid(String raidId, String raidName) {
@@ -37,7 +58,7 @@ public class Raid {
         this.raidName = raidName;
         this.waves = new ArrayList<>();
         this.status = RaidStatus.IDLE;
-        this.minPlayers = 2;
+        this.minPlayers = 1; // CORREGIDO: Permitir raids en solitario
         this.maxPlayers = 5;
         this.cooldownSeconds = 3600;
         this.enabled = true;

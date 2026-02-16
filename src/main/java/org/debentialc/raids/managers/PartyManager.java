@@ -123,7 +123,6 @@ public class PartyManager {
     public static boolean canStartRaid(Party party) {
         return party != null && party.canStartRaid();
     }
-
     /**
      * Obtiene el tamaño de una party
      */

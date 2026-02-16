@@ -9,30 +9,31 @@ import org.debentialc.raids.menus.RaidChatInputManager;
 
 /**
  * RaidMenuChatListener - Escucha inputs de chat para los menús de raids
- * Funciona igual que los listeners del sistema de custom items
+ *
+ * IMPORTANTE: Usa prioridad HIGHEST para cancelar el evento ANTES de que
+ * otros plugins lo procesen. Si usamos LOWEST, otros plugins con prioridad
+ * NORMAL o HIGH ya habrán procesado el mensaje antes de que lo cancelemos.
  */
 public class RaidMenuChatListener implements Listener {
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        String message = event.getMessage().trim();
 
-        // Verificar si el jugador está en un flujo de input de raids
         if (!RaidChatInputManager.isInputting(player)) {
             return;
         }
 
-        // Cancelar el mensaje del chat
-        event.setCancelled(true);
+        String message = event.getMessage().trim();
 
-        // Verificar cancelación
+        event.setCancelled(true);
+        event.getRecipients().clear();
+
         if (message.equalsIgnoreCase("cancelar") || message.equalsIgnoreCase("cancel")) {
             RaidChatInputManager.cancelInput(player);
             return;
         }
 
-        // Procesar el input
         RaidChatInputManager.processInput(player, message);
     }
 }

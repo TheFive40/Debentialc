@@ -1,4 +1,5 @@
 package org.debentialc;
+
 import lombok.Getter;
 import noppes.npcs.api.event.INpcEvent;
 import org.bukkit.Bukkit;
@@ -12,14 +13,16 @@ import org.debentialc.boosters.managers.GlobalBoosterManager;
 import org.debentialc.boosters.managers.PersonalBoosterManager;
 import org.debentialc.boosters.models.PersonalBooster;
 import org.debentialc.boosters.placeholders.PlaceholderModule;
-import org.debentialc.raids.events.NPCDeathListener;
-import org.debentialc.raids.events.PlayerDeathListener;
-import org.debentialc.service.ClassesRegistration;
 import org.debentialc.customitems.tools.ci.CustomManager;
-import org.debentialc.service.commands.CommandFramework;
 import org.debentialc.customitems.tools.fragments.FragmentBonusIntegration;
 import org.debentialc.customitems.tools.storage.CustomArmorStorage;
+import org.debentialc.raids.events.NPCDeathListener;
+import org.debentialc.raids.managers.RaidStorageManager;
+import org.debentialc.service.ClassesRegistration;
+import org.debentialc.service.commands.CommandFramework;
+
 import java.io.File;
+
 import static org.debentialc.customitems.tools.ci.CustomManager.effectsTask;
 import static org.debentialc.customitems.tools.config.DBCConfigManager.loadAllConfigs;
 
@@ -44,21 +47,64 @@ public class Main extends JavaPlugin {
         System.out.println("Plugin successfully enabled");
         System.out.println("Version: 1.1.5 ");
         System.out.println("By DelawareX");
+
+        // Cargar comandos
         classesRegistration.loadCommands("org.debentialc.customitems.commands");
         classesRegistration.loadCommands("org.debentialc.raids.commands");
         classesRegistration.loadCommands("org.debentialc.boosters.commands");
 
+        // Cargar listeners de Bukkit
         classesRegistration.loadListeners("org.debentialc.customitems.events");
         classesRegistration.loadListeners("org.debentialc.boosters.events");
-        classesRegistration.loadListeners("org.debentialc.raids.events");
+        classesRegistration.loadListeners("org.debentialc.raids.events"); // PlayerDeathListener, PlayerQuitListener, RaidMenuChatListener
 
+        // Tareas
         CustomManager.armorTask();
         effectsTask();
         new CustomArmorStorage();
         loadAllConfigs();
         armorTask();
+
+        // Módulos
         BoosterModule.initialize(this);
         PlaceholderModule.initialize(this);
+
+        // **NUEVO: Registrar eventos de CustomNPCs**
+        registerCustomNPCsEvents();
+
+        RaidStorageManager.loadAllRaids();
+        System.out.println("[Raids] Sistema de raids inicializado");
+    }
+
+    /**
+     * Registra los eventos de CustomNPCs
+     * Debe ejecutarse después de que el servidor esté completamente iniciado
+     */
+    private void registerCustomNPCsEvents() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            if (!noppes.npcs.api.AbstractNpcAPI.IsAvailable()) {
+                getLogger().warning("[Raids] CustomNPCs no está disponible. NPCDeathListener no será registrado.");
+                getLogger().warning("[Raids] Asegúrate de que CustomNPCs esté instalado.");
+                return;
+            }
+
+            try {
+                noppes.npcs.api.AbstractNpcAPI api = noppes.npcs.api.AbstractNpcAPI.Instance();
+
+                if (api == null) {
+                    getLogger().severe("[Raids] No se pudo obtener la instancia de la API de CustomNPCs!");
+                    return;
+                }
+
+                api.events().register(new org.debentialc.raids.events.NPCDeathListener());
+
+                getLogger().info("[Raids] NPCDeathListener registrado correctamente en CustomNPCs");
+
+            } catch (Exception e) {
+                getLogger().severe("[Raids] Error al registrar NPCDeathListener:");
+                e.printStackTrace();
+            }
+        }, 20L);
     }
 
     public static void armorTask() {
@@ -72,10 +118,13 @@ public class Main extends JavaPlugin {
         };
         runnable.runTaskTimer(Main.instance, 1L, 1L);
     }
-    public static void callDeathEvent(INpcEvent.DiedEvent event){
+
+    public static void callDeathEvent(INpcEvent.DiedEvent event) {
         NPCDeathListener npcDeathListener = new NPCDeathListener();
         npcDeathListener.onNpcDie(event);
+
     }
+
     @Override
     public void onDisable() {
         BoosterModule.shutdown();

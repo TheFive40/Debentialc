@@ -42,6 +42,22 @@ public class RaidConfigMenu {
                 .build();
     }
 
+    /**
+     * Reabre el menú con un delay de 1 tick para evitar conflictos con SmartInventory
+     */
+    private static void reopenMenu(Player player, String raidId) {
+        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
+                org.debentialc.Main.instance,
+                () -> {
+                    SmartInventory menu = createRaidConfigMenu(raidId);
+                    if (menu != null) {
+                        menu.open(player);
+                    }
+                },
+                1L
+        );
+    }
+
     private static void buildMenu(Player player, InventoryContents contents, String raidId) {
         Raid raid = RaidManager.getRaidById(raidId);
         if (raid == null) return;
@@ -119,7 +135,13 @@ public class RaidConfigMenu {
 
         // CONFIGURAR ARENA SPAWN
         boolean arenaSet = raid.getArenaSpawnPoint() != null;
-        ItemStack arenaButton = new ItemStack(arenaSet ? Material.IRON_FENCE : Material.ANVIL);
+        ItemStack arenaButton;
+        if (arenaSet) {
+            arenaButton = new ItemStack(Material.IRON_FENCE);
+        } else {
+            // BARRIER no existe en 1.7.10, usar vidrio rojo
+            arenaButton = new ItemStack(Material.COAL_BLOCK, 1, (short) 14);
+        }
         ItemMeta arenaMeta = arenaButton.getItemMeta();
         arenaMeta.setDisplayName(CC.translate("&d&lArena Spawn"));
         List<String> arenaLore = new ArrayList<>();
@@ -142,14 +164,26 @@ public class RaidConfigMenu {
             raid.setArenaSpawnPoint(loc);
             RaidManager.updateRaid(raid);
             RaidStorageManager.saveRaid(raid);
-            player.sendMessage(CC.translate("&a✓ Arena spawn: &f" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
-            // Reabrir menú para refrescar estado visual
-            createRaidConfigMenu(raidId).open(player);
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Arena spawn configurado"));
+            player.sendMessage(CC.translate("&7Posición: &f" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
+            player.sendMessage("");
+
+            org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
+                    org.debentialc.Main.instance,
+                    () -> createRaidConfigMenu(raidId).open(player),
+                    1L
+            );
         }));
 
         // CONFIGURAR PLAYER SPAWN
         boolean playerSpawnSet = raid.getPlayerSpawnPoint() != null;
-        ItemStack playerSpawnButton = new ItemStack(playerSpawnSet ? Material.BED : Material.ANVIL);
+        ItemStack playerSpawnButton;
+        if (playerSpawnSet) {
+            playerSpawnButton = new ItemStack(Material.BED);
+        } else {
+            playerSpawnButton = new ItemStack(Material.REDSTONE_BLOCK, 1, (short) 14);
+        }
         ItemMeta playerSpawnMeta = playerSpawnButton.getItemMeta();
         playerSpawnMeta.setDisplayName(CC.translate("&a&lPlayer Spawn"));
         List<String> pSpawnLore = new ArrayList<>();
@@ -173,8 +207,7 @@ public class RaidConfigMenu {
             RaidManager.updateRaid(raid);
             RaidStorageManager.saveRaid(raid);
             player.sendMessage(CC.translate("&a✓ Player spawn: &f" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
-            // Reabrir menú para refrescar estado visual
-            createRaidConfigMenu(raidId).open(player);
+            reopenMenu(player, raidId);
         }));
 
         // COOLDOWN
@@ -240,7 +273,7 @@ public class RaidConfigMenu {
                 player.sendMessage(CC.translate("&a✓ Raid habilitada"));
             }
             RaidStorageManager.saveRaid(raid);
-            createRaidConfigMenu(raidId).open(player);
+            reopenMenu(player, raidId);
         }));
 
         // GUARDAR
