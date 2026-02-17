@@ -22,6 +22,7 @@ public class CustomDurabilityListener implements Listener {
 
         Player player = (Player) event.getEntity();
         ItemStack[] armorContents = player.getInventory().getArmorContents();
+        boolean armorChanged = false;
 
         for (int i = 0; i < armorContents.length; i++) {
             ItemStack armor = armorContents[i];
@@ -35,23 +36,27 @@ public class CustomDurabilityListener implements Listener {
 
             if (broken) {
                 armorContents[i] = new ItemStack(Material.AIR);
-                player.getInventory().setArmorContents(armorContents);
                 player.sendMessage(CC.translate("&c¡Tu armadura se ha roto!"));
                 player.playSound(player.getLocation(), Sound.ITEM_BREAK, 1f, 1f);
-            } else {
-                CustomDurabilityManager.updateDurabilityLore(armor);
             }
+
+            armorChanged = true;
+        }
+
+        if (armorChanged) {
+            player.getInventory().setArmorContents(armorContents);
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onHit(EntityDamageByEntityEvent event) {
+        if (event.isCancelled()) return;
         if (!(event.getDamager() instanceof Player)) return;
 
         Player player = (Player) event.getDamager();
         ItemStack item = player.getItemInHand();
-        if (item == null || item.getType() == Material.AIR) return;
 
+        if (item == null || item.getType() == Material.AIR) return;
         if (CustomDurabilityManager.isModItem(item)) return;
         if (CustomDurabilityManager.isUnbreakable(item)) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
@@ -63,7 +68,7 @@ public class CustomDurabilityListener implements Listener {
             player.sendMessage(CC.translate("&c¡Tu item se ha roto!"));
             player.playSound(player.getLocation(), Sound.ITEM_BREAK, 1f, 1f);
         } else {
-            CustomDurabilityManager.updateDurabilityLore(item);
+            player.setItemInHand(item);
         }
     }
 
@@ -79,27 +84,12 @@ public class CustomDurabilityListener implements Listener {
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
 
         CustomDurabilityManager.updateDurabilityLore(item);
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onEntityDamage(EntityDamageByEntityEvent event) {
-        if (event.isCancelled()) return;
-        if (!(event.getDamager() instanceof Player)) return;
-
-        Player player = (Player) event.getDamager();
-        ItemStack item = player.getItemInHand();
-
-        if (item == null || item.getTypeId() == 0) return;
-        if (CustomDurabilityManager.isModItem(item)) return;
-        if (!CustomDurabilityManager.hasCustomDurability(item)) return;
-
-        CustomDurabilityManager.updateDurabilityLore(item);
+        player.setItemInHand(item);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerInteract(PlayerInteractEvent event) {
         ItemStack item = event.getItem();
-
         if (item == null || item.getTypeId() == 0) return;
         if (CustomDurabilityManager.isModItem(item)) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
