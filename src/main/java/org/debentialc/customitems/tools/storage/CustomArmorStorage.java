@@ -12,6 +12,19 @@ import java.util.*;
 
 public class CustomArmorStorage {
 
+    private static CustomArmorStorage instance;
+
+    public static CustomArmorStorage getInstance() {
+        if (instance == null) {
+            instance = new CustomArmorStorage();
+        }
+        return instance;
+    }
+
+    public static void destroyInstance() {
+        instance = null;
+    }
+
     private File dataFolder;
     private File armorFile;
     private FileConfiguration armorConfig;
@@ -25,8 +38,6 @@ public class CustomArmorStorage {
         reload();
     }
 
-
-    /** Refreshes armorConfig from disk. */
     public void reload() {
         if (!armorFile.exists()) {
             try { armorFile.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
@@ -34,29 +45,25 @@ public class CustomArmorStorage {
         this.armorConfig = YamlConfiguration.loadConfiguration(armorFile);
     }
 
-
     public void initialLoad() {
         reload();
         Map<String, CustomArmor> loaded = loadAllArmors();
         RegisterItem.items.putAll(loaded);
-        Main.instance.getLogger().info("[CustomArmorStorage] Loaded " + loaded.size() + " custom armors.");
+        Main.instance.getLogger().info("[CustomArmorStorage] Cargadas " + loaded.size() + " armaduras custom.");
     }
 
     public void saveArmor(CustomArmor armor) {
-
-        reload();
-
         String path = "armors." + armor.getId();
-        armorConfig.set(path + ".id",           armor.getId());
-        armorConfig.set(path + ".material",     armor.getMaterial());
-        armorConfig.set(path + ".displayName",  armor.getDisplayName());
-        armorConfig.set(path + ".lore",         armor.getLore());
-        armorConfig.set(path + ".isArmor",      armor.isArmor());
-        armorConfig.set(path + ".bonusStat",    new HashMap<String, Double>(armor.getValueByStat()));
-        armorConfig.set(path + ".operations",   new HashMap<String, String>(armor.getOperation()));
-        armorConfig.set(path + ".effects",      new HashMap<String, Double>(armor.getEffects()));
-        armorConfig.set(path + ".maxDurability",armor.getMaxDurability());
-        armorConfig.set(path + ".unbreakable",  armor.isUnbreakable());
+        armorConfig.set(path + ".id",            armor.getId());
+        armorConfig.set(path + ".material",      armor.getMaterial());
+        armorConfig.set(path + ".displayName",   armor.getDisplayName());
+        armorConfig.set(path + ".lore",          armor.getLore());
+        armorConfig.set(path + ".isArmor",       armor.isArmor());
+        armorConfig.set(path + ".bonusStat",     new HashMap<String, Double>(armor.getValueByStat()));
+        armorConfig.set(path + ".operations",    new HashMap<String, String>(armor.getOperation()));
+        armorConfig.set(path + ".effects",       new HashMap<String, Double>(armor.getEffects()));
+        armorConfig.set(path + ".maxDurability", armor.getMaxDurability());
+        armorConfig.set(path + ".unbreakable",   armor.isUnbreakable());
 
         try {
             armorConfig.save(armorFile);
@@ -64,12 +71,10 @@ public class CustomArmorStorage {
             e.printStackTrace();
         }
 
-        // Also keep in-memory map up to date
         RegisterItem.items.put(armor.getId(), armor);
     }
 
     public void deleteArmor(String id) {
-        reload();
         armorConfig.set("armors." + id, null);
         try {
             armorConfig.save(armorFile);
@@ -121,12 +126,10 @@ public class CustomArmorStorage {
     public Map<String, CustomArmor> loadAllArmors() {
         Map<String, CustomArmor> armors = new HashMap<String, CustomArmor>();
         if (!armorConfig.contains("armors")) return armors;
-
         for (String id : armorConfig.getConfigurationSection("armors").getKeys(false)) {
             CustomArmor armor = loadArmor(id);
             if (armor != null) armors.put(id, armor);
         }
-
         return armors;
     }
 

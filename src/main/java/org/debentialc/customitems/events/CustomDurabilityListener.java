@@ -14,7 +14,6 @@ import org.debentialc.customitems.tools.durability.CustomDurabilityManager;
 
 public class CustomDurabilityListener implements Listener {
 
-    // ── Armor takes damage when the player is hit ───────────────────────────
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerReceiveDamage(EntityDamageEvent event) {
         if (event.isCancelled()) return;
@@ -28,7 +27,6 @@ public class CustomDurabilityListener implements Listener {
             ItemStack armor = armorContents[i];
             if (armor == null || armor.getType() == Material.AIR) continue;
             if (!CustomDurabilityManager.hasCustomDurability(armor)) continue;
-            if (CustomDurabilityManager.isUnbreakable(armor)) continue;
 
             boolean broken = CustomDurabilityManager.damageItem(armor, 1);
             changed = true;
@@ -38,8 +36,6 @@ public class CustomDurabilityListener implements Listener {
                 player.sendMessage(CC.translate("&c¡Tu armadura se ha roto!"));
                 player.playSound(player.getLocation(), Sound.ITEM_BREAK, 1f, 1f);
             }
-            // Whether broken or not we must write the array back (meta was
-            // mutated in-place by damageItem / setCustomDurability).
         }
 
         if (changed) {
@@ -48,20 +44,15 @@ public class CustomDurabilityListener implements Listener {
         }
     }
 
-    // ── Weapon / tool loses a use when the player hits something ────────────
     @EventHandler(priority = EventPriority.HIGH)
     public void onHit(EntityDamageByEntityEvent event) {
         if (event.isCancelled()) return;
         if (!(event.getDamager() instanceof Player)) return;
 
         Player player = (Player) event.getDamager();
-        // IMPORTANT: getItemInHand() returns a copy in 1.7.10.
-        // We must mutate that copy and then setItemInHand so the server
-        // sees the change.
         ItemStack item = player.getItemInHand();
         if (item == null || item.getType() == Material.AIR) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
-        if (CustomDurabilityManager.isUnbreakable(item)) return;
 
         boolean broken = CustomDurabilityManager.damageItem(item, 1);
 
@@ -70,14 +61,11 @@ public class CustomDurabilityListener implements Listener {
             player.sendMessage(CC.translate("&c¡Tu item se ha roto!"));
             player.playSound(player.getLocation(), Sound.ITEM_BREAK, 1f, 1f);
         } else {
-            // Write the mutated copy back so the server persists the lore change
-            // and the visual durability bar.
             player.setItemInHand(item);
         }
         player.updateInventory();
     }
 
-    // ── Mining costs a use ──────────────────────────────────────────────────
     @EventHandler(priority = EventPriority.HIGH)
     public void onBlockBreak(org.bukkit.event.block.BlockBreakEvent event) {
         if (event.isCancelled()) return;
@@ -85,7 +73,6 @@ public class CustomDurabilityListener implements Listener {
         ItemStack item = player.getItemInHand();
         if (item == null || item.getTypeId() == 0) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
-        if (CustomDurabilityManager.isUnbreakable(item)) return;
 
         boolean broken = CustomDurabilityManager.damageItem(item, 1);
         if (broken) {

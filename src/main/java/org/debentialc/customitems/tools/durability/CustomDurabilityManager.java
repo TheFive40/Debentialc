@@ -141,14 +141,19 @@ public class CustomDurabilityManager {
     }
 
     public static boolean damageItem(ItemStack item, int damage) {
-        if (isUnbreakable(item)) return false;
         if (!hasCustomDurability(item)) return false;
 
         int current = getCustomDurability(item);
         int max = getCustomMaxDurability(item);
         current -= damage;
 
-        if (current <= 0) return true;
+        if (current <= 0) {
+            if (isUnbreakable(item)) {
+                setCustomDurability(item, 1, max);
+                return false;
+            }
+            return true;
+        }
 
         setCustomDurability(item, current, max);
         return false;
