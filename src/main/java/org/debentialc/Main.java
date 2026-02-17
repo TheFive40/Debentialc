@@ -53,11 +53,13 @@ public class Main extends JavaPlugin {
         classesRegistration.loadCommands("org.debentialc.customitems.commands");
         classesRegistration.loadCommands("org.debentialc.raids.commands");
         classesRegistration.loadCommands("org.debentialc.boosters.commands");
+        classesRegistration.loadCommands("org.debentialc.claims.commands");
 
         // Cargar listeners de Bukkit
         classesRegistration.loadListeners("org.debentialc.customitems.events");
         classesRegistration.loadListeners("org.debentialc.boosters.events");
-        classesRegistration.loadListeners("org.debentialc.raids.events"); // PlayerDeathListener, PlayerQuitListener, RaidMenuChatListener
+        classesRegistration.loadListeners("org.debentialc.raids.events");
+        classesRegistration.loadListeners("org.debentialc.claims.events");
 
         // Tareas
         CustomManager.armorTask();

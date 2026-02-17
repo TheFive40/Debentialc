@@ -2,9 +2,12 @@ package org.debentialc.customitems.tools.inventory;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.ci.CustomItem;
 import org.debentialc.customitems.commands.CustomItemCommand;
+import org.debentialc.customitems.tools.nbt.NbtHandler;
+import org.debentialc.customitems.tools.nbt.NbtItemBuilder;
 import org.debentialc.customitems.tools.storage.CustomItemStorage;
 
 import java.util.HashMap;
@@ -65,49 +68,46 @@ public class ItemEditManager {
         CustomItem item = CustomItemCommand.items.get(state.itemId);
         CustomItemStorage storage = new CustomItemStorage();
 
-        switch (state.editType.toLowerCase()) {
-            case "rename":
-                item.setDisplayName(CC.translate(input));
-                storage.saveItem(item);
+        String editTypeLower = state.editType.toLowerCase();
+        if ("rename".equals(editTypeLower)) {
+            item.setDisplayName(CC.translate(input));
+            storage.saveItem(item);
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Nombre actualizado"));
+            player.sendMessage("");
+        } else if ("addline".equals(editTypeLower)) {
+            java.util.List<String> lore = item.getLore();
+            if (lore == null) {
+                lore = new java.util.ArrayList<>();
+            }
+            lore.add(CC.translate(input));
+            item.setLore(lore);
+            storage.saveItem(item);
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Línea agregada"));
+            player.sendMessage("");
+        } else if ("setline".equals(editTypeLower)) {
+            java.util.List<String> lore = item.getLore();
+            if (lore == null || state.lineNumber > lore.size() || state.lineNumber < 1) {
                 player.sendMessage("");
-                player.sendMessage(CC.translate("&a✓ Nombre actualizado"));
+                player.sendMessage(CC.translate("&c✗ Número de línea inválido"));
                 player.sendMessage("");
-                break;
-
-            case "addline":
-                java.util.List<String> lore = item.getLore();
-                if (lore == null) {
-                    lore = new java.util.ArrayList<>();
-                }
-                lore.add(CC.translate(input));
-                item.setLore(lore);
-                storage.saveItem(item);
-                player.sendMessage("");
-                player.sendMessage(CC.translate("&a✓ Línea agregada"));
-                player.sendMessage("");
-                break;
-
-            case "setline":
-                lore = item.getLore();
-                if (lore == null || state.lineNumber > lore.size() || state.lineNumber < 1) {
-                    player.sendMessage("");
-                    player.sendMessage(CC.translate("&c✗ Número de línea inválido"));
-                    player.sendMessage("");
-                    finishItemEdit(player);
-                    return;
-                }
-                lore.set(state.lineNumber - 1, CC.translate(input));
-                item.setLore(lore);
-                storage.saveItem(item);
-                player.sendMessage("");
-                player.sendMessage(CC.translate("&a✓ Línea actualizada"));
-                player.sendMessage("");
-                break;
+                finishItemEdit(player);
+                return;
+            }
+            lore.set(state.lineNumber - 1, CC.translate(input));
+            item.setLore(lore);
+            storage.saveItem(item);
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Línea actualizada"));
+            player.sendMessage("");
         }
 
         finishItemEdit(player);
-        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(org.debentialc.Main.instance, () -> {
-            CustomItemMenus.openEditItemMenu(state.itemId).open(player);
+        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(org.debentialc.Main.instance, new Runnable() {
+            public void run() {
+                CustomItemMenus.openEditItemMenu(state.itemId).open(player);
+            }
         }, 1L);
     }
 
@@ -131,24 +131,45 @@ public class ItemEditManager {
         }
 
         CustomItem customItem = CustomItemCommand.items.get(itemId);
-        ItemStack itemStack = new ItemStack(customItem.getMaterial());
-        org.bukkit.inventory.meta.ItemMeta meta = itemStack.getItemMeta();
 
-        meta.setDisplayName(customItem.getDisplayName());
-        if (customItem.getLore() != null) {
-            meta.setLore(customItem.getLore());
+        ItemStack itemStack = new ItemStack(customItem.getMaterial(), 1, customItem.getDurabilityData());
+
+        if (customItem.getNbtData() != null && !customItem.getNbtData().isEmpty()) {
+            NbtHandler nbt = new NbtHandler(itemStack);
+            nbt.setCompoundFromString(customItem.getNbtData());
+            itemStack = nbt.getItemStack();
         }
-        itemStack.setItemMeta(meta);
 
-        // Aplicar durabilidad personalizada si existe
+        ItemMeta meta = itemStack.getItemMeta();
+        if (meta != null) {
+            if (customItem.getDisplayName() != null) {
+                meta.setDisplayName(customItem.getDisplayName());
+            }
+            if (customItem.getLore() != null) {
+                meta.setLore(customItem.getLore());
+            }
+            itemStack.setItemMeta(meta);
+        }
+
+        if (customItem.isUnbreakable() && (customItem.getNbtData() == null || customItem.getNbtData().isEmpty())) {
+            NbtHandler nbt = new NbtHandler(itemStack);
+            nbt.setBoolean("Unbreakable", true);
+            itemStack = nbt.getItemStack();
+            if (meta != null && customItem.getDisplayName() != null) {
+                ItemMeta newMeta = itemStack.getItemMeta();
+                if (newMeta != null) {
+                    newMeta.setDisplayName(customItem.getDisplayName());
+                    if (customItem.getLore() != null) newMeta.setLore(customItem.getLore());
+                    itemStack.setItemMeta(newMeta);
+                }
+            }
+        }
+
         if (customItem.getMaxDurability() > 0) {
-            org.debentialc.customitems.tools.durability.CustomDurabilityManager.setCustomMaxDurability(itemStack, customItem.getMaxDurability());
-            org.debentialc.customitems.tools.durability.CustomDurabilityManager.addDurabilityToLore(itemStack);
-        }
-
-        // Aplicar estado de irrompible si está activado
-        if (customItem.isUnbreakable()) {
-            org.debentialc.customitems.tools.durability.CustomDurabilityManager.setUnbreakable(itemStack, true);
+            org.debentialc.customitems.tools.durability.CustomDurabilityManager
+                    .setCustomMaxDurability(itemStack, customItem.getMaxDurability());
+            org.debentialc.customitems.tools.durability.CustomDurabilityManager
+                    .syncVisualDurabilityForModItem(itemStack, customItem.getMaxDurability(), customItem.getMaxDurability());
         }
 
         if (player.getInventory().firstEmpty() == -1) {

@@ -11,20 +11,17 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.debentialc.customitems.commands.CustomItemCommand;
 import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.ci.CustomItem;
+import org.debentialc.customitems.tools.nbt.NbtHandler;
+import org.debentialc.customitems.tools.storage.CustomItemStorage;
 
 import java.util.*;
 
-/**
- * Menús de gestión de items custom
- * VERSIÓN MEJORADA: Integración completa con Pastebin para edición de lore
- */
 public class CustomItemMenus {
 
     public static SmartInventory createMainMenu() {
         return SmartInventory.builder()
                 .id("ci_menu_main")
                 .provider(new InventoryProvider() {
-                    @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
@@ -36,7 +33,6 @@ public class CustomItemMenus {
                                 CC.translate("&7Debes sostener el item en mano")
                         ));
                         createButton.setItemMeta(createMeta);
-
                         contents.set(1, 1, ClickableItem.of(createButton, e -> {
                             player.closeInventory();
                             ItemCreationManager.startItemCreation(player);
@@ -50,7 +46,6 @@ public class CustomItemMenus {
                                 CC.translate("&7Y edítalos desde el menú")
                         ));
                         listButton.setItemMeta(listMeta);
-
                         contents.set(1, 4, ClickableItem.of(listButton, e -> {
                             openItemListMenu(1).open(player);
                         }));
@@ -63,7 +58,6 @@ public class CustomItemMenus {
                                 CC.translate("&7Con todos los comandos disponibles")
                         ));
                         helpButton.setItemMeta(helpMeta);
-
                         contents.set(1, 7, ClickableItem.of(helpButton, e -> {
                             openHelpMenu().open(player);
                         }));
@@ -72,13 +66,11 @@ public class CustomItemMenus {
                         ItemMeta closeMeta = closeButton.getItemMeta();
                         closeMeta.setDisplayName(CC.translate("&r&lCerrar"));
                         closeButton.setItemMeta(closeMeta);
-
                         contents.set(2, 4, ClickableItem.of(closeButton, e -> {
                             player.closeInventory();
                         }));
                     }
 
-                    @Override
                     public void update(Player player, InventoryContents contents) {
                     }
                 })
@@ -91,7 +83,6 @@ public class CustomItemMenus {
         return SmartInventory.builder()
                 .id("ci_list_menu_" + page)
                 .provider(new InventoryProvider() {
-                    @Override
                     public void init(Player player, InventoryContents contents) {
                         Set<String> itemIds = CustomItemCommand.items.keySet();
                         int pageSize = 21;
@@ -113,7 +104,7 @@ public class CustomItemMenus {
                             String id = ids.get(i);
                             CustomItem customItem = CustomItemCommand.items.get(id);
 
-                            ItemStack displayItem = new ItemStack(customItem.getMaterial());
+                            ItemStack displayItem = new ItemStack(customItem.getMaterial(), 1, customItem.getDurabilityData());
                             ItemMeta meta = displayItem.getItemMeta();
                             meta.setDisplayName(CC.translate("&e" + id));
 
@@ -137,10 +128,7 @@ public class CustomItemMenus {
                             if (col >= 8) {
                                 col = 1;
                                 row++;
-
-                                if (row >= 4) {
-                                    break;
-                                }
+                                if (row >= 4) break;
                             }
                         }
 
@@ -149,7 +137,6 @@ public class CustomItemMenus {
                             ItemMeta prevMeta = prevButton.getItemMeta();
                             prevMeta.setDisplayName(CC.translate("&b← Anterior"));
                             prevButton.setItemMeta(prevMeta);
-
                             contents.set(4, 2, ClickableItem.of(prevButton, e -> {
                                 openItemListMenu(page - 1).open(player);
                             }));
@@ -166,7 +153,6 @@ public class CustomItemMenus {
                             ItemMeta nextMeta = nextButton.getItemMeta();
                             nextMeta.setDisplayName(CC.translate("&bSiguiente →"));
                             nextButton.setItemMeta(nextMeta);
-
                             contents.set(4, 6, ClickableItem.of(nextButton, e -> {
                                 openItemListMenu(page + 1).open(player);
                             }));
@@ -176,13 +162,11 @@ public class CustomItemMenus {
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&r← Atrás"));
                         backButton.setItemMeta(backMeta);
-
                         contents.set(4, 8, ClickableItem.of(backButton, e -> {
                             createMainMenu().open(player);
                         }));
                     }
 
-                    @Override
                     public void update(Player player, InventoryContents contents) {
                     }
                 })
@@ -193,31 +177,27 @@ public class CustomItemMenus {
 
     public static SmartInventory openEditItemMenu(String itemId) {
         CustomItem item = CustomItemCommand.items.get(itemId);
-        if (item == null) {
-            return null;
-        }
+        if (item == null) return null;
 
         return SmartInventory.builder()
                 .id("ci_edit_" + itemId)
                 .provider(new InventoryProvider() {
-                    @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
-                        // INFO DEL ITEM
                         ItemStack infoItem = new ItemStack(Material.PAPER);
                         ItemMeta infoMeta = infoItem.getItemMeta();
                         infoMeta.setDisplayName(CC.translate("&c&l" + itemId));
                         List<String> infoLore = new ArrayList<>();
                         infoLore.add(CC.translate("&7ID: &f" + item.getId()));
                         infoLore.add(CC.translate("&7Nombre: &f" + item.getDisplayName()));
-                        infoLore.add(CC.translate("&7Material: &f" + item.getMaterial()));
+                        infoLore.add(CC.translate("&7Material: &f" + item.getMaterial() +
+                                (item.getDurabilityData() > 0 ? "/" + item.getDurabilityData() : "")));
                         infoLore.add(CC.translate("&7Estado: &f" + (item.isActive() ? "Activo" : "Inactivo")));
                         infoMeta.setLore(infoLore);
                         infoItem.setItemMeta(infoMeta);
                         contents.set(1, 1, ClickableItem.empty(infoItem));
 
-                        // RENOMBRAR
                         ItemStack renameButton = new ItemStack(Material.NAME_TAG);
                         ItemMeta renameMeta = renameButton.getItemMeta();
                         renameMeta.setDisplayName(CC.translate("&e&lRenombrar"));
@@ -232,7 +212,6 @@ public class CustomItemMenus {
                             ItemEditManager.startItemEdit(player, itemId, "rename");
                         }));
 
-                        // EDITAR LORE (PASTEBIN)
                         ItemStack loreButton = new ItemStack(Material.BOOK_AND_QUILL);
                         ItemMeta loreMeta = loreButton.getItemMeta();
                         loreMeta.setDisplayName(CC.translate("&bEditar Lore"));
@@ -247,7 +226,6 @@ public class CustomItemMenus {
                             org.debentialc.customitems.tools.pastebin.PastebinLoreManager.startPastebinInput(player, itemId, "item");
                         }));
 
-                        // AÑADIR STATS
                         ItemStack statsButton = new ItemStack(Material.REDSTONE);
                         ItemMeta statsMeta = statsButton.getItemMeta();
                         statsMeta.setDisplayName(CC.translate("&aAñadir Stats"));
@@ -266,7 +244,6 @@ public class CustomItemMenus {
                             CustomItemBonusMenus.createStatSelectionMenu(itemId).open(player);
                         }));
 
-                        // AGREGAR EFECTOS
                         ItemStack effectsButton = new ItemStack(Material.REDSTONE_TORCH_ON);
                         ItemMeta effectsMeta = effectsButton.getItemMeta();
                         effectsMeta.setDisplayName(CC.translate("&6Agregar Efectos"));
@@ -283,7 +260,6 @@ public class CustomItemMenus {
                             CustomItemEffectsMenu.createEffectSelectionMenu(itemId).open(player);
                         }));
 
-                        // MODIFICAR DURABILIDAD
                         ItemStack durabilityButton = new ItemStack(Material.DIAMOND_PICKAXE);
                         ItemMeta durabilityMeta = durabilityButton.getItemMeta();
                         durabilityMeta.setDisplayName(CC.translate("&d&lDurabilidad"));
@@ -297,12 +273,12 @@ public class CustomItemMenus {
                             DurabilityInputManager.startDurabilityInput(player, itemId, "item");
                         }));
 
-                        // HACER IRROMPIBLE
                         ItemStack unbreakableButton = new ItemStack(Material.BEDROCK);
                         ItemMeta unbreakableMeta = unbreakableButton.getItemMeta();
                         unbreakableMeta.setDisplayName(CC.translate("&b&lIrrompible"));
                         List<String> unbreakableLore = new ArrayList<>();
                         unbreakableLore.add(CC.translate("&7El item no recibirá daño"));
+                        unbreakableLore.add(CC.translate("&7Aplica via NBT para items de mod"));
                         unbreakableLore.add("");
                         if (item.isUnbreakable()) {
                             unbreakableLore.add(CC.translate("&a✓ ACTIVADO"));
@@ -316,28 +292,47 @@ public class CustomItemMenus {
                         unbreakableMeta.setLore(unbreakableLore);
                         unbreakableButton.setItemMeta(unbreakableMeta);
                         contents.set(2, 2, ClickableItem.of(unbreakableButton, e -> {
-                            // Alternar estado
-                            item.setUnbreakable(!item.isUnbreakable());
+                            boolean newState = !item.isUnbreakable();
+                            item.setUnbreakable(newState);
+                            applyUnbreakableToNbt(item, newState);
 
-                            // Guardar
-                            org.debentialc.customitems.tools.storage.CustomItemStorage storage =
-                                    new org.debentialc.customitems.tools.storage.CustomItemStorage();
+                            CustomItemStorage storage = new CustomItemStorage();
                             storage.saveItem(item);
 
-                            // Mensaje
                             player.sendMessage("");
-                            if (item.isUnbreakable()) {
-                                player.sendMessage(CC.translate("&a✓ Item ahora es irrompible"));
+                            if (newState) {
+                                player.sendMessage(CC.translate("&a✓ Item ahora es irrompible (NBT + vanilla)"));
                             } else {
                                 player.sendMessage(CC.translate("&c✗ Item ya no es irrompible"));
                             }
                             player.sendMessage("");
 
-                            // Reabrir menú
                             openEditItemMenu(itemId).open(player);
                         }));
 
-                        // OPCIONES AVANZADAS
+                        ItemStack damageButton = new ItemStack(Material.DIAMOND_SWORD);
+                        ItemMeta damageMeta = damageButton.getItemMeta();
+                        damageMeta.setDisplayName(CC.translate("&c&lDaño Custom"));
+                        List<String> damageLore = new ArrayList<>();
+                        damageLore.add(CC.translate("&7Modifica el daño via NBT"));
+                        damageLore.add(CC.translate("&7Funciona en items de mod"));
+                        damageLore.add("");
+                        if (item.getAttackDamage() >= 0) {
+                            damageLore.add(CC.translate("&7Daño actual: &f" + item.getAttackDamage()));
+                            damageLore.add("");
+                            damageLore.add(CC.translate("&a[CLICK PARA MODIFICAR]"));
+                            damageLore.add(CC.translate("&7Ingresa &c0 &7para eliminar"));
+                        } else {
+                            damageLore.add(CC.translate("&7Daño actual: &fVanilla"));
+                            damageLore.add("");
+                            damageLore.add(CC.translate("&a[CLICK PARA CONFIGURAR]"));
+                        }
+                        damageMeta.setLore(damageLore);
+                        damageButton.setItemMeta(damageMeta);
+                        contents.set(2, 3, ClickableItem.of(damageButton, e -> {
+                            AttackDamageInputManager.startAttackDamageInput(player, itemId);
+                        }));
+
                         ItemStack advancedButton = new ItemStack(Material.NETHER_STAR);
                         ItemMeta advancedMeta = advancedButton.getItemMeta();
                         advancedMeta.setDisplayName(CC.translate("&5&l⚙ Opciones Avanzadas"));
@@ -348,27 +343,27 @@ public class CustomItemMenus {
                         advancedLore.add(CC.translate("&a[CLICK PARA ABRIR]"));
                         advancedMeta.setLore(advancedLore);
                         advancedButton.setItemMeta(advancedMeta);
-                        contents.set(2, 3, ClickableItem.of(advancedButton, e -> {
+                        contents.set(2, 4, ClickableItem.of(advancedButton, e -> {
                             CustomItemAdvancedOptionsMenu.createAdvancedOptionsMenu(itemId).open(player);
                         }));
-                        //CAMBIAR ID
+
                         ItemStack changeIdButton = new ItemStack(Material.NAME_TAG);
                         ItemMeta changeIdMeta = changeIdButton.getItemMeta();
-                        changeIdMeta.setDisplayName(CC.translate("&b&lCambiar ID"));
+                        changeIdMeta.setDisplayName(CC.translate("&b&lCambiar ID/Material"));
                         List<String> changeIdLore = new ArrayList<>();
-                        changeIdLore.add(CC.translate("&7ID actual: &f" + itemId));
+                        changeIdLore.add(CC.translate("&7Material actual: &f" + item.getMaterial() +
+                                (item.getDurabilityData() > 0 ? "/" + item.getDurabilityData() : "")));
                         changeIdLore.add("");
-                        changeIdLore.add(CC.translate("&7Permite cambiar el identificador"));
-                        changeIdLore.add(CC.translate("&7Soporta IDs con tipos: id/tipo"));
+                        changeIdLore.add(CC.translate("&7Soporta IDs con data: &f567/50"));
                         changeIdLore.add("");
                         changeIdLore.add(CC.translate("&a[CLICK PARA CAMBIAR]"));
                         changeIdMeta.setLore(changeIdLore);
                         changeIdButton.setItemMeta(changeIdMeta);
-                        contents.set(2, 4, ClickableItem.of(changeIdButton, e -> {
+                        contents.set(2, 5, ClickableItem.of(changeIdButton, e -> {
                             player.closeInventory();
                             ItemIdChangeManager.startMaterialIdChange(player, itemId, "item");
                         }));
-                        // DAR ITEM
+
                         ItemStack giveButton = new ItemStack(Material.APPLE);
                         ItemMeta giveMeta = giveButton.getItemMeta();
                         giveMeta.setDisplayName(CC.translate("&a&lDar Item"));
@@ -382,7 +377,6 @@ public class CustomItemMenus {
                             ItemEditManager.giveCustomItem(player, itemId);
                         }));
 
-                        // ELIMINAR ITEM
                         ItemStack deleteButton = new ItemStack(Material.ANVIL);
                         ItemMeta deleteMeta = deleteButton.getItemMeta();
                         deleteMeta.setDisplayName(CC.translate("&c&lEliminar Item"));
@@ -396,7 +390,6 @@ public class CustomItemMenus {
                             openDeleteConfirmMenu(itemId).open(player);
                         }));
 
-                        // BOTÓN ATRÁS
                         ItemStack backButton = new ItemStack(Material.ARROW);
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&b← Atrás"));
@@ -406,7 +399,6 @@ public class CustomItemMenus {
                         }));
                     }
 
-                    @Override
                     public void update(Player player, InventoryContents contents) {
                     }
                 })
@@ -415,11 +407,25 @@ public class CustomItemMenus {
                 .build();
     }
 
+    private static void applyUnbreakableToNbt(CustomItem item, boolean unbreakable) {
+        org.bukkit.inventory.ItemStack itemStack = new org.bukkit.inventory.ItemStack(item.getMaterial(), 1, item.getDurabilityData());
+
+        if (item.getNbtData() != null && !item.getNbtData().isEmpty()) {
+            NbtHandler nbt = new NbtHandler(itemStack);
+            nbt.setCompoundFromString(item.getNbtData());
+            itemStack = nbt.getItemStack();
+        }
+
+        NbtHandler nbt = new NbtHandler(itemStack);
+        nbt.setBoolean("Unbreakable", unbreakable);
+
+        item.setNbtData(nbt.getCompound() != null ? nbt.getCompound().toString() : null);
+    }
+
     public static SmartInventory openDeleteConfirmMenu(String itemId) {
         return SmartInventory.builder()
                 .id("ci_delete_confirm_" + itemId)
                 .provider(new InventoryProvider() {
-                    @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
@@ -440,11 +446,8 @@ public class CustomItemMenus {
                         yesButton.setItemMeta(yesMeta);
                         contents.set(2, 3, ClickableItem.of(yesButton, e -> {
                             CustomItemCommand.items.remove(itemId);
-
-                            // Eliminar de la base de datos
                             org.debentialc.customitems.tools.storage.CustomItemStorage storage = new org.debentialc.customitems.tools.storage.CustomItemStorage();
                             storage.deleteItem(itemId);
-
                             player.sendMessage(CC.translate("&a✓ Item eliminado correctamente"));
                             openItemListMenu(1).open(player);
                         }));
@@ -458,7 +461,6 @@ public class CustomItemMenus {
                         }));
                     }
 
-                    @Override
                     public void update(Player player, InventoryContents contents) {
                     }
                 })
@@ -471,7 +473,6 @@ public class CustomItemMenus {
         return SmartInventory.builder()
                 .id("ci_help_menu")
                 .provider(new InventoryProvider() {
-                    @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
@@ -531,7 +532,6 @@ public class CustomItemMenus {
                         }));
                     }
 
-                    @Override
                     public void update(Player player, InventoryContents contents) {
                     }
                 })

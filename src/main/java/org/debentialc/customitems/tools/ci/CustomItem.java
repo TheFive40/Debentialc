@@ -13,6 +13,7 @@ import java.util.Objects;
 public class CustomItem {
     private int count = 1;
     private int material;
+    private short durabilityData = 0;
     private String displayName;
     private List<String> lore;
     private double value;
@@ -35,12 +36,22 @@ public class CustomItem {
 
     private boolean tpConsumeStack = false;
 
+    private int attackDamage = -1;
+
+    private String nbtData = null;
+
     public CustomItem() {
         this.commands = new ArrayList<>();
     }
 
     public CustomItem setMaterial(int material) {
         this.material = material;
+        return this;
+    }
+
+    public CustomItem setMaterial(int material, short data) {
+        this.material = material;
+        this.durabilityData = data;
         return this;
     }
 
@@ -111,6 +122,16 @@ public class CustomItem {
 
     public CustomItem setTpConsumeStack(boolean tpConsumeStack) {
         this.tpConsumeStack = tpConsumeStack;
+        return this;
+    }
+
+    public CustomItem setAttackDamage(int attackDamage) {
+        this.attackDamage = attackDamage;
+        return this;
+    }
+
+    public CustomItem setNbtData(String nbtData) {
+        this.nbtData = nbtData;
         return this;
     }
 
