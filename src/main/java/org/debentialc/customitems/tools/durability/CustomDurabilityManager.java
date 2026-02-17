@@ -1,147 +1,142 @@
 package org.debentialc.customitems.tools.durability;
 
+import net.minecraft.server.v1_7_R4.NBTTagCompound;
+import org.bukkit.craftbukkit.v1_7_R4.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.debentialc.service.CC;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CustomDurabilityManager {
 
-    private static final String UNBREAKABLE_KEY = "§8[UNBREAKABLE]";
+    private static final short SYNTHETIC_MAX = 1000;
+
+    private static Field craftHandleField;
+
+    static {
+        try {
+            craftHandleField = CraftItemStack.class.getDeclaredField("handle");
+            craftHandleField.setAccessible(true);
+        } catch (Exception e) {
+            craftHandleField = null;
+        }
+    }
+
+    private static net.minecraft.server.v1_7_R4.ItemStack getCraftHandle(ItemStack item) {
+        if (craftHandleField != null && item instanceof CraftItemStack) {
+            try {
+                return (net.minecraft.server.v1_7_R4.ItemStack) craftHandleField.get(item);
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
 
     public static void setUnbreakable(ItemStack item, boolean unbreakable) {
         if (item == null || item.getTypeId() == 0) return;
 
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return;
+        net.minecraft.server.v1_7_R4.ItemStack handle = getCraftHandle(item);
 
-        List<String> lore = meta.getLore();
-        if (lore == null) {
-            lore = new ArrayList<>();
-        }
-
-        lore.removeIf(line -> line.equals(UNBREAKABLE_KEY));
-
-        if (unbreakable) {
-            lore.add(UNBREAKABLE_KEY);
-        }
-
-        meta.setLore(lore);
-        item.setItemMeta(meta);
-
-        if (unbreakable && item.getType().getMaxDurability() > 0 && !isModItem(item)) {
-            item.setDurability((short) 0);
+        if (handle != null) {
+            NBTTagCompound tag = handle.hasTag() ? handle.getTag() : new NBTTagCompound();
+            tag.setBoolean("Unbreakable", unbreakable);
+            handle.setTag(tag);
+        } else {
+            net.minecraft.server.v1_7_R4.ItemStack nms = CraftItemStack.asNMSCopy(item);
+            NBTTagCompound tag = nms.hasTag() ? nms.getTag() : new NBTTagCompound();
+            tag.setBoolean("Unbreakable", unbreakable);
+            nms.setTag(tag);
+            ItemStack rebuilt = CraftItemStack.asBukkitCopy(nms);
+            item.setItemMeta(rebuilt.getItemMeta());
         }
     }
 
     public static boolean isUnbreakable(ItemStack item) {
         if (item == null || item.getTypeId() == 0) return false;
-        if (!item.hasItemMeta()) return false;
 
-        List<String> lore = item.getItemMeta().getLore();
-        if (lore == null) return false;
+        net.minecraft.server.v1_7_R4.ItemStack handle = getCraftHandle(item);
+        if (handle != null) {
+            return handle.hasTag() && handle.getTag().getBoolean("Unbreakable");
+        }
 
-        return lore.contains(UNBREAKABLE_KEY);
+        net.minecraft.server.v1_7_R4.ItemStack nms = CraftItemStack.asNMSCopy(item);
+        return nms.hasTag() && nms.getTag().getBoolean("Unbreakable");
     }
 
     public static void setCustomMaxDurability(ItemStack item, int maxDurability) {
-        if (item == null || item.getTypeId() == 0) return;
-
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return;
-
         setCustomDurability(item, maxDurability, maxDurability);
     }
 
     public static void setCustomDurability(ItemStack item, int current, int max) {
         if (item == null || item.getTypeId() == 0) return;
-
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
 
         current = Math.max(0, Math.min(current, max));
 
         List<String> lore = meta.getLore();
-        if (lore == null) {
-            lore = new ArrayList<>();
+        if (lore == null) lore = new ArrayList<String>();
+
+        List<String> newLore = new ArrayList<String>();
+        for (String line : lore) {
+            String clean = line.replaceAll("\u00a7[0-9a-fk-or]", "");
+            if (!clean.matches("\\d+/\\d+ \\(\\d+%\\)")) {
+                newLore.add(line);
+            }
         }
 
-        lore.removeIf(line -> {
-            String cleanLine = line.replaceAll("§[0-9a-fk-or]", "");
-            return cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)");
-        });
+        double pct = (double) current / (double) max * 100.0;
+        newLore.add(0, CC.translate("&a" + current + "/" + max + " (" + String.format("%.0f", pct) + "%)"));
 
-        double percentage = (double) current / (double) max * 100;
-        String durabilityLine = CC.translate("&a" + current + "/" + max + " (" + String.format("%.0f", percentage) + "%)");
-        lore.add(0, durabilityLine);
-
-        meta.setLore(lore);
+        meta.setLore(newLore);
         item.setItemMeta(meta);
 
-        syncVisualDurability(item, current, max);
+        syncVisualBar(item, current, max);
     }
 
     public static int getCustomDurability(ItemStack item) {
         if (item == null || item.getTypeId() == 0) return 0;
         if (!item.hasItemMeta()) return 0;
-
         List<String> lore = item.getItemMeta().getLore();
-        if (lore == null || lore.isEmpty()) return 0;
-
+        if (lore == null) return 0;
         for (String line : lore) {
-            String cleanLine = line.replaceAll("§[0-9a-fk-or]", "");
-            if (cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)")) {
+            String clean = line.replaceAll("\u00a7[0-9a-fk-or]", "");
+            if (clean.matches("\\d+/\\d+ \\(\\d+%\\)")) {
                 try {
-                    String[] parts = cleanLine.split("/");
-                    return Integer.parseInt(parts[0].trim());
-                } catch (Exception e) {
-                    return 0;
-                }
+                    return Integer.parseInt(clean.split("/")[0].trim());
+                } catch (NumberFormatException ignored) {}
             }
         }
-
         return 0;
     }
 
     public static int getCustomMaxDurability(ItemStack item) {
         if (item == null || item.getTypeId() == 0) return 0;
         if (!item.hasItemMeta()) return 0;
-
         List<String> lore = item.getItemMeta().getLore();
-        if (lore == null || lore.isEmpty()) return 0;
-
+        if (lore == null) return 0;
         for (String line : lore) {
-            String cleanLine = line.replaceAll("§[0-9a-fk-or]", "");
-            if (cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)")) {
+            String clean = line.replaceAll("\u00a7[0-9a-fk-or]", "");
+            if (clean.matches("\\d+/\\d+ \\(\\d+%\\)")) {
                 try {
-                    String[] parts = cleanLine.split("/");
-                    String maxPart = parts[1].split(" ")[0].trim();
-                    return Integer.parseInt(maxPart);
-                } catch (Exception e) {
-                    return 0;
-                }
+                    return Integer.parseInt(clean.split("/")[1].split(" ")[0].trim());
+                } catch (NumberFormatException ignored) {}
             }
         }
-
         return 0;
     }
 
     public static boolean hasCustomDurability(ItemStack item) {
         if (item == null || item.getTypeId() == 0) return false;
         if (!item.hasItemMeta()) return false;
-
         List<String> lore = item.getItemMeta().getLore();
-        if (lore == null || lore.isEmpty()) return false;
-
+        if (lore == null) return false;
         for (String line : lore) {
-            String cleanLine = line.replaceAll("§[0-9a-fk-or]", "");
-            if (cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)")) {
-                return true;
-            }
+            String clean = line.replaceAll("\u00a7[0-9a-fk-or]", "");
+            if (clean.matches("\\d+/\\d+ \\(\\d+%\\)")) return true;
         }
-
         return false;
     }
 
@@ -151,12 +146,9 @@ public class CustomDurabilityManager {
 
         int current = getCustomDurability(item);
         int max = getCustomMaxDurability(item);
-
         current -= damage;
 
-        if (current <= 0) {
-            return true;
-        }
+        if (current <= 0) return true;
 
         setCustomDurability(item, current, max);
         return false;
@@ -164,92 +156,64 @@ public class CustomDurabilityManager {
 
     public static void repairItem(ItemStack item, int amount) {
         if (!hasCustomDurability(item)) return;
-
         int current = getCustomDurability(item);
         int max = getCustomMaxDurability(item);
-
-        current = Math.min(current + amount, max);
-        setCustomDurability(item, current, max);
+        setCustomDurability(item, Math.min(current + amount, max), max);
     }
 
     public static void repairItemFull(ItemStack item) {
         if (!hasCustomDurability(item)) return;
-
         int max = getCustomMaxDurability(item);
         setCustomDurability(item, max, max);
     }
 
-    private static void syncVisualDurability(ItemStack item, int current, int max) {
-        if (item == null || item.getTypeId() == 0) return;
+    public static boolean isModItem(ItemStack item) {
+        if (item == null) return false;
+        return item.getType().getMaxDurability() == 0;
+    }
 
-        if (isModItem(item)) {
-            return;
+    private static void syncVisualBar(ItemStack item, int current, int max) {
+        double pct = (double) current / (double) max;
+        short vanillaMax = item.getType().getMaxDurability();
+        if (vanillaMax > 0) {
+            item.setDurability((short) (vanillaMax - (int) (vanillaMax * pct)));
+        } else {
+            item.setDurability((short) (SYNTHETIC_MAX - (int) (SYNTHETIC_MAX * pct)));
         }
-
-        short vanillaMaxDurability = item.getType().getMaxDurability();
-
-        if (vanillaMaxDurability <= 0) {
-            return;
-        }
-
-        double percentage = (double) current / (double) max;
-        short vanillaDurability = (short) (vanillaMaxDurability - (int) (vanillaMaxDurability * percentage));
-        item.setDurability(vanillaDurability);
     }
 
     public static void syncVisualDurabilityForModItem(ItemStack item, int current, int max) {
-        if (item == null || item.getTypeId() == 0) return;
-        if (isModItem(item)) return;
-
-        short vanillaMax = item.getType().getMaxDurability();
-        if (vanillaMax <= 0) return;
-
-        double percentage = (double) current / (double) max;
-        short mapped = (short) (vanillaMax - (int) (vanillaMax * percentage));
-        item.setDurability(mapped);
-    }
-
-    public static boolean isModItem(ItemStack item) {
-        if (item == null) return false;
-        return item.getDurability() > 0 && item.getType().getMaxDurability() == 0;
-    }
-
-    public static String getDurabilityText(ItemStack item) {
-        if (!hasCustomDurability(item)) return "";
-
-        int current = getCustomDurability(item);
-        int max = getCustomMaxDurability(item);
-        double percentage = (double) current / (double) max * 100;
-
-        return CC.translate("&a" + current + "/" + max + " (" + String.format("%.0f", percentage) + "%)");
-    }
-
-    public static void addDurabilityToLore(ItemStack item) {
+        syncVisualBar(item, current, max);
     }
 
     public static void removeDurabilityFromLore(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return;
-
         ItemMeta meta = item.getItemMeta();
         List<String> lore = meta.getLore();
         if (lore == null) return;
-
-        lore.removeIf(line -> {
-            String cleanLine = line.replaceAll("§[0-9a-fk-or]", "");
-            return cleanLine.matches("\\d+/\\d+ \\(\\d+%\\)");
-        });
-
-        meta.setLore(lore);
+        List<String> newLore = new ArrayList<String>();
+        for (String line : lore) {
+            String clean = line.replaceAll("\u00a7[0-9a-fk-or]", "");
+            if (!clean.matches("\\d+/\\d+ \\(\\d+%\\)")) newLore.add(line);
+        }
+        meta.setLore(newLore);
         item.setItemMeta(meta);
     }
 
-    public static void updateDurabilityLore(ItemStack item) {
-        if (!hasCustomDurability(item)) return;
-        if (isModItem(item)) return;
-
+    public static String getDurabilityText(ItemStack item) {
+        if (!hasCustomDurability(item)) return "";
         int current = getCustomDurability(item);
         int max = getCustomMaxDurability(item);
+        double pct = (double) current / (double) max * 100.0;
+        return CC.translate("&a" + current + "/" + max + " (" + String.format("%.0f", pct) + "%)");
+    }
 
+    public static void addDurabilityToLore(ItemStack item) {}
+
+    public static void updateDurabilityLore(ItemStack item) {
+        if (!hasCustomDurability(item)) return;
+        int current = getCustomDurability(item);
+        int max = getCustomMaxDurability(item);
         setCustomDurability(item, current, max);
     }
 }

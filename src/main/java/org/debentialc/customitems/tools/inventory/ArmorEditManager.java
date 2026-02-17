@@ -6,6 +6,8 @@ import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.ci.CustomArmor;
 import org.debentialc.customitems.tools.storage.CustomArmorStorage;
 import org.debentialc.customitems.commands.RegisterItem;
+import org.debentialc.customitems.tools.durability.CustomDurabilityManager;
+import org.debentialc.customitems.tools.nbt.NbtHandler;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -29,7 +31,7 @@ public class ArmorEditManager {
         }
     }
 
-    private static final HashMap<UUID, ArmorEditState> playersEditing = new HashMap<>();
+    private static final HashMap<UUID, ArmorEditState> playersEditing = new HashMap<UUID, ArmorEditState>();
 
     public static void startArmorEdit(Player player, String armorId, String editType) {
         playersEditing.put(player.getUniqueId(), new ArmorEditState(armorId, editType));
@@ -65,49 +67,45 @@ public class ArmorEditManager {
         CustomArmor armor = RegisterItem.items.get(state.armorId);
         CustomArmorStorage storage = new CustomArmorStorage();
 
-        switch (state.editType.toLowerCase()) {
-            case "rename":
-                armor.setDisplayName(CC.translate(input));
-                storage.saveArmor(armor);
+        if ("rename".equals(state.editType.toLowerCase())) {
+            armor.setDisplayName(CC.translate(input));
+            storage.saveArmor(armor);
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Nombre actualizado"));
+            player.sendMessage("");
+        } else if ("addline".equals(state.editType.toLowerCase())) {
+            java.util.List<String> lore = armor.getLore();
+            if (lore == null) {
+                lore = new java.util.ArrayList<String>();
+            }
+            lore.add(CC.translate(input));
+            armor.setLore(lore);
+            storage.saveArmor(armor);
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Línea agregada"));
+            player.sendMessage("");
+        } else if ("setline".equals(state.editType.toLowerCase())) {
+            java.util.List<String> lore = armor.getLore();
+            if (lore == null || state.lineNumber > lore.size() || state.lineNumber < 1) {
                 player.sendMessage("");
-                player.sendMessage(CC.translate("&a✓ Nombre actualizado"));
+                player.sendMessage(CC.translate("&c✗ Número de línea inválido"));
                 player.sendMessage("");
-                break;
-
-            case "addline":
-                java.util.List<String> lore = armor.getLore();
-                if (lore == null) {
-                    lore = new java.util.ArrayList<>();
-                }
-                lore.add(CC.translate(input));
-                armor.setLore(lore);
-                storage.saveArmor(armor);
-                player.sendMessage("");
-                player.sendMessage(CC.translate("&a✓ Línea agregada"));
-                player.sendMessage("");
-                break;
-
-            case "setline":
-                lore = armor.getLore();
-                if (lore == null || state.lineNumber > lore.size() || state.lineNumber < 1) {
-                    player.sendMessage("");
-                    player.sendMessage(CC.translate("&c✗ Número de línea inválido"));
-                    player.sendMessage("");
-                    finishArmorEdit(player);
-                    return;
-                }
-                lore.set(state.lineNumber - 1, CC.translate(input));
-                armor.setLore(lore);
-                storage.saveArmor(armor);
-                player.sendMessage("");
-                player.sendMessage(CC.translate("&a✓ Línea actualizada"));
-                player.sendMessage("");
-                break;
+                finishArmorEdit(player);
+                return;
+            }
+            lore.set(state.lineNumber - 1, CC.translate(input));
+            armor.setLore(lore);
+            storage.saveArmor(armor);
+            player.sendMessage("");
+            player.sendMessage(CC.translate("&a✓ Línea actualizada"));
+            player.sendMessage("");
         }
 
         finishArmorEdit(player);
-        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(org.debentialc.Main.instance, () -> {
-            CustomArmorMenus.openEditArmorMenu(state.armorId).open(player);
+        org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(org.debentialc.Main.instance, new Runnable() {
+            public void run() {
+                CustomArmorMenus.openEditArmorMenu(state.armorId).open(player);
+            }
         }, 1L);
     }
 
@@ -131,24 +129,25 @@ public class ArmorEditManager {
         }
 
         CustomArmor customArmor = RegisterItem.items.get(armorId);
+
         ItemStack itemStack = new ItemStack(customArmor.getMaterial());
         org.bukkit.inventory.meta.ItemMeta meta = itemStack.getItemMeta();
-
         meta.setDisplayName(customArmor.getDisplayName());
         if (customArmor.getLore() != null) {
             meta.setLore(customArmor.getLore());
         }
         itemStack.setItemMeta(meta);
 
-        // Aplicar durabilidad personalizada si existe
-        if (customArmor.getMaxDurability() > 0) {
-            org.debentialc.customitems.tools.durability.CustomDurabilityManager.setCustomMaxDurability(itemStack, customArmor.getMaxDurability());
-            org.debentialc.customitems.tools.durability.CustomDurabilityManager.addDurabilityToLore(itemStack);
+        if (customArmor.isUnbreakable()) {
+            NbtHandler nbt = new NbtHandler(itemStack);
+            nbt.setBoolean("Unbreakable", true);
+            ItemStack withNbt = nbt.getItemStack();
+            ItemStack restored = rebuildMeta(withNbt, customArmor.getDisplayName(), customArmor.getLore());
+            itemStack = restored;
         }
 
-        // Aplicar estado de irrompible si está activado
-        if (customArmor.isUnbreakable()) {
-            org.debentialc.customitems.tools.durability.CustomDurabilityManager.setUnbreakable(itemStack, true);
+        if (customArmor.getMaxDurability() > 0) {
+            CustomDurabilityManager.setCustomMaxDurability(itemStack, customArmor.getMaxDurability());
         }
 
         if (player.getInventory().firstEmpty() == -1) {
@@ -162,5 +161,14 @@ public class ArmorEditManager {
             player.sendMessage(CC.translate("&a✓ Armadura entregada"));
             player.sendMessage("");
         }
+    }
+
+    private static ItemStack rebuildMeta(ItemStack item, String displayName, java.util.List<String> lore) {
+        org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+        if (meta == null) return item;
+        if (displayName != null) meta.setDisplayName(displayName);
+        if (lore != null) meta.setLore(lore);
+        item.setItemMeta(meta);
+        return item;
     }
 }
