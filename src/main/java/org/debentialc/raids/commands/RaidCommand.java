@@ -7,6 +7,7 @@ import org.debentialc.raids.menus.RaidMainMenu;
 import org.debentialc.raids.menus.RaidListMenu;
 import org.debentialc.raids.menus.RaidChatInputManager;
 import org.debentialc.raids.managers.RaidStorageManager;
+import org.debentialc.raids.managers.CooldownManager;
 import org.debentialc.service.CC;
 import org.bukkit.entity.Player;
 
@@ -54,13 +55,16 @@ public class RaidCommand extends BaseCommand {
 
             case "reload":
                 RaidStorageManager.loadAllRaids();
+                CooldownManager.loadCooldowns();
                 player.sendMessage(CC.translate("&a✓ Sistema de raids recargado"));
+                player.sendMessage(CC.translate("&7Raids cargadas y cooldowns restaurados"));
                 break;
 
             case "save":
                 RaidStorageManager.saveAllRaids();
                 RaidStorageManager.saveRaidSystemData();
-                player.sendMessage(CC.translate("&a✓ Raids guardadas"));
+                CooldownManager.saveCooldowns();
+                player.sendMessage(CC.translate("&a✓ Raids y cooldowns guardados"));
                 break;
 
             default:

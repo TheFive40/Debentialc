@@ -306,6 +306,24 @@ public class PartyCommand extends BaseCommand {
             return;
         }
 
+        // =====================================================
+        // VALIDACIÓN DE COOLDOWN - Todos los jugadores
+        // =====================================================
+        for (UUID memberId : party.getActivePlayers()) {
+            if (CooldownManager.hasCooldown(memberId, raid.getRaidId())) {
+                Player member = Bukkit.getPlayer(memberId);
+                String memberName = member != null ? member.getName() : memberId.toString();
+                long remaining = CooldownManager.getCooldownRemaining(memberId, raid.getRaidId());
+                String timeFormatted = CooldownManager.getCooldownFormattedTime(memberId, raid.getRaidId());
+
+                player.sendMessage("");
+                player.sendMessage(CC.translate("&c✗ &f" + memberName + " tiene cooldown activo"));
+                player.sendMessage(CC.translate("&7Tiempo restante: &f" + timeFormatted));
+                player.sendMessage("");
+                return;
+            }
+        }
+
         if (RaidSessionManager.hasActiveSession(raid.getRaidId())) {
             sendError(player, "Otra party ya está haciendo esta raid. Espera a que terminen.");
             return;

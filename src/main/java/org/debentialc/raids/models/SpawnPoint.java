@@ -1,5 +1,6 @@
 package org.debentialc.raids.models;
 
+import com.google.gson.annotations.Expose;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
@@ -11,12 +12,22 @@ import org.bukkit.Location;
 @Setter
 public class SpawnPoint {
 
+    @Expose
     private Location location;
+
+    @Expose
     private String npcName;
+
+    @Expose
     private int npcTab;
+
+    @Expose
     private int quantity;
+
+    @Expose
     private int aliveCount;
 
+    @Expose
     private String displayName;
 
     public SpawnPoint(Location location, String npcName, int npcTab, int quantity) {

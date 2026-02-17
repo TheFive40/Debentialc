@@ -18,6 +18,7 @@ import java.util.*;
 
 /**
  * Menú visual de configuración de una raid individual
+ * ACTUALIZADO: Sin botón "Arena Spawn" (los spawn points se configuran por oleada)
  */
 public class RaidConfigMenu {
 
@@ -42,9 +43,6 @@ public class RaidConfigMenu {
                 .build();
     }
 
-    /**
-     * Reabre el menú con un delay de 1 tick para evitar conflictos con SmartInventory
-     */
     private static void reopenMenu(Player player, String raidId) {
         org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
                 org.debentialc.Main.instance,
@@ -74,7 +72,6 @@ public class RaidConfigMenu {
         infoLore.add(CC.translate("&7Oleadas: &f" + raid.getTotalWaves()));
         infoLore.add(CC.translate("&7Jugadores: &f" + raid.getMinPlayers() + "-" + raid.getMaxPlayers()));
         infoLore.add(CC.translate("&7Cooldown: &f" + (raid.getCooldownSeconds() / 60) + " min"));
-        infoLore.add(CC.translate("&7Arena: " + (raid.getArenaSpawnPoint() != null ? "&a✓ Configurada" : "&c✗ Sin configurar")));
         infoLore.add(CC.translate("&7Spawn: " + (raid.getPlayerSpawnPoint() != null ? "&a✓ Configurado" : "&c✗ Sin configurar")));
         infoLore.add(CC.translate("&7Estado: " + (raid.isEnabled() ? "&a✓ Habilitada" : "&c✗ Deshabilitada")));
         infoMeta.setLore(infoLore);
@@ -133,49 +130,6 @@ public class RaidConfigMenu {
             RaidWavesMenu.createWavesMenu(raidId).open(player);
         }));
 
-        // CONFIGURAR ARENA SPAWN
-        boolean arenaSet = raid.getArenaSpawnPoint() != null;
-        ItemStack arenaButton;
-        if (arenaSet) {
-            arenaButton = new ItemStack(Material.IRON_FENCE);
-        } else {
-            // BARRIER no existe en 1.7.10, usar vidrio rojo
-            arenaButton = new ItemStack(Material.COAL_BLOCK, 1, (short) 14);
-        }
-        ItemMeta arenaMeta = arenaButton.getItemMeta();
-        arenaMeta.setDisplayName(CC.translate("&d&lArena Spawn"));
-        List<String> arenaLore = new ArrayList<>();
-        arenaLore.add(CC.translate("&7Punto donde aparecen los NPCs"));
-        if (arenaSet) {
-            Location aLoc = raid.getArenaSpawnPoint();
-            arenaLore.add(CC.translate("&7Estado: &a✓ Configurado"));
-            arenaLore.add(CC.translate("&7Pos: &f" + aLoc.getBlockX() + ", " + aLoc.getBlockY() + ", " + aLoc.getBlockZ()));
-        } else {
-            arenaLore.add(CC.translate("&7Estado: &c✗ Sin configurar"));
-        }
-        arenaLore.add("");
-        arenaLore.add(CC.translate("&7Se usará tu posición actual"));
-        arenaLore.add("");
-        arenaLore.add(CC.translate("&d[CLICK PARA ESTABLECER]"));
-        arenaMeta.setLore(arenaLore);
-        arenaButton.setItemMeta(arenaMeta);
-        contents.set(1, 5, ClickableItem.of(arenaButton, e -> {
-            Location loc = player.getLocation().clone();
-            raid.setArenaSpawnPoint(loc);
-            RaidManager.updateRaid(raid);
-            RaidStorageManager.saveRaid(raid);
-            player.sendMessage("");
-            player.sendMessage(CC.translate("&a✓ Arena spawn configurado"));
-            player.sendMessage(CC.translate("&7Posición: &f" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ()));
-            player.sendMessage("");
-
-            org.bukkit.Bukkit.getScheduler().scheduleSyncDelayedTask(
-                    org.debentialc.Main.instance,
-                    () -> createRaidConfigMenu(raidId).open(player),
-                    1L
-            );
-        }));
-
         // CONFIGURAR PLAYER SPAWN
         boolean playerSpawnSet = raid.getPlayerSpawnPoint() != null;
         ItemStack playerSpawnButton;
@@ -201,7 +155,7 @@ public class RaidConfigMenu {
         pSpawnLore.add(CC.translate("&a[CLICK PARA ESTABLECER]"));
         playerSpawnMeta.setLore(pSpawnLore);
         playerSpawnButton.setItemMeta(playerSpawnMeta);
-        contents.set(1, 6, ClickableItem.of(playerSpawnButton, e -> {
+        contents.set(1, 5, ClickableItem.of(playerSpawnButton, e -> {
             Location loc = player.getLocation().clone();
             raid.setPlayerSpawnPoint(loc);
             RaidManager.updateRaid(raid);
@@ -215,6 +169,7 @@ public class RaidConfigMenu {
         ItemMeta cooldownMeta = cooldownButton.getItemMeta();
         cooldownMeta.setDisplayName(CC.translate("&3&lCooldown"));
         cooldownMeta.setLore(Arrays.asList(
+                CC.translate("&7Tiempo de espera entre raids"),
                 CC.translate("&7Actual: &f" + (raid.getCooldownSeconds() / 60) + " minutos"),
                 "",
                 CC.translate("&3[CLICK PARA CAMBIAR]")

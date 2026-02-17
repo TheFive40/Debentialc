@@ -1,5 +1,6 @@
 package org.debentialc.raids.models;
 
+import com.google.gson.annotations.Expose;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.*;
@@ -11,12 +12,19 @@ import java.util.*;
 @Setter
 public class Wave {
 
+    @Expose
     private int waveNumber;
+
+    @Expose
     private List<SpawnPoint> spawnPoints;
+
+    @Expose
     private List<WaveReward> rewards;
 
+    @Expose
     private WaveStatus status;
 
+    @Expose
     private String description;
 
     public Wave(int waveNumber) {

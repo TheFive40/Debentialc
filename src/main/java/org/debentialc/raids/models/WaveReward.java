@@ -1,5 +1,6 @@
 package org.debentialc.raids.models;
 
+import com.google.gson.annotations.Expose;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,10 +11,16 @@ import lombok.Setter;
 @Setter
 public class WaveReward {
 
+    @Expose
     private String command;
+
+    @Expose
     private int probability;
 
+    @Expose
     private String description;
+
+    @Expose
     private int executionOrder;
 
     public WaveReward(String command, int probability) {

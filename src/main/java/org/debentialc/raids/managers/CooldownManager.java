@@ -1,13 +1,25 @@
 package org.debentialc.raids.managers;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * CooldownManager - Gestor de cooldowns
- * Responsable de verificar y gestionar cooldowns de raids por jugador
+ * CooldownManager - Gestor de cooldowns con persistencia
+ * Los cooldowns se guardan y cargan automáticamente
  */
 public class CooldownManager {
+
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final String COOLDOWNS_FILE = "plugins/Debentialc/data/raids/cooldowns.json";
 
     // Estructura: player_uuid -> (raid_id -> cooldown_end_time)
     private static final Map<UUID, Map<String, Long>> cooldowns = new ConcurrentHashMap<>();
@@ -23,6 +35,9 @@ public class CooldownManager {
 
         System.out.println("[Raids] Cooldown establecido: " + playerId + " - " + raidId +
                 " - Duración: " + durationSeconds + "s");
+
+        // Auto-guardar después de establecer cooldown
+        saveCooldowns();
     }
 
     /**
@@ -43,6 +58,7 @@ public class CooldownManager {
         if (System.currentTimeMillis() >= endTime) {
             // Cooldown expiró, removerlo
             playerCooldowns.remove(raidId);
+            saveCooldowns();
             return false;
         }
 
@@ -97,6 +113,7 @@ public class CooldownManager {
         Map<String, Long> playerCooldowns = cooldowns.get(playerId);
         if (playerCooldowns != null) {
             playerCooldowns.remove(raidId);
+            saveCooldowns();
             System.out.println("[Raids] Cooldown removido: " + playerId + " - " + raidId);
         }
     }
@@ -108,6 +125,7 @@ public class CooldownManager {
         Map<String, Long> playerCooldowns = cooldowns.get(playerId);
         if (playerCooldowns != null) {
             playerCooldowns.clear();
+            saveCooldowns();
             System.out.println("[Raids] Todos los cooldowns de " + playerId + " han sido removidos");
         }
     }
@@ -117,6 +135,7 @@ public class CooldownManager {
      */
     public static void clearAllCooldowns() {
         cooldowns.clear();
+        saveCooldowns();
         System.out.println("[Raids] Todos los cooldowns han sido removidos");
     }
 
@@ -137,6 +156,97 @@ public class CooldownManager {
     }
 
     /**
+     * Guarda todos los cooldowns en archivo JSON
+     */
+    public static void saveCooldowns() {
+        try {
+            File file = new File(COOLDOWNS_FILE);
+            file.getParentFile().mkdirs();
+
+            // Convertir UUID a String para serialización
+            Map<String, Map<String, Long>> serializable = new HashMap<>();
+            for (Map.Entry<UUID, Map<String, Long>> entry : cooldowns.entrySet()) {
+                serializable.put(entry.getKey().toString(), entry.getValue());
+            }
+
+            try (FileWriter writer = new FileWriter(file)) {
+                GSON.toJson(serializable, writer);
+            }
+
+            System.out.println("[Raids] Cooldowns guardados: " + cooldowns.size() + " jugadores");
+        } catch (Exception e) {
+            System.err.println("[Raids] Error al guardar cooldowns: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Carga todos los cooldowns desde archivo JSON
+     */
+    public static void loadCooldowns() {
+        try {
+            File file = new File(COOLDOWNS_FILE);
+            if (!file.exists()) {
+                System.out.println("[Raids] No hay archivo de cooldowns previo");
+                return;
+            }
+
+            try (FileReader reader = new FileReader(file)) {
+                Type type = new TypeToken<Map<String, Map<String, Long>>>(){}.getType();
+                Map<String, Map<String, Long>> loaded = GSON.fromJson(reader, type);
+
+                if (loaded != null) {
+                    cooldowns.clear();
+                    // Convertir String a UUID
+                    for (Map.Entry<String, Map<String, Long>> entry : loaded.entrySet()) {
+                        try {
+                            UUID playerId = UUID.fromString(entry.getKey());
+                            cooldowns.put(playerId, new ConcurrentHashMap<>(entry.getValue()));
+                        } catch (IllegalArgumentException e) {
+                            System.err.println("[Raids] UUID inválido en cooldowns: " + entry.getKey());
+                        }
+                    }
+                }
+            }
+
+            // Limpiar cooldowns expirados
+            cleanupExpiredCooldowns();
+
+            System.out.println("[Raids] Cooldowns cargados: " + cooldowns.size() + " jugadores");
+        } catch (Exception e) {
+            System.err.println("[Raids] Error al cargar cooldowns: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Limpia cooldowns expirados
+     */
+    private static void cleanupExpiredCooldowns() {
+        long now = System.currentTimeMillis();
+        AtomicInteger removed = new AtomicInteger();
+
+        for (Map.Entry<UUID, Map<String, Long>> playerEntry : cooldowns.entrySet()) {
+            Map<String, Long> playerCooldowns = playerEntry.getValue();
+            playerCooldowns.entrySet().removeIf(entry -> {
+                if (now >= entry.getValue()) {
+                    removed.getAndIncrement();
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        // Remover jugadores sin cooldowns
+        cooldowns.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+
+        if (removed.get() > 0) {
+            System.out.println("[Raids] Cooldowns expirados limpiados: " + removed);
+            saveCooldowns();
+        }
+    }
+
+    /**
      * Obtiene un resumen de los cooldowns de un jugador
      */
     public static String getCooldownSummary(UUID playerId) {
@@ -151,9 +261,7 @@ public class CooldownManager {
 
         for (Map.Entry<String, Long> entry : playerCooldowns.entrySet()) {
             String raidId = entry.getKey();
-            long remaining = (entry.getValue() - System.currentTimeMillis()) / 1000;
-            String timeFormatted = formatTime(remaining);
-
+            String timeFormatted = getCooldownFormattedTime(playerId, raidId);
             sb.append("§e").append(raidId).append(": §f").append(timeFormatted).append("\n");
         }
 
@@ -164,42 +272,7 @@ public class CooldownManager {
      * Verifica si un jugador tiene al menos un cooldown
      */
     public static boolean hasAnyCooldown(UUID playerId) {
-        Map<String, Long> playerCooldowns = cooldowns.get(playerId);
-        if (playerCooldowns == null || playerCooldowns.isEmpty()) {
-            return false;
-        }
-
-        // Remover cooldowns expirados
-        playerCooldowns.entrySet().removeIf(entry -> System.currentTimeMillis() >= entry.getValue());
-
-        return !playerCooldowns.isEmpty();
-    }
-
-    /**
-     * Obtiene el cooldown más cercano a expirar
-     */
-    public static String getNextCooldownToExpire(UUID playerId) {
-        Map<String, Long> playerCooldowns = getPlayerCooldowns(playerId);
-
-        if (playerCooldowns.isEmpty()) {
-            return null;
-        }
-
-        return playerCooldowns.entrySet().stream()
-                .min(Comparator.comparingLong(Map.Entry::getValue))
-                .map(Map.Entry::getKey)
-                .orElse(null);
-    }
-
-    /**
-     * Obtiene el tiempo del siguiente cooldown a expirar
-     */
-    public static long getNextCooldownTime(UUID playerId) {
-        String raidId = getNextCooldownToExpire(playerId);
-        if (raidId == null) {
-            return 0;
-        }
-        return getCooldownRemaining(playerId, raidId);
+        return !getPlayerCooldowns(playerId).isEmpty();
     }
 
     /**
@@ -218,46 +291,5 @@ public class CooldownManager {
             total += playerCooldowns.size();
         }
         return total;
-    }
-
-    /**
-     * Formatea tiempo en formato legible
-     */
-    private static String formatTime(long seconds) {
-        if (seconds <= 0) {
-            return "Expirado";
-        }
-
-        long hours = seconds / 3600;
-        long minutes = (seconds % 3600) / 60;
-        long secs = seconds % 60;
-
-        if (hours > 0) {
-            return String.format("§6%dh %dm %ds", hours, minutes, secs);
-        } else if (minutes > 0) {
-            return String.format("§6%dm %ds", minutes, secs);
-        } else {
-            return String.format("§6%ds", secs);
-        }
-    }
-
-    /**
-     * Obtiene información detallada de cooldowns para un jugador
-     */
-    public static String getCooldownInfo(UUID playerId, String raidId) {
-        if (!hasCooldown(playerId, raidId)) {
-            return "§aNo hay cooldown para esta raid";
-        }
-
-        long remaining = getCooldownRemaining(playerId, raidId);
-        String formatted = getCooldownFormattedTime(playerId, raidId);
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("§6=== Cooldown de Raid ===\n");
-        sb.append("§eRaid: §f").append(raidId).append("\n");
-        sb.append("§eTiempo restante: §f").append(formatted).append("\n");
-        sb.append("§eSegundos: §f").append(remaining).append("s");
-
-        return sb.toString();
     }
 }

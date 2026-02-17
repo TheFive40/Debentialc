@@ -364,7 +364,7 @@ public class CustomItemMenus {
                         changeIdLore.add(CC.translate("&a[CLICK PARA CAMBIAR]"));
                         changeIdMeta.setLore(changeIdLore);
                         changeIdButton.setItemMeta(changeIdMeta);
-                        contents.set(2, 3, ClickableItem.of(changeIdButton, e -> {
+                        contents.set(2, 4, ClickableItem.of(changeIdButton, e -> {
                             player.closeInventory();
                             ItemIdChangeManager.startMaterialIdChange(player, itemId, "item");
                         }));
