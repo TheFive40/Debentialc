@@ -7,10 +7,6 @@ import org.bukkit.entity.Player;
 import org.debentialc.customitems.tools.inventory.*;
 import org.debentialc.customitems.tools.pastebin.PastebinLoreManager;
 
-/**
- * Listener para manejar todos los inputs de chat relacionados con items
- * VERSIÓN ACTUALIZADA: Incluye soporte para scripts y cambio de ID
- */
 public class ItemEditListener implements Listener {
 
     @EventHandler
@@ -18,10 +14,18 @@ public class ItemEditListener implements Listener {
         Player player = event.getPlayer();
         String message = event.getMessage().trim();
 
-        // Item Edit Manager (Renombrar, etc)
+        if (AttackDamageInputManager.isInputtingAttackDamage(player)) {
+            event.setCancelled(true);
+            if (message.equalsIgnoreCase("cancelar")) {
+                AttackDamageInputManager.cancelAttackDamageInput(player);
+            } else {
+                AttackDamageInputManager.processAttackDamageInput(player, message);
+            }
+            return;
+        }
+
         if (ItemEditManager.isEditingItem(player)) {
             event.setCancelled(true);
-
             if (message.equalsIgnoreCase("cancelar")) {
                 ItemEditManager.cancelItemEdit(player);
             } else {
@@ -34,16 +38,14 @@ public class ItemEditListener implements Listener {
             event.setCancelled(true);
             if (message.equalsIgnoreCase("cancelar")) {
                 PastebinLoreManager.cancelPastebinInput(player);
-                return;
+            } else {
+                PastebinLoreManager.processPastebinInput(player, message);
             }
-
-            PastebinLoreManager.processPastebinInput(player, message);
             return;
         }
-        // Armor Edit Manager
+
         if (ArmorEditManager.isEditingArmor(player)) {
             event.setCancelled(true);
-
             if (message.equalsIgnoreCase("cancelar")) {
                 ArmorEditManager.cancelArmorEdit(player);
             } else {
@@ -52,10 +54,8 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // Bonus Input Manager
         if (BonusInputManager.isInputtingBonus(player)) {
             event.setCancelled(true);
-
             if (message.equalsIgnoreCase("cancelar")) {
                 BonusInputManager.cancelBonusInput(player);
             } else {
@@ -64,10 +64,8 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // Effect Input Manager
         if (EffectInputManager.isInputtingEffect(player)) {
             event.setCancelled(true);
-
             if (message.equalsIgnoreCase("cancelar")) {
                 EffectInputManager.cancelEffectInput(player);
             } else {
@@ -76,10 +74,8 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // Durability Input Manager
         if (DurabilityInputManager.isInputtingDurability(player)) {
             event.setCancelled(true);
-
             if (message.equalsIgnoreCase("cancelar")) {
                 DurabilityInputManager.cancelDurabilityInput(player);
             } else {
@@ -88,10 +84,18 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // Command Input Manager
+        if (AttackDamageInputManager.isInputtingAttackDamage(player)) {
+            event.setCancelled(true);
+            if (message.equalsIgnoreCase("cancelar")) {
+                AttackDamageInputManager.cancelAttackDamageInput(player);
+            } else {
+                AttackDamageInputManager.processAttackDamageInput(player, message);
+            }
+            return;
+        }
+
         if (ItemCommandInputManager.isInputtingCommand(player)) {
             event.setCancelled(true);
-
             if (message.equalsIgnoreCase("cancelar")) {
                 ItemCommandInputManager.cancelCommandInput(player);
             } else {
@@ -100,10 +104,8 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // TP Input Manager
         if (ItemTPInputManager.isInputtingTPValue(player)) {
             event.setCancelled(true);
-
             if (message.equalsIgnoreCase("cancelar")) {
                 ItemTPInputManager.cancelTPValueInput(player);
             } else {
@@ -112,10 +114,8 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-        // Script Input Manager
         if (org.debentialc.customitems.tools.scripts.ScriptInputManager.isInputtingScript(player)) {
             event.setCancelled(true);
-
             if (message.equalsIgnoreCase("cancelar")) {
                 org.debentialc.customitems.tools.scripts.ScriptInputManager.cancelScriptInput(player);
             } else {
@@ -124,10 +124,8 @@ public class ItemEditListener implements Listener {
             return;
         }
 
-
         if (ItemIdChangeManager.isChangingMaterialId(player)) {
             event.setCancelled(true);
-
             if (message.equalsIgnoreCase("cancelar")) {
                 ItemIdChangeManager.cancelMaterialIdChange(player);
             } else {
@@ -137,4 +135,3 @@ public class ItemEditListener implements Listener {
         }
     }
 }
-

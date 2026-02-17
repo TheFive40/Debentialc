@@ -13,7 +13,6 @@ import org.bukkit.inventory.ItemStack;
 import org.debentialc.service.CC;
 import org.debentialc.customitems.tools.durability.CustomDurabilityManager;
 
-
 public class CustomDurabilityListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -28,6 +27,7 @@ public class CustomDurabilityListener implements Listener {
             ItemStack armor = armorContents[i];
 
             if (armor == null || armor.getType() == Material.AIR) continue;
+            if (CustomDurabilityManager.isModItem(armor)) continue;
             if (CustomDurabilityManager.isUnbreakable(armor)) continue;
             if (!CustomDurabilityManager.hasCustomDurability(armor)) continue;
 
@@ -44,10 +44,6 @@ public class CustomDurabilityListener implements Listener {
         }
     }
 
-    /**
-     * Previene el daño vanilla a items con durabilidad custom (arma en mano)
-     * cuando el jugador ataca a otra entidad.
-     */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onHit(EntityDamageByEntityEvent event) {
         if (!(event.getDamager() instanceof Player)) return;
@@ -56,6 +52,7 @@ public class CustomDurabilityListener implements Listener {
         ItemStack item = player.getItemInHand();
         if (item == null || item.getType() == Material.AIR) return;
 
+        if (CustomDurabilityManager.isModItem(item)) return;
         if (CustomDurabilityManager.isUnbreakable(item)) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
 
@@ -70,10 +67,6 @@ public class CustomDurabilityListener implements Listener {
         }
     }
 
-
-    /**
-     * Manejo adicional para minería de bloques
-     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(org.bukkit.event.block.BlockBreakEvent event) {
         if (event.isCancelled()) return;
@@ -82,14 +75,12 @@ public class CustomDurabilityListener implements Listener {
         ItemStack item = player.getItemInHand();
 
         if (item == null || item.getTypeId() == 0) return;
+        if (CustomDurabilityManager.isModItem(item)) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
 
         CustomDurabilityManager.updateDurabilityLore(item);
     }
 
-    /**
-     * Actualiza el lore al atacar entidades
-     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDamage(EntityDamageByEntityEvent event) {
         if (event.isCancelled()) return;
@@ -99,19 +90,18 @@ public class CustomDurabilityListener implements Listener {
         ItemStack item = player.getItemInHand();
 
         if (item == null || item.getTypeId() == 0) return;
+        if (CustomDurabilityManager.isModItem(item)) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
 
         CustomDurabilityManager.updateDurabilityLore(item);
     }
 
-    /**
-     * Actualiza el lore cuando el jugador interactúa
-     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerInteract(PlayerInteractEvent event) {
         ItemStack item = event.getItem();
 
         if (item == null || item.getTypeId() == 0) return;
+        if (CustomDurabilityManager.isModItem(item)) return;
         if (!CustomDurabilityManager.hasCustomDurability(item)) return;
 
         CustomDurabilityManager.updateDurabilityLore(item);

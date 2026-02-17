@@ -11,8 +11,6 @@ public class CustomDurabilityManager {
 
     private static final String UNBREAKABLE_KEY = "§8[UNBREAKABLE]";
 
-    private static final int MOD_ITEM_FAKE_MAX = 1000;
-
     public static void setUnbreakable(ItemStack item, boolean unbreakable) {
         if (item == null || item.getTypeId() == 0) return;
 
@@ -33,7 +31,7 @@ public class CustomDurabilityManager {
         meta.setLore(lore);
         item.setItemMeta(meta);
 
-        if (unbreakable && item.getType().getMaxDurability() > 0) {
+        if (unbreakable && item.getType().getMaxDurability() > 0 && !isModItem(item)) {
             item.setDurability((short) 0);
         }
     }
@@ -149,7 +147,6 @@ public class CustomDurabilityManager {
 
     public static boolean damageItem(ItemStack item, int damage) {
         if (isUnbreakable(item)) return false;
-
         if (!hasCustomDurability(item)) return false;
 
         int current = getCustomDurability(item);
@@ -185,30 +182,36 @@ public class CustomDurabilityManager {
     private static void syncVisualDurability(ItemStack item, int current, int max) {
         if (item == null || item.getTypeId() == 0) return;
 
+        if (isModItem(item)) {
+            return;
+        }
+
         short vanillaMaxDurability = item.getType().getMaxDurability();
 
-        if (vanillaMaxDurability > 0) {
-            double percentage = (double) current / (double) max;
-            short vanillaDurability = (short) (vanillaMaxDurability - (vanillaMaxDurability * percentage));
-            item.setDurability(vanillaDurability);
-        } else {
-            syncVisualDurabilityForModItem(item, current, max);
+        if (vanillaMaxDurability <= 0) {
+            return;
         }
+
+        double percentage = (double) current / (double) max;
+        short vanillaDurability = (short) (vanillaMaxDurability - (int) (vanillaMaxDurability * percentage));
+        item.setDurability(vanillaDurability);
     }
 
     public static void syncVisualDurabilityForModItem(ItemStack item, int current, int max) {
         if (item == null || item.getTypeId() == 0) return;
-
-        double percentage = (double) current / (double) max;
-        short fakeDurability = (short) (MOD_ITEM_FAKE_MAX - (int) (MOD_ITEM_FAKE_MAX * percentage));
+        if (isModItem(item)) return;
 
         short vanillaMax = item.getType().getMaxDurability();
-        if (vanillaMax <= 0) {
-            item.setDurability(fakeDurability);
-        } else {
-            short mapped = (short) (vanillaMax - (int) (vanillaMax * percentage));
-            item.setDurability(mapped);
-        }
+        if (vanillaMax <= 0) return;
+
+        double percentage = (double) current / (double) max;
+        short mapped = (short) (vanillaMax - (int) (vanillaMax * percentage));
+        item.setDurability(mapped);
+    }
+
+    public static boolean isModItem(ItemStack item) {
+        if (item == null) return false;
+        return item.getDurability() > 0 && item.getType().getMaxDurability() == 0;
     }
 
     public static String getDurabilityText(ItemStack item) {
@@ -222,7 +225,6 @@ public class CustomDurabilityManager {
     }
 
     public static void addDurabilityToLore(ItemStack item) {
-        if (!hasCustomDurability(item)) return;
     }
 
     public static void removeDurabilityFromLore(ItemStack item) {
@@ -243,6 +245,7 @@ public class CustomDurabilityManager {
 
     public static void updateDurabilityLore(ItemStack item) {
         if (!hasCustomDurability(item)) return;
+        if (isModItem(item)) return;
 
         int current = getCustomDurability(item);
         int max = getCustomMaxDurability(item);
