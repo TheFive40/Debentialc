@@ -1,48 +1,47 @@
 package org.debentialc.claims.managers;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.milkbowl.vault.economy.Economy;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.debentialc.Main;
 import org.debentialc.claims.models.Terrain;
 import org.debentialc.claims.storage.TerrainStorage;
 import org.debentialc.service.CC;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.bukkit.Bukkit.getServer;
+
 public class TerrainManager {
+
+    private static final int BUFFER_BLOCKS = 16;
 
     private static TerrainManager instance;
 
     private final Map<String, Terrain> terrains = new HashMap<String, Terrain>();
     private final TerrainStorage storage;
+    @Setter
+    @Getter
     private Economy economy;
 
     private TerrainManager() {
         storage = new TerrainStorage();
         terrains.putAll(storage.loadAll());
+        setupEconomy();
     }
 
     public static TerrainManager getInstance() {
         if (instance == null) instance = new TerrainManager();
         return instance;
-    }
-
-    public void setEconomy(Economy economy) {
-        this.economy = economy;
-    }
-
-    public Economy getEconomy() {
-        return economy;
     }
 
     public boolean createTerrain(String id, int chunks) {
@@ -60,7 +59,19 @@ public class TerrainManager {
         storage.saveTerrain(terrain);
         return true;
     }
+    private boolean setupEconomy() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
+            return false;
+        }
 
+        RegisteredServiceProvider<Economy> rsp =
+                getServer().getServicesManager().getRegistration(Economy.class);
+
+        if (rsp == null) return false;
+
+        economy = rsp.getProvider();
+        return economy != null;
+    }
     public Terrain getTerrain(String id) {
         return terrains.get(id);
     }
@@ -86,6 +97,31 @@ public class TerrainManager {
         return null;
     }
 
+    public String checkCollision(String excludeId, World world, int ox, int oz, int size) {
+        int ax1 = ox - BUFFER_BLOCKS;
+        int az1 = oz - BUFFER_BLOCKS;
+        int ax2 = ox + size + BUFFER_BLOCKS;
+        int az2 = oz + size + BUFFER_BLOCKS;
+
+        for (Terrain other : terrains.values()) {
+            if (!other.isCommitted()) continue;
+            if (excludeId != null && other.getId().equals(excludeId)) continue;
+            if (other.getOrigin() == null) continue;
+            if (!other.getOrigin().getWorld().getName().equals(world.getName())) continue;
+
+            int bx1 = other.getOrigin().getBlockX();
+            int bz1 = other.getOrigin().getBlockZ();
+            int bx2 = bx1 + other.getSizeInBlocks();
+            int bz2 = bz1 + other.getSizeInBlocks();
+
+            boolean overlapX = ax1 < bx2 && ax2 > bx1;
+            boolean overlapZ = az1 < bz2 && az2 > bz1;
+
+            if (overlapX && overlapZ) return other.getId();
+        }
+        return null;
+    }
+
     public boolean commitTerrain(String id, Player player) {
         Terrain terrain = terrains.get(id);
         if (terrain == null) return false;
@@ -97,6 +133,9 @@ public class TerrainManager {
         int y = center.getBlockY();
         World world = center.getWorld();
 
+        String collision = checkCollision(id, world, chunkX, chunkZ, terrain.getSizeInBlocks());
+        if (collision != null) return false;
+
         Location origin = new Location(world, chunkX, y, chunkZ);
         terrain.setOrigin(origin);
         terrain.setCommitted(true);
@@ -106,6 +145,13 @@ public class TerrainManager {
 
         storage.saveTerrain(terrain);
         return true;
+    }
+
+    public String getCollisionId(String id, Player player, Terrain terrain) {
+        Location center = player.getLocation();
+        int chunkX = center.getChunk().getX() * 16;
+        int chunkZ = center.getChunk().getZ() * 16;
+        return checkCollision(id, center.getWorld(), chunkX, chunkZ, terrain.getSizeInBlocks());
     }
 
     private void buildBorders(Terrain terrain, World world, int ox, int oz, int y) {
@@ -120,6 +166,32 @@ public class TerrainManager {
         for (int z = oz; z < oz + size + 1; z++) {
             setBlock(world, ox, y, z, slabId, slabData);
             setBlock(world, ox + size, y, z, slabId, slabData);
+        }
+    }
+
+    private void removeBorders(Terrain terrain) {
+        if (terrain.getOrigin() == null) return;
+        World world = terrain.getOrigin().getWorld();
+        int ox = terrain.getOrigin().getBlockX();
+        int oz = terrain.getOrigin().getBlockZ();
+        int y = terrain.getOrigin().getBlockY();
+        int size = terrain.getSizeInBlocks();
+
+        for (int x = ox; x < ox + size; x++) {
+            clearBlock(world, x, y, oz);
+            clearBlock(world, x, y, oz + size);
+        }
+        for (int z = oz; z < oz + size + 1; z++) {
+            clearBlock(world, ox, y, z);
+            clearBlock(world, ox + size, y, z);
+        }
+    }
+
+    private void clearBlock(World world, int x, int y, int z) {
+        Block block = world.getBlockAt(x, y, z);
+        int id = block.getTypeId();
+        if (id == 44 || id == 63 || id == 68) {
+            block.setTypeId(0, false);
         }
     }
 
@@ -161,6 +233,38 @@ public class TerrainManager {
         } else {
             sign.setLine(2, CC.translate("&aEn venta"));
             sign.setLine(3, CC.translate("&7$" + (int) terrain.getPrice()));
+        }
+    }
+
+    public boolean deleteTerrain(String id) {
+        Terrain terrain = terrains.remove(id);
+        if (terrain == null) return false;
+        if (terrain.isCommitted()) {
+            removeBorders(terrain);
+            removeSign(terrain);
+        }
+        storage.deleteTerrain(id);
+        return true;
+    }
+
+    public boolean dissolveTerrain(String id) {
+        Terrain terrain = terrains.get(id);
+        if (terrain == null) return false;
+        if (!terrain.hasOwner()) return false;
+        terrain.setOwner(null);
+        terrain.setOwnerName(null);
+        terrain.getMembers().clear();
+        storage.saveTerrain(terrain);
+        updateSign(terrain);
+        return true;
+    }
+
+    private void removeSign(Terrain terrain) {
+        if (terrain.getSignLocation() == null) return;
+        Block block = terrain.getSignLocation().getBlock();
+        int id = block.getTypeId();
+        if (id == 63 || id == 68) {
+            block.setTypeId(0, false);
         }
     }
 
@@ -228,5 +332,9 @@ public class TerrainManager {
 
     public Map<String, Terrain> getAll() {
         return terrains;
+    }
+
+    public int getBuffer() {
+        return BUFFER_BLOCKS;
     }
 }

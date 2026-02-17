@@ -16,4 +16,6 @@ public class ClaimsPermissions {
     public static final String TERRAIN_KICK = COMMAND + "terrain.kick";
     public static final String TERRAIN_TRANSFER = COMMAND + "terrain.transfer";
     public static final String TERRAIN_SELL = COMMAND + "terrain.sell";
+    public static final String TERRAIN_DELETE = COMMAND + "terrain.delete";
+    public static final String TERRAIN_DISSOLVE = COMMAND + "terrain.dissolve";
 }

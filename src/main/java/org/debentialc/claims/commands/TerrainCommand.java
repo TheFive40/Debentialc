@@ -56,6 +56,12 @@ public class TerrainCommand extends BaseCommand {
             case "list":
                 handleList(player);
                 break;
+            case "delete":
+                handleDelete(player, command);
+                break;
+            case "dissolve":
+                handleDissolve(player, command);
+                break;
             default:
                 sendHelp(player);
                 break;
@@ -140,6 +146,14 @@ public class TerrainCommand extends BaseCommand {
             return;
         }
 
+        String collision = TerrainManager.getInstance().getCollisionId(id, player, terrain);
+        if (collision != null) {
+            int buffer = TerrainManager.getInstance().getBuffer();
+            player.sendMessage(CC.translate("&cNo se puede generar el terreno aquí."));
+            player.sendMessage(CC.translate("&7Se choca con el terreno &f" + collision + " &7o está a menos de &f" + buffer + " &7bloques de distancia."));
+            return;
+        }
+
         boolean ok = TerrainManager.getInstance().commitTerrain(id, player);
         if (!ok) {
             player.sendMessage(CC.translate("&7No se pudo generar el terreno."));
@@ -160,7 +174,7 @@ public class TerrainCommand extends BaseCommand {
             return;
         }
 
-        player.sendMessage(CC.translate("&8&m                    "));
+        player.sendMessage(CC.translate("&8&m                                    "));
         player.sendMessage(CC.translate("  &7Terreno &f" + terrain.getId()));
         player.sendMessage(CC.translate("  &7Tamaño: &f" + terrain.getChunks() + " chunk(s) &7(" + terrain.getSizeInBlocks() + "x" + terrain.getSizeInBlocks() + ")"));
         player.sendMessage(CC.translate("  &7Precio: &f$" + (int) terrain.getPrice()));
@@ -172,7 +186,7 @@ public class TerrainCommand extends BaseCommand {
         if (!terrain.getMembers().isEmpty()) {
             player.sendMessage(CC.translate("  &7Miembros: &f" + terrain.getMembers().size()));
         }
-        player.sendMessage(CC.translate("&8&m                    "));
+        player.sendMessage(CC.translate("&8&m                                    "));
     }
 
     private void handleMember(Player player, CommandArgs command) {
@@ -333,20 +347,73 @@ public class TerrainCommand extends BaseCommand {
             player.sendMessage(CC.translate("&7No hay terrenos registrados."));
             return;
         }
-        player.sendMessage(CC.translate("&8&m                    "));
+        player.sendMessage(CC.translate("&8&m                                   "));
         player.sendMessage(CC.translate("  &7Terrenos registrados:"));
         for (Terrain terrain : all.values()) {
             String state = terrain.hasOwner() ? "&f" + terrain.getOwnerName() : "&aEn venta";
             String committed = terrain.isCommitted() ? "" : " &8(sin generar)";
             player.sendMessage(CC.translate("  &7- &f" + terrain.getId() + " &8| " + state + committed));
         }
-        player.sendMessage(CC.translate("&8&m                    "));
+        player.sendMessage(CC.translate("&8&m                                   "));
+    }
+
+    private void handleDelete(Player player, CommandArgs command) {
+        if (!player.hasPermission(ClaimsPermissions.TERRAIN_DELETE)) {
+            player.sendMessage(CC.translate("&cNo tienes permiso. Solo administradores pueden eliminar terrenos."));
+            return;
+        }
+        if (command.length() < 2) {
+            player.sendMessage(CC.translate("&7Uso: &f/terrain delete <id>"));
+            return;
+        }
+        String id = command.getArgs(1);
+        Terrain terrain = TerrainManager.getInstance().getTerrain(id);
+        if (terrain == null) {
+            player.sendMessage(CC.translate("&7No se encontró el terreno &f" + id + "&7."));
+            return;
+        }
+
+        boolean deleted = TerrainManager.getInstance().deleteTerrain(id);
+        if (!deleted) {
+            player.sendMessage(CC.translate("&7No se pudo eliminar el terreno &f" + id + "&7."));
+            return;
+        }
+        player.sendMessage(CC.translate("&7Terreno &f" + id + " &7eliminado. Los bordes fueron removidos del mundo."));
+    }
+
+    private void handleDissolve(Player player, CommandArgs command) {
+        if (!player.hasPermission(ClaimsPermissions.TERRAIN_DISSOLVE)) {
+            player.sendMessage(CC.translate("&cNo tienes permiso. Solo administradores pueden disolver terrenos."));
+            return;
+        }
+        if (command.length() < 2) {
+            player.sendMessage(CC.translate("&7Uso: &f/terrain dissolve <id>"));
+            return;
+        }
+        String id = command.getArgs(1);
+        Terrain terrain = TerrainManager.getInstance().getTerrain(id);
+        if (terrain == null) {
+            player.sendMessage(CC.translate("&7No se encontró el terreno &f" + id + "&7."));
+            return;
+        }
+        if (!terrain.hasOwner()) {
+            player.sendMessage(CC.translate("&7El terreno &f" + id + " &7ya está sin propietario."));
+            return;
+        }
+
+        String prevOwner = terrain.getOwnerName();
+        boolean dissolved = TerrainManager.getInstance().dissolveTerrain(id);
+        if (!dissolved) {
+            player.sendMessage(CC.translate("&7No se pudo disolver el terreno &f" + id + "&7."));
+            return;
+        }
+        player.sendMessage(CC.translate("&7Terreno &f" + id + " &7disuelto. El propietario &f" + prevOwner + " &7fue removido. El terreno vuelve a estar en venta."));
     }
 
     private void sendHelp(Player player) {
-        player.sendMessage(CC.translate("&8&m                    "));
+        player.sendMessage(CC.translate("&8&m                                   "));
         player.sendMessage(CC.translate("  &7Comandos de Terreno"));
-        player.sendMessage(CC.translate("&8&m                    "));
+        player.sendMessage(CC.translate("&8&m                                   "));
         player.sendMessage(CC.translate("  &f/terrain create <id> <chunks>"));
         player.sendMessage(CC.translate("  &f/terrain price <id> <precio>"));
         player.sendMessage(CC.translate("  &f/terrain commit <id>"));
@@ -356,6 +423,8 @@ public class TerrainCommand extends BaseCommand {
         player.sendMessage(CC.translate("  &f/terrain transfer <id> <jugador>"));
         player.sendMessage(CC.translate("  &f/terrain sell <id>"));
         player.sendMessage(CC.translate("  &f/terrain list"));
-        player.sendMessage(CC.translate("&8&m                    "));
+        player.sendMessage(CC.translate("  &f/terrain delete <id> &8(Admin)"));
+        player.sendMessage(CC.translate("  &f/terrain dissolve <id> &8(Admin)"));
+        player.sendMessage(CC.translate("&8&m                                   "));
     }
 }

@@ -15,12 +15,12 @@ public class ArmorCreationManager {
     public static void startArmorCreation(Player player) {
         playersCreatingArmor.put(player.getUniqueId(), true);
         player.sendMessage("");
-        player.sendMessage(CC.translate(" &b&l┌─────────────────────────────────────"));
-        player.sendMessage(CC.translate(" &b&l  &f&lCREAR ARMADURA CUSTOM          &b&l"));
-        player.sendMessage(CC.translate(" &b&l"));
-        player.sendMessage(CC.translate(" &b&l &7Escribe el ID de la armadura      &b&l"));
-        player.sendMessage(CC.translate(" &b&l &c(Escribe 'cancelar' para abortar) &b&l"));
-        player.sendMessage(CC.translate(" &b&l└─────────────────────────────────────"));
+        player.sendMessage(CC.translate(" &b────────────────────────────────"));
+        player.sendMessage(CC.translate(" &b  &f&lCREAR ARMADURA CUSTOM          &b&l"));
+        player.sendMessage(CC.translate(" &b"));
+        player.sendMessage(CC.translate(" &b &7Escribe el ID de la armadura      &b&l"));
+        player.sendMessage(CC.translate(" &b &c(Escribe 'cancelar' para abortar) &b&l"));
+        player.sendMessage(CC.translate(" &b────────────────────────────────"));
         player.sendMessage("");
     }
 
