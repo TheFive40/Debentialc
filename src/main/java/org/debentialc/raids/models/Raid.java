@@ -81,7 +81,7 @@ public class Raid {
     }
 
     public boolean isConfigured() {
-        return arenaSpawnPoint != null &&
+        return
                 playerSpawnPoint != null &&
                 !waves.isEmpty();
     }

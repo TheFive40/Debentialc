@@ -1,6 +1,7 @@
 package org.debentialc.raids.events;
 
 import noppes.npcs.api.event.INpcEvent;
+import noppes.npcs.scripted.NpcAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -25,6 +26,8 @@ public class NPCDeathListener implements Listener {
 
     public void onNpcDie(INpcEvent.DiedEvent event) {
         try {
+
+
             int entityId = event.getNpc().getEntityId();
             String waveId = NPCSpawnManager.getWaveIdForNpc(entityId);
 
@@ -353,7 +356,7 @@ public class NPCDeathListener implements Listener {
                         player.sendMessage("");
                         player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
                         player.sendMessage("§6§l  ✦ RECOMPENSA ✦");
-                        player.sendMessage("§f  /" + rewardName);
+                        player.sendMessage("§f" + rewardName);
                         player.sendMessage("§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
                         player.sendMessage("");
                     }
@@ -375,7 +378,7 @@ public class NPCDeathListener implements Listener {
             return "§b✓ §fExperiencia otorgada";
         }
 
-        return "§e✓ §f" + command;
+        return "§e✓ §f/" + command;
     }
 
     private List<Player> getActivePlayers(RaidSession session) {

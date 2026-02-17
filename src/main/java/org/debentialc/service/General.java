@@ -1,7 +1,7 @@
 package org.debentialc.service;
 
 import JinRyuu.JRMCore.JRMCoreH;
-import net.minecraft.entity.INpc;
+import kamkeel.npcdbc.constants.DBCRace;
 import net.minecraft.entity.player.EntityPlayerMP;
 import noppes.npcs.api.IWorld;
 import noppes.npcs.api.entity.ICustomNpc;
@@ -44,9 +44,54 @@ public class General {
         STATS_MAP.put("MND", MND2);
         STATS_MAP.put("SPI", SPI2);
     }
-
+    public static String getRankColorCode ( Player player ) {
+        int level = getLVL ( player );
+        if (level >= 300 && level <= 1000) {
+            return "&8[&fF&8]";
+        } else if (level >= 1001 && level <= 3000) {
+            return "&8[&fE&8]";
+        } else if (level >= 3001 && level <= 6000) {
+            return "&8[&fD&8]";
+        } else if (level >= 6001 && level <= 10000) {
+            return "&8[&2C&8]";
+        } else if (level >= 10001 && level <= 14000) {
+            return "&8[&2B&8]";
+        } else if (level >= 14001 && level <= 18000) {
+            return "&8[&aA&8]";
+        } else if (level >= 18001 && level <= 28000) {
+            return "&8[&aA&c+&8]";
+        } else if (level >= 28001 && level <= 38000) {
+            return "&8[&5S&8]";
+        } else if (level >= 38001 && level <= 50000) {
+            return "&8[&5S&c+&8]";
+        } else if (level >= 50001 && level <= 70000) {
+            return "&8[&cZ&8]";
+        } else if (level >= 70001) {
+            return "&8[&cZ&4+&8]";
+        } else {
+            return "&8[?]";
+        }
+    }
     public static IDBCPlayer getDBCPlayer(String name) {
         return NpcAPI.Instance().getPlayer(name).getDBCPlayer();
+    }
+    public static String getRace ( Player player ) {
+        IDBCPlayer dbcPlayer = NpcAPI.Instance ( ).getPlayer ( player.getName ( ) ).getDBCPlayer ( );
+        switch (dbcPlayer.getRace ( )) {
+            case DBCRace.HALFSAIYAN:
+                return "Semi-Saiyan";
+            case DBCRace.ARCOSIAN:
+                return "Arcosiano";
+            case DBCRace.MAJIN:
+                return "Majin";
+            case DBCRace.HUMAN:
+                return "Humano";
+            case DBCRace.SAIYAN:
+                return "Saiyan";
+            case DBCRace.NAMEKIAN:
+                return "Namekiano";
+        }
+        return "N/A";
     }
 
     public static int getSTAT(String stat, Player entity) {

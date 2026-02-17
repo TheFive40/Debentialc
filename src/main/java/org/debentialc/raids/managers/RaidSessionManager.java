@@ -101,12 +101,10 @@ public class RaidSessionManager {
         System.out.println("[Raids] Oleada completada: " + session.getSessionId() + " - Wave " +
                 (session.getCurrentWaveIndex() + 1));
 
-        // Ejecutar recompensas
         if (session.getCurrentWave().hasRewards()) {
             executeWaveRewards(session);
         }
 
-        // Verificar si hay siguiente oleada
         if (session.hasNextWave()) {
             session.moveToNextWave();
             session.getCurrentWave().setStatus(WaveStatus.ACTIVE);
@@ -115,7 +113,6 @@ public class RaidSessionManager {
             System.out.println("[Raids] Siguiente oleada iniciada: Wave " +
                     (session.getCurrentWaveIndex() + 1));
         } else {
-            // Raid completada
             completeRaid(session);
         }
     }
@@ -154,16 +151,11 @@ public class RaidSessionManager {
         System.out.println("[Raids] Duración: " + session.getDurationSeconds() + "s");
         System.out.println("[Raids] Jugadores activos: " + session.getActivePlayers().size());
 
-        // Aplicar cooldown a todos los jugadores
         for (UUID playerId : session.getActivePlayers()) {
             CooldownManager.setCooldown(playerId, session.getRaid().getRaidId(),
                     session.getRaid().getCooldownSeconds());
         }
 
-        // Generar efectos de victoria
-        // TODO: Generar efectos visuales
-
-        // Remover sesión después de un tiempo
         scheduleSessionRemoval(session.getSessionId());
     }
 
@@ -178,13 +170,7 @@ public class RaidSessionManager {
         session.setStatus(RaidStatus.FAILED);
         session.setEndTime(System.currentTimeMillis());
 
-        System.out.println("[Raids] Raid fallida: " + session.getSessionId());
-
-        // Generar efectos de derrota
-        // TODO: Generar efectos visuales
-
-        // Remover sesión
-        removeSession(session.getSessionId());
+        System.out.println("[Raids] Raid fallida: " + session.getSessionId());        removeSession(session.getSessionId());
     }
 
     /**
@@ -218,7 +204,6 @@ public class RaidSessionManager {
         playerToSession.remove(playerId);
         System.out.println("[Raids] Jugador salió de la raid: " + playerId);
 
-        // Verificar si la raid falló
         if (session.isRaidFailed()) {
             failRaid(session);
         }

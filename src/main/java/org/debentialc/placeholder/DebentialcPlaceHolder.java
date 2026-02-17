@@ -5,10 +5,10 @@ import noppes.npcs.api.entity.IDBCPlayer;
 import noppes.npcs.scripted.NpcAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.debentialc.boosters.core.BoosterSettings;
 import org.debentialc.boosters.managers.GlobalBoosterManager;
 import org.debentialc.boosters.managers.PersonalBoosterManager;
 import org.debentialc.boosters.models.PersonalBooster;
-import org.debentialc.boosters.core.BoosterSettings;
 import org.debentialc.service.General;
 
 public class DebentialcPlaceHolder extends PlaceholderExpansion {
@@ -39,7 +39,7 @@ public class DebentialcPlaceHolder extends PlaceholderExpansion {
     }
 
     @Override
-    public String onPlaceholderRequest(Player player,  String identifier) {
+    public String onPlaceholderRequest(Player player, String identifier) {
 
         switch (identifier.toLowerCase()) {
 
@@ -150,7 +150,10 @@ public class DebentialcPlaceHolder extends PlaceholderExpansion {
                 boolean anyActive = GlobalBoosterManager.isBoosterActive() ||
                         PersonalBoosterManager.getActiveBooster(player.getUniqueId()) != null;
                 return anyActive ? "Activo" : "Inactivo";
-
+            case "race":
+                return General.getRace(player);
+            case "category":
+                return General.getRankColorCode(player);
             default:
                 return null;
         }
