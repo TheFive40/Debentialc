@@ -3,6 +3,8 @@ package org.debentialc.claims;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.debentialc.Main;
+import org.debentialc.claims.events.LeaseProtectionListener;
+import org.debentialc.claims.managers.LeaseManager;
 import org.debentialc.claims.managers.TerrainManager;
 
 public class ClaimsModule {
@@ -10,7 +12,10 @@ public class ClaimsModule {
     public static void initialize(Main plugin) {
         setupEconomy(plugin);
         TerrainManager.getInstance();
+        LeaseManager.getInstance();
+        plugin.getServer().getPluginManager().registerEvents(new LeaseProtectionListener(), plugin);
         plugin.getLogger().info("[Claims] Sistema de terrenos inicializado.");
+        plugin.getLogger().info("[Claims] Sistema de arrendamiento inicializado.");
     }
 
     private static void setupEconomy(Main plugin) {

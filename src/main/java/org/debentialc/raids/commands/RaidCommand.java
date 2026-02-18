@@ -28,7 +28,6 @@ public class RaidCommand extends BaseCommand {
             return;
         }
 
-        // Si no hay argumentos, abre el menú principal visual
         if (args.length() == 0) {
             RaidMainMenu.createMainMenu().open(player);
             return;
