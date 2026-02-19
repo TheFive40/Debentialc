@@ -4,6 +4,7 @@ import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.debentialc.Main;
 import org.debentialc.claims.events.LeaseProtectionListener;
+import org.debentialc.claims.events.LeaseSelectionListener;
 import org.debentialc.claims.managers.LeaseManager;
 import org.debentialc.claims.managers.TerrainManager;
 
@@ -14,13 +15,14 @@ public class ClaimsModule {
         TerrainManager.getInstance();
         LeaseManager.getInstance();
         plugin.getServer().getPluginManager().registerEvents(new LeaseProtectionListener(), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new LeaseSelectionListener(), plugin);
         plugin.getLogger().info("[Claims] Sistema de terrenos inicializado.");
         plugin.getLogger().info("[Claims] Sistema de arrendamiento inicializado.");
     }
 
     private static void setupEconomy(Main plugin) {
         if (plugin.getServer().getPluginManager().getPlugin("Vault") == null) {
-            plugin.getLogger().warning("[Claims] Vault no encontrado. El sistema de compra no estará disponible.");
+            plugin.getLogger().warning("[Claims] Vault no encontrado.");
             return;
         }
         RegisteredServiceProvider<Economy> rsp = plugin.getServer().getServicesManager().getRegistration(Economy.class);

@@ -20,30 +20,35 @@ public class LeaseStorage {
         folder.mkdirs();
     }
 
-    public void saveContract(LeaseContract contract) {
-        File file = new File(folder, contract.getContractId() + ".dat");
+    public void saveContract(LeaseContract c) {
+        File file = new File(folder, c.getContractId() + ".dat");
         try {
-            Properties props = new Properties();
-            props.setProperty("contractId", contract.getContractId());
-            props.setProperty("parentTerrainId", contract.getParentTerrainId());
-            props.setProperty("subTerrainId", contract.getSubTerrainId() != null ? contract.getSubTerrainId() : "");
-            props.setProperty("ownerId", contract.getOwnerId().toString());
-            props.setProperty("ownerName", contract.getOwnerName());
-            props.setProperty("tenantId", contract.getTenantId().toString());
-            props.setProperty("tenantName", contract.getTenantName());
-            props.setProperty("chunks", String.valueOf(contract.getChunks()));
-            props.setProperty("pricePerCycle", String.valueOf(contract.getPricePerCycle()));
-            props.setProperty("cycleDays", String.valueOf(contract.getCycleDays()));
-            props.setProperty("status", contract.getStatus().name());
-            props.setProperty("origin", contract.getOrigin().name());
-            props.setProperty("createdAt", String.valueOf(contract.getCreatedAt()));
-            props.setProperty("activatedAt", String.valueOf(contract.getActivatedAt()));
-            props.setProperty("lastPaymentAt", String.valueOf(contract.getLastPaymentAt()));
-            props.setProperty("nextPaymentAt", String.valueOf(contract.getNextPaymentAt()));
-            props.setProperty("gracePeriodEndsAt", String.valueOf(contract.getGracePeriodEndsAt()));
-
+            Properties p = new Properties();
+            p.setProperty("contractId", c.getContractId());
+            p.setProperty("parentTerrainId", c.getParentTerrainId());
+            p.setProperty("subTerrainId", c.getSubTerrainId() != null ? c.getSubTerrainId() : "");
+            p.setProperty("ownerId", c.getOwnerId().toString());
+            p.setProperty("ownerName", c.getOwnerName());
+            p.setProperty("tenantId", c.getTenantId().toString());
+            p.setProperty("tenantName", c.getTenantName());
+            p.setProperty("chunks", String.valueOf(c.getChunks()));
+            p.setProperty("pricePerCycle", String.valueOf(c.getPricePerCycle()));
+            p.setProperty("cycleDays", String.valueOf(c.getCycleDays()));
+            p.setProperty("status", c.getStatus().name());
+            p.setProperty("origin", c.getOrigin().name());
+            p.setProperty("createdAt", String.valueOf(c.getCreatedAt()));
+            p.setProperty("activatedAt", String.valueOf(c.getActivatedAt()));
+            p.setProperty("lastPaymentAt", String.valueOf(c.getLastPaymentAt()));
+            p.setProperty("nextPaymentAt", String.valueOf(c.getNextPaymentAt()));
+            p.setProperty("gracePeriodEndsAt", String.valueOf(c.getGracePeriodEndsAt()));
+            p.setProperty("hasPendingMove", String.valueOf(c.isHasPendingMove()));
+            p.setProperty("pendingMoveX1", String.valueOf(c.getPendingMoveX1()));
+            p.setProperty("pendingMoveZ1", String.valueOf(c.getPendingMoveZ1()));
+            p.setProperty("pendingMoveX2", String.valueOf(c.getPendingMoveX2()));
+            p.setProperty("pendingMoveZ2", String.valueOf(c.getPendingMoveZ2()));
+            p.setProperty("pendingMoveWorld", c.getPendingMoveWorld() != null ? c.getPendingMoveWorld() : "");
             FileOutputStream fos = new FileOutputStream(file);
-            props.store(fos, null);
+            p.store(fos, null);
             fos.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -51,56 +56,53 @@ public class LeaseStorage {
     }
 
     public List<LeaseContract> loadAll() {
-        List<LeaseContract> contracts = new ArrayList<LeaseContract>();
+        List<LeaseContract> list = new ArrayList<LeaseContract>();
         File[] files = folder.listFiles();
-        if (files == null) return contracts;
-
+        if (files == null) return list;
         for (File file : files) {
             if (!file.getName().endsWith(".dat")) continue;
             try {
-                Properties props = new Properties();
+                Properties p = new Properties();
                 FileInputStream fis = new FileInputStream(file);
-                props.load(fis);
+                p.load(fis);
                 fis.close();
 
-                UUID ownerId = UUID.fromString(props.getProperty("ownerId"));
-                String ownerName = props.getProperty("ownerName");
-                UUID tenantId = UUID.fromString(props.getProperty("tenantId"));
-                String tenantName = props.getProperty("tenantName");
-                int chunks = Integer.parseInt(props.getProperty("chunks", "1"));
-                double pricePerCycle = Double.parseDouble(props.getProperty("pricePerCycle", "0"));
-                int cycleDays = Integer.parseInt(props.getProperty("cycleDays", "3"));
-                LeaseContract.ContractOrigin origin = LeaseContract.ContractOrigin.valueOf(props.getProperty("origin", "OWNER_OFFER"));
-
-                LeaseContract contract = new LeaseContract(
-                        props.getProperty("contractId"),
-                        props.getProperty("parentTerrainId"),
-                        ownerId, ownerName, tenantId, tenantName,
-                        chunks, pricePerCycle, cycleDays, origin
+                LeaseContract c = new LeaseContract(
+                        p.getProperty("contractId"),
+                        p.getProperty("parentTerrainId"),
+                        UUID.fromString(p.getProperty("ownerId")),
+                        p.getProperty("ownerName"),
+                        UUID.fromString(p.getProperty("tenantId")),
+                        p.getProperty("tenantName"),
+                        Integer.parseInt(p.getProperty("chunks", "1")),
+                        Double.parseDouble(p.getProperty("pricePerCycle", "0")),
+                        Integer.parseInt(p.getProperty("cycleDays", "3")),
+                        LeaseContract.ContractOrigin.valueOf(p.getProperty("origin", "OWNER_OFFER"))
                 );
-
-                String subTerrainId = props.getProperty("subTerrainId", "");
-                if (!subTerrainId.isEmpty()) {
-                    contract.setSubTerrainId(subTerrainId);
-                }
-
-                contract.setStatus(LeaseContract.ContractStatus.valueOf(props.getProperty("status", "PENDING_TENANT")));
-                contract.setCreatedAt(Long.parseLong(props.getProperty("createdAt", "0")));
-                contract.setActivatedAt(Long.parseLong(props.getProperty("activatedAt", "0")));
-                contract.setLastPaymentAt(Long.parseLong(props.getProperty("lastPaymentAt", "0")));
-                contract.setNextPaymentAt(Long.parseLong(props.getProperty("nextPaymentAt", "0")));
-                contract.setGracePeriodEndsAt(Long.parseLong(props.getProperty("gracePeriodEndsAt", "0")));
-
-                contracts.add(contract);
+                String sub = p.getProperty("subTerrainId", "");
+                if (!sub.isEmpty()) c.setSubTerrainId(sub);
+                c.setStatus(LeaseContract.ContractStatus.valueOf(p.getProperty("status", "PENDING_TENANT")));
+                c.setCreatedAt(Long.parseLong(p.getProperty("createdAt", "0")));
+                c.setActivatedAt(Long.parseLong(p.getProperty("activatedAt", "0")));
+                c.setLastPaymentAt(Long.parseLong(p.getProperty("lastPaymentAt", "0")));
+                c.setNextPaymentAt(Long.parseLong(p.getProperty("nextPaymentAt", "0")));
+                c.setGracePeriodEndsAt(Long.parseLong(p.getProperty("gracePeriodEndsAt", "0")));
+                c.setHasPendingMove(Boolean.parseBoolean(p.getProperty("hasPendingMove", "false")));
+                c.setPendingMoveX1(Integer.parseInt(p.getProperty("pendingMoveX1", "0")));
+                c.setPendingMoveZ1(Integer.parseInt(p.getProperty("pendingMoveZ1", "0")));
+                c.setPendingMoveX2(Integer.parseInt(p.getProperty("pendingMoveX2", "0")));
+                c.setPendingMoveZ2(Integer.parseInt(p.getProperty("pendingMoveZ2", "0")));
+                c.setPendingMoveWorld(p.getProperty("pendingMoveWorld", ""));
+                list.add(c);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        return contracts;
+        return list;
     }
 
     public void deleteContract(String contractId) {
-        File file = new File(folder, contractId + ".dat");
-        if (file.exists()) file.delete();
+        File f = new File(folder, contractId + ".dat");
+        if (f.exists()) f.delete();
     }
 }

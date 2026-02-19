@@ -28,6 +28,7 @@ public class LeaseManager {
 
     private static final int RED_WOOL_ID = 35;
     private static final byte RED_WOOL_DATA = 14;
+    public static final int PARENT_BORDER_MARGIN = 2;
 
     private static LeaseManager instance;
 
@@ -60,48 +61,26 @@ public class LeaseManager {
     private void processCycles() {
         List<LeaseContract> toProcess = new ArrayList<LeaseContract>(contracts.values());
         for (LeaseContract contract : toProcess) {
-            if (contract.getStatus() == LeaseContract.ContractStatus.ACTIVE) {
-                if (contract.isPaymentDue()) {
-                    processPayment(contract);
-                }
-            } else if (contract.getStatus() == LeaseContract.ContractStatus.GRACE_PERIOD) {
-                if (contract.isGraceExpired()) {
-                    evictTenant(contract);
-                }
-            }
+            if (contract.getStatus() == LeaseContract.ContractStatus.ACTIVE && contract.isPaymentDue()) processPayment(contract);
+            else if (contract.getStatus() == LeaseContract.ContractStatus.GRACE_PERIOD && contract.isGraceExpired()) evictTenant(contract);
         }
     }
 
     private void processPayment(LeaseContract contract) {
         Economy economy = TerrainManager.getInstance().getEconomy();
         if (economy == null) return;
-
         if (economy.has(contract.getTenantName(), contract.getPricePerCycle())) {
             economy.withdrawPlayer(contract.getTenantName(), contract.getPricePerCycle());
             economy.depositPlayer(contract.getOwnerName(), contract.getPricePerCycle());
             contract.renewPayment();
             storage.saveContract(contract);
-
-            Player tenant = Bukkit.getPlayerExact(contract.getTenantName());
-            if (tenant != null) {
-                tenant.sendMessage(CC.translate("&7[Contrato] Pago de &f$" + (int) contract.getPricePerCycle() + " &7debitado por el arrendamiento &f" + contract.getSubTerrainId() + "&7."));
-            }
-            Player owner = Bukkit.getPlayerExact(contract.getOwnerName());
-            if (owner != null) {
-                owner.sendMessage(CC.translate("&7[Contrato] Recibiste &f$" + (int) contract.getPricePerCycle() + " &7de &f" + contract.getTenantName() + " &7por arrendamiento."));
-            }
+            notify(contract.getTenantName(), "&7[Contrato] Pago de &f$" + (int) contract.getPricePerCycle() + " &7debitado — &f" + contract.getSubTerrainId() + "&7.");
+            notify(contract.getOwnerName(), "&7[Contrato] Recibiste &f$" + (int) contract.getPricePerCycle() + " &7de &f" + contract.getTenantName() + "&7.");
         } else {
             contract.startGracePeriod();
             storage.saveContract(contract);
-
-            Player tenant = Bukkit.getPlayerExact(contract.getTenantName());
-            if (tenant != null) {
-                tenant.sendMessage(CC.translate("&c[Contrato] Sin fondos para el pago. Tienes &f" + GRACE_PERIOD_DAYS + " días &cpara pagar o abandonar el terreno."));
-            }
-            Player owner = Bukkit.getPlayerExact(contract.getOwnerName());
-            if (owner != null) {
-                owner.sendMessage(CC.translate("&c[Contrato] &f" + contract.getTenantName() + " &cno pudo pagar. Período de gracia iniciado."));
-            }
+            notify(contract.getTenantName(), "&c[Contrato] Sin fondos. Tienes &f" + GRACE_PERIOD_DAYS + " días &cpara pagar o desalojar.");
+            notify(contract.getOwnerName(), "&c[Contrato] &f" + contract.getTenantName() + " &cno pudo pagar. Período de gracia iniciado.");
         }
     }
 
@@ -112,23 +91,29 @@ public class LeaseManager {
         }
         contract.setStatus(LeaseContract.ContractStatus.EXPIRED);
         storage.saveContract(contract);
-
-        Player tenant = Bukkit.getPlayerExact(contract.getTenantName());
-        if (tenant != null) {
-            tenant.sendMessage(CC.translate("&c[Contrato] Período de gracia expirado. Desalojado de &f" + contract.getSubTerrainId() + "&c."));
-        }
-        Player owner = Bukkit.getPlayerExact(contract.getOwnerName());
-        if (owner != null) {
-            owner.sendMessage(CC.translate("&7[Contrato] Inquilino &f" + contract.getTenantName() + " &7desalojado por falta de pago."));
-        }
+        notify(contract.getTenantName(), "&c[Contrato] Período de gracia expirado. Desalojado de &f" + contract.getSubTerrainId() + "&c.");
+        notify(contract.getOwnerName(), "&7[Contrato] &f" + contract.getTenantName() + " &7fue desalojado por falta de pago.");
     }
 
-    public String generateContractId() {
-        return "LEASE_" + System.currentTimeMillis();
+    private void notify(String playerName, String msg) {
+        Player p = Bukkit.getPlayerExact(playerName);
+        if (p != null) p.sendMessage(CC.translate(msg));
+    }
+
+    public String generateContractId(String tenantName, String parentTerrainId) {
+        String base = "LEASE_" + tenantName.toUpperCase() + "_" + parentTerrainId.toUpperCase();
+        if (!contracts.containsKey(base)) return base;
+        int counter = 2;
+        while (contracts.containsKey(base + "_" + counter)) counter++;
+        return base + "_" + counter;
     }
 
     public String generateSubTerrainId(String parentId, String tenantName) {
-        return parentId + "_" + tenantName.toUpperCase();
+        String base = parentId + "_" + tenantName.toUpperCase();
+        if (TerrainManager.getInstance().getTerrain(base) == null) return base;
+        int counter = 2;
+        while (TerrainManager.getInstance().getTerrain(base + "_" + counter) != null) counter++;
+        return base + "_" + counter;
     }
 
     public LeaseContract offerContract(Terrain parentTerrain, Player owner, UUID tenantId, String tenantName,
@@ -136,15 +121,10 @@ public class LeaseManager {
         if (parentTerrain.getChunks() < MIN_CHUNKS_TO_LEASE) return null;
         if (cycleDays < MIN_CYCLE_DAYS || cycleDays > MAX_CYCLE_DAYS) return null;
         if (chunks < 1 || chunks >= parentTerrain.getChunks()) return null;
-
-        String contractId = generateContractId();
-        LeaseContract contract = new LeaseContract(
-                contractId, parentTerrain.getId(),
-                owner.getUniqueId(), owner.getName(),
-                tenantId, tenantName,
-                chunks, price, cycleDays,
-                LeaseContract.ContractOrigin.OWNER_OFFER
-        );
+        String contractId = generateContractId(tenantName, parentTerrain.getId());
+        LeaseContract contract = new LeaseContract(contractId, parentTerrain.getId(),
+                owner.getUniqueId(), owner.getName(), tenantId, tenantName,
+                chunks, price, cycleDays, LeaseContract.ContractOrigin.OWNER_OFFER);
         contracts.put(contractId, contract);
         storage.saveContract(contract);
         return contract;
@@ -155,15 +135,10 @@ public class LeaseManager {
         if (parentTerrain.getChunks() < MIN_CHUNKS_TO_LEASE) return null;
         if (cycleDays < MIN_CYCLE_DAYS || cycleDays > MAX_CYCLE_DAYS) return null;
         if (chunks < 1 || chunks >= parentTerrain.getChunks()) return null;
-
-        String contractId = generateContractId();
-        LeaseContract contract = new LeaseContract(
-                contractId, parentTerrain.getId(),
-                ownerId, ownerName,
-                tenant.getUniqueId(), tenant.getName(),
-                chunks, price, cycleDays,
-                LeaseContract.ContractOrigin.TENANT_REQUEST
-        );
+        String contractId = generateContractId(tenant.getName(), parentTerrain.getId());
+        LeaseContract contract = new LeaseContract(contractId, parentTerrain.getId(),
+                ownerId, ownerName, tenant.getUniqueId(), tenant.getName(),
+                chunks, price, cycleDays, LeaseContract.ContractOrigin.TENANT_REQUEST);
         contracts.put(contractId, contract);
         storage.saveContract(contract);
         return contract;
@@ -174,14 +149,10 @@ public class LeaseManager {
         for (LeaseContract c : contracts.values()) {
             if (c.getStatus() == LeaseContract.ContractStatus.PENDING_TENANT
                     && c.getTenantId().equals(acceptorId)
-                    && c.getOwnerName().toLowerCase().equals(lower)) {
-                return c;
-            }
+                    && c.getOwnerName().toLowerCase().equals(lower)) return c;
             if (c.getStatus() == LeaseContract.ContractStatus.PENDING_OWNER
                     && c.getOwnerId().equals(acceptorId)
-                    && c.getTenantName().toLowerCase().equals(lower)) {
-                return c;
-            }
+                    && c.getTenantName().toLowerCase().equals(lower)) return c;
         }
         return null;
     }
@@ -191,9 +162,25 @@ public class LeaseManager {
         for (LeaseContract c : contracts.values()) {
             if (c.getStatus() == LeaseContract.ContractStatus.AWAITING_SUBTERRAIN
                     && c.getOwnerId().equals(ownerId)
-                    && c.getTenantName().toLowerCase().equals(lower)) {
-                return c;
-            }
+                    && c.getTenantName().toLowerCase().equals(lower)) return c;
+        }
+        return null;
+    }
+
+    public LeaseContract findActiveContractByTenantName(UUID ownerId, String tenantName) {
+        String lower = tenantName.toLowerCase();
+        for (LeaseContract c : contracts.values()) {
+            if (c.getOwnerId().equals(ownerId)
+                    && c.getTenantName().toLowerCase().equals(lower)
+                    && (c.getStatus() == LeaseContract.ContractStatus.ACTIVE
+                    || c.getStatus() == LeaseContract.ContractStatus.GRACE_PERIOD)) return c;
+        }
+        return null;
+    }
+
+    public LeaseContract findPendingMoveForTenant(UUID tenantId) {
+        for (LeaseContract c : contracts.values()) {
+            if (c.getTenantId().equals(tenantId) && c.isHasPendingMove()) return c;
         }
         return null;
     }
@@ -212,95 +199,73 @@ public class LeaseManager {
         return true;
     }
 
-    public boolean acceptContractById(String contractId, Player acceptor) {
-        return acceptContract(contracts.get(contractId), acceptor);
+    private boolean isInsideParentWithMargin(Terrain parent, int ox, int oz, int size) {
+        if (parent.getOrigin() == null) return false;
+        int px = parent.getOrigin().getBlockX();
+        int pz = parent.getOrigin().getBlockZ();
+        int pSize = parent.getSizeInBlocks();
+        int m = PARENT_BORDER_MARGIN;
+        return ox >= (px + m) && (ox + size) <= (px + pSize - m)
+                && oz >= (pz + m) && (oz + size) <= (pz + pSize - m);
     }
 
-    private String checkSubTerrainCollision(String excludeSubId, World world, int ox, int oz, int size) {
+    private boolean subCollidesWithOthers(String excludeSubId, World world, int ox, int oz, int size) {
         for (LeaseContract other : contracts.values()) {
             if (other.getSubTerrainId() == null) continue;
             if (excludeSubId != null && excludeSubId.equals(other.getSubTerrainId())) continue;
             if (other.getStatus() != LeaseContract.ContractStatus.ACTIVE
                     && other.getStatus() != LeaseContract.ContractStatus.GRACE_PERIOD) continue;
-
             Terrain sub = TerrainManager.getInstance().getTerrain(other.getSubTerrainId());
             if (sub == null || !sub.isCommitted() || sub.getOrigin() == null) continue;
             if (!sub.getOrigin().getWorld().getName().equals(world.getName())) continue;
-
             int bx1 = sub.getOrigin().getBlockX();
             int bz1 = sub.getOrigin().getBlockZ();
             int bx2 = bx1 + sub.getSizeInBlocks();
             int bz2 = bz1 + sub.getSizeInBlocks();
-
             boolean overlapX = ox < bx2 && (ox + size) > bx1;
             boolean overlapZ = oz < bz2 && (oz + size) > bz1;
+            if (overlapX && overlapZ) return true;
+        }
+        return false;
+    }
 
-            if (overlapX && overlapZ) return other.getSubTerrainId();
+    public String validateSelectionForAssign(LeaseContract contract, World world, int ox, int oz, int size) {
+        Terrain parent = TerrainManager.getInstance().getTerrain(contract.getParentTerrainId());
+        if (parent == null || !parent.isCommitted() || parent.getOrigin() == null)
+            return "El terreno padre &f" + contract.getParentTerrainId() + " &7no existe o no está generado.";
+        if (!isInsideParentWithMargin(parent, ox, oz, size))
+            return "La selección no está completamente dentro del terreno &f" + parent.getId() + " &7(respetando el margen de borde de &f" + PARENT_BORDER_MARGIN + " bloques&7).";
+        if (subCollidesWithOthers(null, world, ox, oz, size))
+            return "La selección se superpone con un sub-terreno ya existente.";
+        return null;
+    }
+
+    public String validateSelectionForMove(LeaseContract contract, World world, int ox, int oz, int size) {
+        Terrain parent = TerrainManager.getInstance().getTerrain(contract.getParentTerrainId());
+        if (parent == null || !parent.isCommitted() || parent.getOrigin() == null)
+            return "El terreno padre no existe.";
+        if (!isInsideParentWithMargin(parent, ox, oz, size))
+            return "La nueva posición no está dentro del terreno &f" + parent.getId() + " &7respetando los bordes.";
+        if (subCollidesWithOthers(contract.getSubTerrainId(), world, ox, oz, size))
+            return "La nueva posición se superpone con otro sub-terreno existente.";
+        Terrain currentSub = TerrainManager.getInstance().getTerrain(contract.getSubTerrainId());
+        if (currentSub != null && currentSub.getOrigin() != null) {
+            int curOx = currentSub.getOrigin().getBlockX();
+            int curOz = currentSub.getOrigin().getBlockZ();
+            if (curOx == ox && curOz == oz && currentSub.getOrigin().getWorld().getName().equals(world.getName()))
+                return "El sub-terreno ya está en esa posición.";
         }
         return null;
     }
 
-    private boolean isFullyInsideParent(Terrain parent, int ox, int oz, int size) {
-        if (parent.getOrigin() == null) return false;
-        int px = parent.getOrigin().getBlockX();
-        int pz = parent.getOrigin().getBlockZ();
-        int pSize = parent.getSizeInBlocks();
-        return ox >= px && (ox + size) <= (px + pSize)
-                && oz >= pz && (oz + size) <= (pz + pSize);
-    }
-
-    public String getAssignError(LeaseContract contract, Player owner) {
-        Terrain parentTerrain = TerrainManager.getInstance().getTerrain(contract.getParentTerrainId());
-        if (parentTerrain == null || !parentTerrain.isCommitted() || parentTerrain.getOrigin() == null) {
-            return "El terreno padre no existe o no está generado.";
-        }
-
-        Location center = owner.getLocation();
-        int chunkX = center.getChunk().getX() * 16;
-        int chunkZ = center.getChunk().getZ() * 16;
-        int subSize = contract.getChunks() * 16;
-
-        if (!isFullyInsideParent(parentTerrain, chunkX, chunkZ, subSize)) {
-            return "Debes estar dentro del terreno &f" + parentTerrain.getId()
-                    + " &7y que el sub-terreno (&f" + contract.getChunks() + " chunks&7) quepa íntegramente dentro de él.";
-        }
-
-        String collision = checkSubTerrainCollision(null, center.getWorld(), chunkX, chunkZ, subSize);
-        if (collision != null) {
-            return "Se superpone con el sub-terreno ya existente &f" + collision + "&7.";
-        }
-
-        return null;
-    }
-
-    public boolean assignSubTerrain(LeaseContract contract, Player owner) {
+    public boolean assignSubTerrainAtPos(LeaseContract contract, Player owner, World world, int ox, int oz, int y) {
         if (contract.getStatus() != LeaseContract.ContractStatus.AWAITING_SUBTERRAIN) return false;
         if (!contract.getOwnerId().equals(owner.getUniqueId()) && !owner.hasPermission(ClaimsPermissions.ADMIN_MANAGE)) return false;
 
-        Terrain parentTerrain = TerrainManager.getInstance().getTerrain(contract.getParentTerrainId());
-        if (parentTerrain == null || !parentTerrain.isCommitted() || parentTerrain.getOrigin() == null) return false;
-
-        Location center = owner.getLocation();
-        int chunkX = center.getChunk().getX() * 16;
-        int chunkZ = center.getChunk().getZ() * 16;
-        int y = center.getBlockY();
-        World world = center.getWorld();
-        int subSize = contract.getChunks() * 16;
-
-        if (!isFullyInsideParent(parentTerrain, chunkX, chunkZ, subSize)) return false;
-
-        String existingCollision = checkSubTerrainCollision(null, world, chunkX, chunkZ, subSize);
-        if (existingCollision != null) return false;
-
         String subId = generateSubTerrainId(contract.getParentTerrainId(), contract.getTenantName());
-        if (TerrainManager.getInstance().getTerrain(subId) != null) {
-            subId = subId + "_" + (System.currentTimeMillis() % 1000);
-        }
-
         Terrain subTerrain = new Terrain(subId, contract.getChunks());
         subTerrain.setPrice(contract.getPricePerCycle());
-        Location origin = new Location(world, chunkX, y, chunkZ);
-        subTerrain.setOrigin(origin);
+        subTerrain.setOrigin(new Location(world, ox, y, oz));
         subTerrain.setCommitted(true);
         subTerrain.setOwner(contract.getTenantId());
         subTerrain.setOwnerName(contract.getTenantName());
@@ -308,8 +273,9 @@ public class LeaseManager {
         TerrainManager.getInstance().getAll().put(subId, subTerrain);
         TerrainManager.getInstance().save(subTerrain);
 
-        buildSubBorders(world, chunkX, chunkZ, y, subSize);
-        placeSubSign(subTerrain, world, chunkX, chunkZ, y, contract);
+        int size = contract.getChunks() * 16;
+        buildSubBorders(world, ox, oz, y, size);
+        placeSubSign(subTerrain, world, ox, oz, y, contract);
 
         contract.setSubTerrainId(subId);
 
@@ -321,6 +287,88 @@ public class LeaseManager {
 
         contract.activate();
         storage.saveContract(contract);
+        return true;
+    }
+
+    public void requestMoveWithSelection(LeaseContract contract, Player owner, World world, int ox, int oz, int y) {
+        contract.requestMove(world.getName(), ox, oz, ox + contract.getChunks() * 16, oz + contract.getChunks() * 16);
+        storage.saveContract(contract);
+    }
+
+    public boolean acceptMove(String contractId, Player tenant) {
+        LeaseContract contract = contracts.get(contractId);
+        if (contract == null || !contract.getTenantId().equals(tenant.getUniqueId())) return false;
+        if (!contract.isHasPendingMove()) return false;
+
+        World world = Bukkit.getWorld(contract.getPendingMoveWorld());
+        if (world == null) {
+            contract.clearPendingMove();
+            storage.saveContract(contract);
+            return false;
+        }
+
+        int ox = contract.getPendingMoveX1();
+        int oz = contract.getPendingMoveZ1();
+        int size = contract.getChunks() * 16;
+
+        Terrain parent = TerrainManager.getInstance().getTerrain(contract.getParentTerrainId());
+        String valid = validateSelectionForMove(contract, world, ox, oz, size);
+        if (valid != null) {
+            contract.clearPendingMove();
+            storage.saveContract(contract);
+            tenant.sendMessage(CC.translate("&cEl traslado ya no es válido: &7" + valid));
+            notify(contract.getOwnerName(), "&c[Contrato] El traslado solicitado de &f" + contract.getTenantName() + " &cya no es válido (el espacio fue ocupado). Solicítalo de nuevo.");
+            return false;
+        }
+
+        Terrain sub = TerrainManager.getInstance().getTerrain(contract.getSubTerrainId());
+        if (sub == null) return false;
+        int y = sub.getOrigin() != null ? sub.getOrigin().getBlockY() : tenant.getLocation().getBlockY();
+
+        doMoveSubTerrain(contract, world, ox, oz, y);
+        contract.clearPendingMove();
+        storage.saveContract(contract);
+        return true;
+    }
+
+    public boolean declineMove(String contractId, Player tenant) {
+        LeaseContract contract = contracts.get(contractId);
+        if (contract == null || !contract.getTenantId().equals(tenant.getUniqueId())) return false;
+        if (!contract.isHasPendingMove()) return false;
+        contract.clearPendingMove();
+        storage.saveContract(contract);
+        notify(contract.getOwnerName(), "&c[Contrato] &f" + tenant.getName() + " &crechazó el traslado de &f" + contract.getSubTerrainId() + "&c.");
+        return true;
+    }
+
+    public boolean adminMoveSubTerrain(String contractId, Player admin, World world, int ox, int oz, int y) {
+        LeaseContract contract = contracts.get(contractId);
+        if (contract == null) return false;
+        if (!admin.hasPermission(ClaimsPermissions.ADMIN_MANAGE)) return false;
+        int size = contract.getChunks() * 16;
+        String err = validateSelectionForMove(contract, world, ox, oz, size);
+        if (err != null) {
+            admin.sendMessage(CC.translate("&7" + err));
+            return false;
+        }
+        return doMoveSubTerrain(contract, world, ox, oz, y);
+    }
+
+    private boolean doMoveSubTerrain(LeaseContract contract, World world, int newOx, int newOz, int y) {
+        Terrain sub = TerrainManager.getInstance().getTerrain(contract.getSubTerrainId());
+        if (sub == null) return false;
+
+        removeSubBorders(contract.getSubTerrainId());
+
+        sub.setOrigin(new Location(world, newOx, y, newOz));
+        TerrainManager.getInstance().save(sub);
+
+        int size = sub.getSizeInBlocks();
+        buildSubBorders(world, newOx, newOz, y, size);
+        placeSubSign(sub, world, newOx, newOz, y, contract);
+
+        notify(contract.getTenantName(), "&7Tu sub-terreno &f" + contract.getSubTerrainId() + " &7fue movido a &fX=" + newOx + " Z=" + newOz + "&7.");
+        notify(contract.getOwnerName(), "&7Sub-terreno &f" + contract.getSubTerrainId() + " &7trasladado.");
         return true;
     }
 
@@ -339,7 +387,7 @@ public class LeaseManager {
         world.getBlockAt(x, y, z).setTypeIdAndData(RED_WOOL_ID, RED_WOOL_DATA, false);
     }
 
-    private void removeSubBorders(String subTerrainId) {
+    public void removeSubBorders(String subTerrainId) {
         Terrain sub = TerrainManager.getInstance().getTerrain(subTerrainId);
         if (sub == null || sub.getOrigin() == null) return;
         World world = sub.getOrigin().getWorld();
@@ -347,22 +395,13 @@ public class LeaseManager {
         int oz = sub.getOrigin().getBlockZ();
         int y = sub.getOrigin().getBlockY();
         int size = sub.getSizeInBlocks();
-
-        for (int x = ox; x < ox + size; x++) {
-            clearWool(world, x, y, oz);
-            clearWool(world, x, y, oz + size);
-        }
-        for (int z = oz; z <= oz + size; z++) {
-            clearWool(world, ox, y, z);
-            clearWool(world, ox + size, y, z);
-        }
+        for (int x = ox; x < ox + size; x++) { clearWool(world, x, y, oz); clearWool(world, x, y, oz + size); }
+        for (int z = oz; z <= oz + size; z++) { clearWool(world, ox, y, z); clearWool(world, ox + size, y, z); }
     }
 
     private void clearWool(World world, int x, int y, int z) {
         Block block = world.getBlockAt(x, y, z);
-        if (block.getTypeId() == RED_WOOL_ID && block.getData() == RED_WOOL_DATA) {
-            block.setTypeId(0, false);
-        }
+        if (block.getTypeId() == RED_WOOL_ID && block.getData() == RED_WOOL_DATA) block.setTypeId(0, false);
     }
 
     private void placeSubSign(Terrain subTerrain, World world, int ox, int oz, int y, LeaseContract contract) {
@@ -383,28 +422,17 @@ public class LeaseManager {
     public boolean cancelContract(String contractId, Player canceller) {
         LeaseContract contract = contracts.get(contractId);
         if (contract == null) return false;
-
         boolean isOwner = contract.getOwnerId().equals(canceller.getUniqueId());
         boolean isTenant = contract.getTenantId().equals(canceller.getUniqueId());
         boolean isAdmin = canceller.hasPermission(ClaimsPermissions.ADMIN_MANAGE);
-
         if (!isOwner && !isTenant && !isAdmin) return false;
-
         if (contract.getStatus() == LeaseContract.ContractStatus.ACTIVE) {
             contract.startGracePeriod();
             storage.saveContract(contract);
-
-            Player tenant = Bukkit.getPlayerExact(contract.getTenantName());
-            if (tenant != null) {
-                tenant.sendMessage(CC.translate("&c[Contrato] Tu contrato en &f" + contract.getSubTerrainId() + " &cfue cancelado. Tienes &f3 días &cpara abandonar el terreno."));
-            }
-            Player owner = Bukkit.getPlayerExact(contract.getOwnerName());
-            if (owner != null && !canceller.getName().equals(owner.getName())) {
-                owner.sendMessage(CC.translate("&7[Contrato] El contrato con &f" + contract.getTenantName() + " &7fue cancelado."));
-            }
+            notify(contract.getTenantName(), "&c[Contrato] Tu contrato en &f" + contract.getSubTerrainId() + " &cfue cancelado. Tienes &f3 días &cpara desalojar.");
+            if (!canceller.getName().equals(contract.getOwnerName())) notify(contract.getOwnerName(), "&7[Contrato] Contrato con &f" + contract.getTenantName() + " &7cancelado.");
             return true;
         }
-
         if (contract.getStatus() == LeaseContract.ContractStatus.PENDING_TENANT
                 || contract.getStatus() == LeaseContract.ContractStatus.PENDING_OWNER
                 || contract.getStatus() == LeaseContract.ContractStatus.AWAITING_SUBTERRAIN) {
@@ -412,27 +440,21 @@ public class LeaseManager {
             storage.saveContract(contract);
             return true;
         }
-
         return false;
     }
 
     public boolean forceEvict(String contractId, Player admin) {
         LeaseContract contract = contracts.get(contractId);
-        if (contract == null) return false;
-        if (!admin.hasPermission(ClaimsPermissions.ADMIN_MANAGE)) return false;
+        if (contract == null || !admin.hasPermission(ClaimsPermissions.ADMIN_MANAGE)) return false;
         evictTenant(contract);
         return true;
     }
 
     public boolean tryPayGrace(String contractId) {
         LeaseContract contract = contracts.get(contractId);
-        if (contract == null) return false;
-        if (contract.getStatus() != LeaseContract.ContractStatus.GRACE_PERIOD) return false;
-
+        if (contract == null || contract.getStatus() != LeaseContract.ContractStatus.GRACE_PERIOD) return false;
         Economy economy = TerrainManager.getInstance().getEconomy();
-        if (economy == null) return false;
-        if (!economy.has(contract.getTenantName(), contract.getPricePerCycle())) return false;
-
+        if (economy == null || !economy.has(contract.getTenantName(), contract.getPricePerCycle())) return false;
         economy.withdrawPlayer(contract.getTenantName(), contract.getPricePerCycle());
         economy.depositPlayer(contract.getOwnerName(), contract.getPricePerCycle());
         contract.setStatus(LeaseContract.ContractStatus.ACTIVE);
@@ -458,54 +480,37 @@ public class LeaseManager {
     public boolean ownerCanInteractInSubTerrain(UUID actorId, String subTerrainId) {
         LeaseContract contract = getContractBySubTerrain(subTerrainId);
         if (contract == null) return true;
-        if (contract.getOwnerId().equals(actorId)) return false;
-        return true;
+        return !contract.getOwnerId().equals(actorId);
     }
 
     public List<LeaseContract> getContractsByOwner(UUID ownerId) {
         List<LeaseContract> result = new ArrayList<LeaseContract>();
-        for (LeaseContract c : contracts.values()) {
-            if (c.getOwnerId().equals(ownerId)) result.add(c);
-        }
+        for (LeaseContract c : contracts.values()) if (c.getOwnerId().equals(ownerId)) result.add(c);
         return result;
     }
 
     public List<LeaseContract> getContractsByTenant(UUID tenantId) {
         List<LeaseContract> result = new ArrayList<LeaseContract>();
-        for (LeaseContract c : contracts.values()) {
-            if (c.getTenantId().equals(tenantId)) result.add(c);
-        }
+        for (LeaseContract c : contracts.values()) if (c.getTenantId().equals(tenantId)) result.add(c);
         return result;
     }
 
     public List<LeaseContract> getPendingForPlayer(UUID playerId) {
         List<LeaseContract> result = new ArrayList<LeaseContract>();
         for (LeaseContract c : contracts.values()) {
-            if (c.getStatus() == LeaseContract.ContractStatus.PENDING_TENANT
-                    && c.getTenantId().equals(playerId)) {
+            if ((c.getStatus() == LeaseContract.ContractStatus.PENDING_TENANT && c.getTenantId().equals(playerId))
+                    || (c.getStatus() == LeaseContract.ContractStatus.PENDING_OWNER && c.getOwnerId().equals(playerId))
+                    || (c.getStatus() == LeaseContract.ContractStatus.AWAITING_SUBTERRAIN && c.getOwnerId().equals(playerId)))
                 result.add(c);
-            } else if (c.getStatus() == LeaseContract.ContractStatus.PENDING_OWNER
-                    && c.getOwnerId().equals(playerId)) {
-                result.add(c);
-            } else if (c.getStatus() == LeaseContract.ContractStatus.AWAITING_SUBTERRAIN
-                    && c.getOwnerId().equals(playerId)) {
-                result.add(c);
-            }
         }
         return result;
     }
 
-    public LeaseContract getContract(String contractId) {
-        return contracts.get(contractId);
-    }
+    public LeaseContract getContract(String contractId) { return contracts.get(contractId); }
 
-    public Map<String, LeaseContract> getAll() {
-        return contracts;
-    }
+    public Map<String, LeaseContract> getAll() { return contracts; }
 
     public void shutdown() {
-        if (taskId != -1) {
-            Bukkit.getScheduler().cancelTask(taskId);
-        }
+        if (taskId != -1) Bukkit.getScheduler().cancelTask(taskId);
     }
 }
