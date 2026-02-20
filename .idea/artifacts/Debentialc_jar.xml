@@ -1,0 +1,31 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Debentialc:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Debentialc_jar</output-path>
+    <root id="archive" name="Debentialc.jar">
+      <element id="module-output" name="Debentialc" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/mozilla/rhino/1.7.14/rhino-1.7.14.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/lombok.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/Factions.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/DBCFuture.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/minecraft.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/MassiveCore.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/npcdbc-1.0.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/npcdbc-1.1.2.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/worldguard-6.2.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/JRMCore-v1.3.51.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/SmartInvs-1.2.7.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/MVdWPlaceholderAPI.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/HolographicDisplays.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/JBRA-Client-v1.6.52.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/DragonBlockC-v1.4.85.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/rhino-1.7.14-sources.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/worldedit-bukkit-6.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/craftbukkit-1.7.10-R4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/CustomNPC-Plus-1.10.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/PlaceholderAPI-2.11.5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/+unimixins-all-1.7.10-0.1.19.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/LuckPerms-Bukkit-Legacy-5.4.71.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Librerias/forgeBin-1.7.10-10.13.4.1614-1.7.10.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
