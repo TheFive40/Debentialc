@@ -103,6 +103,7 @@ public class CustomArmorMenus {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
                         List<String> ids = new ArrayList<>(armorIds);
+                        Collections.sort(ids);
                         int start = (page - 1) * pageSize;
                         int end = Math.min(start + pageSize, ids.size());
 

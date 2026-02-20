@@ -44,6 +44,28 @@ public class CustomItemCommand extends BaseCommand {
             String arg1 = command.length() > 1 ? command.getArgs(1) : "";
 
             switch (arg0.toLowerCase()) {
+                case "give":
+                    if (command.length() < 3) {
+                        player.sendMessage(CC.translate("&cUso: /ci give <id> <jugador> <cantidad>"));
+                        return;
+                    }
+                    int cantidad = 1;
+
+                    if (command.length() > 3) {
+                        try {
+                            cantidad = Integer.parseInt(command.getArgs(3));
+                            if (cantidad < 1) {
+                                player.sendMessage(CC.translate("&cLa cantidad debe ser mayor a 0"));
+                                return;
+                            }
+                        } catch (NumberFormatException e) {
+                            player.sendMessage(CC.translate("&cCantidad inválida"));
+                            return;
+                        }
+                    }
+                    giveItem(arg1, command.getArgs(2), cantidad);
+                    break;
+
                 case "create":
                     if (command.length() < 2) {
                         player.sendMessage(CC.translate("&cUso: /ci create <id>"));
@@ -168,6 +190,7 @@ public class CustomItemCommand extends BaseCommand {
         player.sendMessage(" ");
         player.sendMessage(CC.translate("&e/ci list [página] &7- Listar todos los items"));
         player.sendMessage(CC.translate("&e/ci info &7- Ver info del item en mano"));
+        player.sendMessage(CC.translate("&e/ci give <item_id> <jugador> <cantidad> &7- Dar un item custom a un jugador"));
 
         player.sendMessage(" ");
         player.sendMessage(CC.translate("&7Stats: &fstr&7, &fcon&7, &fdex&7, &fwill&7, &fmnd"));
@@ -424,6 +447,29 @@ public class CustomItemCommand extends BaseCommand {
         }
 
         player.sendMessage(CC.translate("&8&l&m--------------------------------------"));
+    }
+
+    public void giveItem(String id, String targetName, int cantidad) {
+        if (!items.containsKey(id)) {
+            player.sendMessage(CC.translate("&cItem no encontrado: &f" + id));
+            return;
+        }
+
+        Player target = player.getServer().getPlayerExact(targetName);
+        if (target == null) {
+            player.sendMessage(CC.translate("&cJugador no encontrado o no está conectado: &f" + targetName));
+            return;
+        }
+
+        CustomItem customItem = items.get(id);
+        ItemStack itemStack = toItemStack(customItem);
+        itemStack.setAmount(cantidad);
+
+        target.getInventory().addItem(itemStack);
+        target.updateInventory();
+
+        player.sendMessage(CC.translate("&aEntregado &f" + cantidad + "x " + id + " &aa &f" + target.getName()));
+        target.sendMessage(CC.translate("&aRecibiste: &f" + cantidad + "x " + customItem.getDisplayName()));
     }
 
     public CustomItem toItemCustom(ItemStack itemStack) {

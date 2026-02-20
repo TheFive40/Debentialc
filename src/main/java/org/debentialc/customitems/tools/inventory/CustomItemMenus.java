@@ -94,6 +94,7 @@ public class CustomItemMenus {
                         contents.fillBorders(ClickableItem.empty(createGlassPane()));
 
                         List<String> ids = new ArrayList<>(itemIds);
+                        Collections.sort(ids);
                         int start = (page - 1) * pageSize;
                         int end = Math.min(start + pageSize, ids.size());
 
