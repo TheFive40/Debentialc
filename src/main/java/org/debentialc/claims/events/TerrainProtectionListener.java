@@ -2,18 +2,30 @@ package org.debentialc.claims.events;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityCombustEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.debentialc.claims.managers.ClaimsPermissions;
+import org.debentialc.claims.managers.TerrainCustomizeManager;
 import org.debentialc.claims.managers.TerrainManager;
 import org.debentialc.claims.models.Terrain;
 import org.debentialc.service.CC;
 
 public class TerrainProtectionListener implements Listener {
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Bloques
+    // ─────────────────────────────────────────────────────────────────
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onBlockBreak(BlockBreakEvent event) {
@@ -63,6 +75,62 @@ public class TerrainProtectionListener implements Listener {
                 event.setCancelled(true);
                 player.sendMessage(CC.translate("&7No tienes permiso para interactuar aquí."));
             }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  PvP (regla personalizable)
+    // ─────────────────────────────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onEntityDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player)) return;
+        if (!(event.getDamager() instanceof Player)) return;
+
+        Player victim  = (Player) event.getEntity();
+        Player attacker = (Player) event.getDamager();
+
+        Terrain terrain = TerrainManager.getInstance().getTerrainAt(victim.getLocation());
+        if (terrain == null) return;
+
+        if (!TerrainCustomizeManager.isPvpEnabled(terrain.getId())) {
+            event.setCancelled(true);
+            attacker.sendMessage(CC.translate("&7El PvP está &cdisabled &7en este terreno."));
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Spawn de mobs (regla personalizable)
+    // ─────────────────────────────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onCreatureSpawn(CreatureSpawnEvent event) {
+        Terrain terrain = TerrainManager.getInstance().getTerrainAt(event.getLocation());
+        if (terrain == null) return;
+
+        // Solo aplica a mobs (no animales ni spawns artificiales)
+        if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.NATURAL
+                || event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CHUNK_GEN) {
+            if (!TerrainCustomizeManager.isMobSpawningEnabled(terrain.getId())) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Explosiones TNT (regla personalizable)
+    // ─────────────────────────────────────────────────────────────────
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onExplosion(EntityExplodeEvent event) {
+        if (event.blockList().isEmpty()) return;
+
+        // Revisamos si la explosión está en un terreno con TNT deshabilitado
+        Terrain terrain = TerrainManager.getInstance().getTerrainAt(event.getLocation());
+        if (terrain == null) return;
+
+        if (!TerrainCustomizeManager.isRuleEnabled(terrain.getId(), "tntExplodes")) {
+            event.blockList().clear(); // Sin daño de bloques
         }
     }
 

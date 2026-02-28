@@ -29,6 +29,7 @@ public class TerritoryInfoMenu {
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(TerritoryMenu.createGlassPane((short) 7)));
 
+                        // ── Info principal ──────────────────────────────────────────
                         ItemStack infoItem = new ItemStack(Material.MAP);
                         ItemMeta infoMeta = infoItem.getItemMeta();
                         infoMeta.setDisplayName(CC.translate("&f&l" + terrain.getId()));
@@ -44,13 +45,15 @@ public class TerritoryInfoMenu {
                             infoLore.add(CC.translate("&7Estado: &aEn venta"));
                         }
                         if (terrain.getOrigin() != null) {
-                            infoLore.add(CC.translate("&7Ubicación: &f" + terrain.getOrigin().getBlockX() + ", " + terrain.getOrigin().getBlockZ()));
+                            infoLore.add(CC.translate("&7Ubicación: &f" + terrain.getOrigin().getBlockX()
+                                    + ", " + terrain.getOrigin().getBlockZ()));
                             infoLore.add(CC.translate("&7Mundo: &f" + terrain.getOrigin().getWorld().getName()));
                         }
                         infoMeta.setLore(infoLore);
                         infoItem.setItemMeta(infoMeta);
                         contents.set(1, 4, ClickableItem.empty(infoItem));
 
+                        // ── Miembros ────────────────────────────────────────────────
                         if (!terrain.getMembers().isEmpty()) {
                             ItemStack membersItem = new ItemStack(Material.SKULL_ITEM);
                             ItemMeta membersMeta = membersItem.getItemMeta();
@@ -62,7 +65,9 @@ public class TerritoryInfoMenu {
                                     if (roles.length() > 0) roles.append(", ");
                                     roles.append(role.name().toLowerCase());
                                 }
-                                membersLore.add(CC.translate("&7- &f" + entry.getKey().toString().substring(0, 8) + "... &8[" + roles.toString() + "]"));
+                                membersLore.add(CC.translate("&7- &f"
+                                        + entry.getKey().toString().substring(0, 8)
+                                        + "... &8[" + roles.toString() + "]"));
                             }
                             membersMeta.setLore(membersLore);
                             membersItem.setItemMeta(membersMeta);
@@ -72,25 +77,29 @@ public class TerritoryInfoMenu {
                         boolean isOwner = terrain.isOwner(player.getUniqueId());
                         boolean isAdmin = player.hasPermission(ClaimsPermissions.ADMIN_MANAGE);
 
+                        // ── Comprar ─────────────────────────────────────────────────
                         if (!terrain.hasOwner() && terrain.isCommitted() && terrain.getPrice() > 0
                                 && TerrainManager.getInstance().getEconomy() != null) {
 
-                            boolean canAfford = TerrainManager.getInstance().getEconomy().has(player.getName(), terrain.getPrice());
+                            boolean canAfford = TerrainManager.getInstance().getEconomy()
+                                    .has(player.getName(), terrain.getPrice());
 
                             ItemStack buyButton = new ItemStack(canAfford ? Material.EMERALD : Material.REDSTONE);
                             ItemMeta buyMeta = buyButton.getItemMeta();
                             buyMeta.setDisplayName(CC.translate(canAfford ? "&a&lComprar Territorio" : "&c&lSin Fondos"));
                             buyMeta.setLore(Arrays.asList(
                                     CC.translate("&7Precio: &f$" + (int) terrain.getPrice()),
-                                    CC.translate(canAfford ? "&a[CLICK PARA COMPRAR]" : "&c&7No tienes suficiente dinero")
-                            ));
+                                    CC.translate(canAfford
+                                            ? "&a[CLICK PARA COMPRAR]"
+                                            : "&c&7No tienes suficiente dinero")));
                             buyButton.setItemMeta(buyMeta);
 
                             if (canAfford) {
                                 contents.set(3, 4, ClickableItem.of(buyButton, e -> {
                                     boolean purchased = TerrainManager.getInstance().purchaseTerrain(terrain, player);
                                     if (purchased) {
-                                        player.sendMessage(CC.translate("&7Compraste el terreno &f" + terrain.getId() + " &7por &f$" + (int) terrain.getPrice() + "&7."));
+                                        player.sendMessage(CC.translate("&7Compraste el terreno &f" + terrain.getId()
+                                                + " &7por &f$" + (int) terrain.getPrice() + "&7."));
                                         player.closeInventory();
                                     } else {
                                         player.sendMessage(CC.translate("&7No se pudo completar la compra."));
@@ -101,6 +110,7 @@ public class TerritoryInfoMenu {
                             }
                         }
 
+                        // ── Vender ──────────────────────────────────────────────────
                         if ((isOwner || isAdmin) && terrain.hasOwner()) {
                             ItemStack sellButton = new ItemStack(Material.GOLD_INGOT);
                             ItemMeta sellMeta = sellButton.getItemMeta();
@@ -109,9 +119,8 @@ public class TerritoryInfoMenu {
                             sellMeta.setLore(Arrays.asList(
                                     CC.translate("&7Devuelve el territorio al mercado"),
                                     CC.translate("&7Reembolso: &f$" + (int) refund),
-                                    "",
-                                    CC.translate("&e[CLICK PARA VENDER]")
-                            ));
+                                    CC.translate(""),
+                                    CC.translate("&e[CLICK PARA VENDER]")));
                             sellButton.setItemMeta(sellMeta);
                             contents.set(3, 3, ClickableItem.of(sellButton, e -> {
                                 if (!terrain.hasOwner()) {
@@ -124,13 +133,51 @@ public class TerritoryInfoMenu {
                                 TerrainManager.getInstance().save(terrain);
                                 TerrainManager.getInstance().updateSign(terrain);
                                 if (TerrainManager.getInstance().getEconomy() != null && refund > 0) {
-                                    TerrainManager.getInstance().getEconomy().depositPlayer(player.getName(), refund);
-                                    player.sendMessage(CC.translate("&7Terreno puesto a la venta. Reembolso: &f$" + (int) refund + "&7."));
+                                    TerrainManager.getInstance().getEconomy()
+                                            .depositPlayer(player.getName(), refund);
+                                    player.sendMessage(CC.translate("&7Terreno puesto a la venta. Reembolso: &f$"
+                                            + (int) refund + "&7."));
                                 } else {
-                                    player.sendMessage(CC.translate("&7Terreno &f" + terrain.getId() + " &7puesto a la venta."));
+                                    player.sendMessage(CC.translate("&7Terreno &f" + terrain.getId()
+                                            + " &7puesto a la venta."));
                                 }
                                 player.closeInventory();
                             }));
+                        }
+
+                        // ── ✦ PERSONALIZAR (VIP) ─────────────────────────────────────
+                        // Visible si el jugador es propietario del terreno Y tiene al menos
+                        // uno de los permisos de personalización.
+                        boolean hasAnyCustPerm =
+                                player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_BIOME)
+                                        || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_FLOOR)
+                                        || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_WEATHER)
+                                        || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_RULES)
+                                        || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_TIME)
+                                        || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_EFFECTS)
+                                        || isAdmin;
+
+                        if ((isOwner || isAdmin) && terrain.isCommitted() && hasAnyCustPerm) {
+                            ItemStack customizeBtn = new ItemStack(Material.NETHER_STAR);
+                            ItemMeta cm = customizeBtn.getItemMeta();
+                            cm.setDisplayName(CC.translate("&6&l✦ Personalizar Terreno"));
+                            cm.setLore(Arrays.asList(
+                                    CC.translate("&7Cambia bioma, suelo, clima,"),
+                                    CC.translate("&7reglas de juego, tiempo y efectos"),
+                                    CC.translate(""),
+                                    CC.translate("&6[CLICK PARA PERSONALIZAR]")));
+                            customizeBtn.setItemMeta(cm);
+                            contents.set(3, 5, ClickableItem.of(customizeBtn, e ->
+                                    TerrainCustomizeMenu.createMainMenu(terrain, player).open(player)));
+                        } else if (isOwner && terrain.isCommitted() && !hasAnyCustPerm) {
+                            ItemStack lockedBtn = new ItemStack(Material.REDSTONE);
+                            ItemMeta lm = lockedBtn.getItemMeta();
+                            lm.setDisplayName(CC.translate("&c&l✦ Personalizar &8(VIP)"));
+                            lm.setLore(Arrays.asList(
+                                    CC.translate("&7Cambia bioma, suelo, clima y más"),
+                                    CC.translate("&c✗ Requiere rango VIP o superior")));
+                            lockedBtn.setItemMeta(lm);
+                            contents.set(3, 5, ClickableItem.empty(lockedBtn));
                         }
 
                         if (isAdmin) {
@@ -139,27 +186,23 @@ public class TerritoryInfoMenu {
                             adminMeta.setDisplayName(CC.translate("&c&lAcciones Admin"));
                             adminMeta.setLore(Arrays.asList(
                                     CC.translate("&7Eliminar o disolver terreno"),
-                                    "",
-                                    CC.translate("&c[CLICK PARA VER OPCIONES]")
-                            ));
+                                    CC.translate(""),
+                                    CC.translate("&c[CLICK PARA VER OPCIONES]")));
                             adminButton.setItemMeta(adminMeta);
-                            contents.set(3, 5, ClickableItem.of(adminButton, e -> {
-                                TerritoryAdminInfoMenu.createAdminInfoMenu(terrain, player).open(player);
-                            }));
+                            contents.set(3, 6, ClickableItem.of(adminButton, e ->
+                                    TerritoryAdminInfoMenu.createAdminInfoMenu(terrain, player).open(player)));
                         }
 
                         ItemStack backButton = new ItemStack(Material.ARROW);
                         ItemMeta backMeta = backButton.getItemMeta();
                         backMeta.setDisplayName(CC.translate("&b← Atrás"));
                         backButton.setItemMeta(backMeta);
-                        contents.set(3, 0, ClickableItem.of(backButton, e -> {
-                            TerritoryListMenu.createListMenu(1).open(player);
-                        }));
+                        contents.set(3, 0, ClickableItem.of(backButton, e ->
+                                TerritoryListMenu.createListMenu(1).open(player)));
                     }
 
                     @Override
-                    public void update(Player player, InventoryContents contents) {
-                    }
+                    public void update(Player player, InventoryContents contents) {}
                 })
                 .size(4, 9)
                 .title(CC.translate("&f&lTerreno: " + terrain.getId()))

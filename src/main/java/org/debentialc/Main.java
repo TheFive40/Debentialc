@@ -14,6 +14,8 @@ import org.debentialc.boosters.managers.GlobalBoosterManager;
 import org.debentialc.boosters.managers.PersonalBoosterManager;
 import org.debentialc.boosters.models.PersonalBooster;
 import org.debentialc.boosters.placeholders.PlaceholderModule;
+import org.debentialc.claims.ClaimsModule;
+import org.debentialc.claims.managers.TerrainCustomizeManager;
 import org.debentialc.customitems.tools.ci.CustomManager;
 import org.debentialc.customitems.tools.fragments.FragmentBonusIntegration;
 import org.debentialc.customitems.tools.storage.CustomArmorStorage;
@@ -67,18 +69,31 @@ public class Main extends JavaPlugin {
         new CustomArmorStorage();
         loadAllConfigs();
         armorTask();
+        startTerrainEffectsTask();
 
-        // Módulos
         BoosterModule.initialize(this);
         PlaceholderModule.initialize(this);
+        ClaimsModule.initialize(this);
 
-        // **NUEVO: Registrar eventos de CustomNPCs**
         registerCustomNPCsEvents();
 
         RaidStorageManager.loadAllRaids();
         System.out.println("[Raids] Sistema de raids inicializado");
     }
-
+    /**
+     * Tarea periódica que aplica efectos ambientales de terrenos a los jugadores.
+     * Se ejecuta cada 5 segundos (100 ticks).
+     */
+    private void startTerrainEffectsTask() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : getServer().getOnlinePlayers()) {
+                    TerrainCustomizeManager.applyEffectToPlayer(player);
+                }
+            }
+        }.runTaskTimer(this, 20L, 100L); // cada 5 segundos
+    }
     /**
      * Registra los eventos de CustomNPCs
      * Debe ejecutarse después de que el servidor esté completamente iniciado
