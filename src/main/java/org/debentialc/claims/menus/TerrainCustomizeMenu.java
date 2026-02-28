@@ -13,11 +13,13 @@ import org.debentialc.claims.managers.TerrainCustomizeManager;
 import org.debentialc.claims.models.Terrain;
 import org.debentialc.service.CC;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.ArrayList;
 
 public class TerrainCustomizeMenu {
+
+    // ─── Menú principal ───────────────────────────────────────────────────────
 
     public static SmartInventory createMainMenu(final Terrain terrain, final Player viewer) {
         return SmartInventory.builder()
@@ -27,17 +29,19 @@ public class TerrainCustomizeMenu {
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(TerritoryMenu.createGlassPane((short) 7)));
 
-                        ItemStack title = makeItem(Material.NETHER_STAR,
+                        final boolean isAdmin = player.hasPermission(ClaimsPermissions.ADMIN_MANAGE);
+
+                        contents.set(0, 4, ClickableItem.empty(makeItem(Material.NETHER_STAR,
                                 "&6&l✦ Personalización de Terreno",
                                 Arrays.asList(
                                         CC.translate("&7Terreno: &f" + terrain.getId()),
                                         CC.translate("&7Tamaño: &f" + terrain.getChunks() + " chunk(s)"),
                                         CC.translate("&8&m                              "),
                                         CC.translate("&7Elige una categoría para personalizar")
-                                ));
-                        contents.set(0, 4, ClickableItem.empty(title));
+                                ))));
 
-                        boolean hasBiome = player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_BIOME);
+                        // ── Bioma ────────────────────────────────────────────
+                        boolean hasBiome = isAdmin || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_BIOME);
                         ItemStack biomeBtn = makeItem(
                                 hasBiome ? Material.SAPLING : Material.REDSTONE_TORCH_ON,
                                 hasBiome ? "&a&lCambiar Bioma" : "&c&lCambiar Bioma &8(VIP)",
@@ -54,7 +58,8 @@ public class TerrainCustomizeMenu {
                             contents.set(1, 2, ClickableItem.empty(biomeBtn));
                         }
 
-                        boolean hasFloor = player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_FLOOR);
+                        // ── Suelo ─────────────────────────────────────────────
+                        boolean hasFloor = isAdmin || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_FLOOR);
                         ItemStack floorBtn = makeItem(
                                 hasFloor ? Material.GRASS : Material.REDSTONE_TORCH_ON,
                                 hasFloor ? "&a&lPersonalizar Suelo" : "&c&lPersonalizar Suelo &8(VIP)",
@@ -71,7 +76,8 @@ public class TerrainCustomizeMenu {
                             contents.set(1, 4, ClickableItem.empty(floorBtn));
                         }
 
-                        boolean hasWeather = player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_WEATHER);
+                        // ── Clima ─────────────────────────────────────────────
+                        boolean hasWeather = isAdmin || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_WEATHER);
                         ItemStack weatherBtn = makeItem(
                                 hasWeather ? Material.WATER_BUCKET : Material.REDSTONE_TORCH_ON,
                                 hasWeather ? "&b&lClima del Terreno" : "&c&lClima &8(VIP)",
@@ -88,7 +94,8 @@ public class TerrainCustomizeMenu {
                             contents.set(1, 6, ClickableItem.empty(weatherBtn));
                         }
 
-                        boolean hasRules = player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_RULES);
+                        // ── Reglas ────────────────────────────────────────────
+                        boolean hasRules = isAdmin || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_RULES);
                         ItemStack rulesBtn = makeItem(
                                 hasRules ? Material.BOOK_AND_QUILL : Material.REDSTONE_TORCH_ON,
                                 hasRules ? "&e&lReglas del Terreno" : "&c&lReglas &8(VIP)",
@@ -105,13 +112,14 @@ public class TerrainCustomizeMenu {
                             contents.set(2, 2, ClickableItem.empty(rulesBtn));
                         }
 
-                        boolean hasTime = player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_TIME);
+                        // ── Tiempo ────────────────────────────────────────────
+                        boolean hasTime = isAdmin || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_TIME);
                         ItemStack timeBtn = makeItem(
                                 hasTime ? Material.WATCH : Material.REDSTONE_TORCH_ON,
                                 hasTime ? "&d&lCiclo de Tiempo" : "&c&lTiempo &8(VIP)",
                                 Arrays.asList(
-                                        CC.translate("&7Fija o cambia el ciclo día/noche"),
-                                        CC.translate("&7en tu terreno"),
+                                        CC.translate("&7Fija el ciclo día/noche en tu terreno"),
+                                        CC.translate("&7Solo visible para los jugadores en el terreno"),
                                         CC.translate(""),
                                         CC.translate(hasTime ? "&d▶ Click para configurar" : "&c✗ Requiere permiso VIP")
                                 ));
@@ -122,7 +130,8 @@ public class TerrainCustomizeMenu {
                             contents.set(2, 4, ClickableItem.empty(timeBtn));
                         }
 
-                        boolean hasEffects = player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_EFFECTS);
+                        // ── Efectos ───────────────────────────────────────────
+                        boolean hasEffects = isAdmin || player.hasPermission(ClaimsPermissions.TERRAIN_CUSTOMIZE_EFFECTS);
                         ItemStack effectsBtn = makeItem(
                                 hasEffects ? Material.BLAZE_POWDER : Material.REDSTONE_TORCH_ON,
                                 hasEffects ? "&5&lEfectos Ambientales" : "&c&lEfectos &8(VIP+)",
@@ -139,9 +148,8 @@ public class TerrainCustomizeMenu {
                             contents.set(2, 6, ClickableItem.empty(effectsBtn));
                         }
 
-                        ItemStack back = makeItem(Material.ARROW, "&7← Volver al terreno", null);
-                        contents.set(3, 4, ClickableItem.of(back, e ->
-                                TerritoryInfoMenu.createInfoMenu(terrain, player).open(player)));
+                        contents.set(3, 4, ClickableItem.of(makeItem(Material.ARROW, "&7← Volver al terreno", null),
+                                e -> TerritoryInfoMenu.createInfoMenu(terrain, player).open(player)));
                     }
 
                     @Override
@@ -152,11 +160,12 @@ public class TerrainCustomizeMenu {
                 .build();
     }
 
+    // ─── Menú de Bioma ────────────────────────────────────────────────────────
+
     public static SmartInventory createBiomeMenu(final Terrain terrain, final Player viewer) {
         return SmartInventory.builder()
                 .id("terrain_biome_" + terrain.getId())
                 .provider(new InventoryProvider() {
-
                     private final Object[][] BIOMES = {
                             {"&2Bosque",       "FOREST",        Material.LOG},
                             {"&aPlanicias",     "PLAINS",        Material.GRASS},
@@ -174,14 +183,11 @@ public class TerrainCustomizeMenu {
                     @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(TerritoryMenu.createGlassPane((short) 11)));
-
-                        ItemStack title = makeItem(Material.SAPLING,
-                                "&a&lElegir Bioma",
+                        contents.set(0, 4, ClickableItem.empty(makeItem(Material.SAPLING, "&a&lElegir Bioma",
                                 Arrays.asList(
                                         CC.translate("&7Terreno: &f" + terrain.getId()),
                                         CC.translate("&7El bioma afecta la temperatura, lluvia y vegetación")
-                                ));
-                        contents.set(0, 4, ClickableItem.empty(title));
+                                ))));
 
                         int row = 1, col = 1;
                         for (Object[] bio : BIOMES) {
@@ -195,16 +201,13 @@ public class TerrainCustomizeMenu {
                                     ));
                             contents.set(row, col, ClickableItem.of(btn, e -> {
                                 boolean ok = TerrainCustomizeManager.setBiome(terrain, player, biomeName);
-                                player.sendMessage(ok
-                                        ? CC.translate("&7Bioma del terreno &f" + terrain.getId() + " &7cambiado a &f" + displayName + "&7.")
-                                        : CC.translate("&cNo se pudo cambiar el bioma."));
-                                if (ok) player.closeInventory();
+                                if (!ok) player.sendMessage(CC.translate("&cNo se pudo cambiar el bioma."));
+                                else     player.closeInventory();
                             }));
                             col++;
                             if (col >= 8) { col = 1; row++; }
                             if (row >= 4) break;
                         }
-
                         addBackButton(contents, 3, 4, terrain, player);
                     }
 
@@ -216,44 +219,43 @@ public class TerrainCustomizeMenu {
                 .build();
     }
 
+    // ─── Menú de Suelo ────────────────────────────────────────────────────────
+
     public static SmartInventory createFloorMenu(final Terrain terrain, final Player viewer) {
         return SmartInventory.builder()
                 .id("terrain_floor_" + terrain.getId())
                 .provider(new InventoryProvider() {
-
-                    private final Object[][] FLOORS = {
-                            {"&2Pasto",          Material.GRASS,       (byte) 0},
-                            {"&eArena",          Material.SAND,        (byte) 0},
-                            {"&8Piedra",         Material.STONE,       (byte) 0},
-                            {"&6Madera",         Material.WOOD,        (byte) 0},
-                            {"&bHielo",          Material.ICE,         (byte) 0},
-                            {"&fNieve",          Material.SNOW_BLOCK,  (byte) 0},
-                            {"&cNetherrack",     Material.NETHERRACK,  (byte) 0},
-                            {"&aEsmeralda",      Material.EMERALD_BLOCK,(byte) 0},
-                            {"&6Oro",            Material.GOLD_BLOCK,  (byte) 0},
-                            {"&7Hierro",         Material.IRON_BLOCK,  (byte) 0},
-                            {"&dPiedra de End",  Material.ENDER_STONE, (byte) 0},
-                            {"&9Obsidiana",      Material.OBSIDIAN,    (byte) 0},
-                    };
-
                     @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(TerritoryMenu.createGlassPane((short) 3)));
-
-                        ItemStack title = makeItem(Material.GRASS,
-                                "&a&lPersonalizar Suelo",
+                        contents.set(0, 4, ClickableItem.empty(makeItem(Material.GRASS, "&a&lPersonalizar Suelo",
                                 Arrays.asList(
                                         CC.translate("&7Terreno: &f" + terrain.getId()),
                                         CC.translate("&7Reemplaza el suelo en toda el área del terreno"),
                                         CC.translate("&c&l⚠ &cOperación puede tardar algunos segundos")
-                                ));
-                        contents.set(0, 4, ClickableItem.empty(title));
+                                ))));
+
+                        // Formato: {displayName, Material, data}
+                        final Object[][] FLOORS = {
+                                {"&2Pasto",         Material.GRASS,        (byte) 0},
+                                {"&eArena",         Material.SAND,         (byte) 0},
+                                {"&8Piedra",        Material.STONE,        (byte) 0},
+                                {"&6Madera",        Material.WOOD,         (byte) 0},
+                                {"&bHielo",         Material.ICE,          (byte) 0},
+                                {"&fNieve",         Material.SNOW_BLOCK,   (byte) 0},
+                                {"&cNetherrack",    Material.NETHERRACK,   (byte) 0},
+                                {"&aEsmeralda",     Material.EMERALD_BLOCK,(byte) 0},
+                                {"&6Oro",           Material.GOLD_BLOCK,   (byte) 0},
+                                {"&7Hierro",        Material.IRON_BLOCK,   (byte) 0},
+                                {"&dPiedra de End", Material.ENDER_STONE,  (byte) 0},
+                                {"&9Obsidiana",     Material.OBSIDIAN,     (byte) 0},
+                        };
 
                         int row = 1, col = 1;
                         for (Object[] floor : FLOORS) {
                             final String displayName = (String)   floor[0];
                             final Material mat       = (Material) floor[1];
-                            final byte     data      = (byte)     floor[2];
+                            final byte     blockData = (byte)     floor[2];
                             ItemStack btn = makeItem(mat, displayName,
                                     Arrays.asList(
                                             CC.translate("&7Material: &f" + mat.name()),
@@ -261,13 +263,51 @@ public class TerrainCustomizeMenu {
                                             CC.translate("&a▶ Click para aplicar al suelo")
                                     ));
                             contents.set(row, col, ClickableItem.of(btn, e -> {
-                                player.sendMessage(CC.translate("&7Aplicando suelo &f" + displayName + " &7al terreno, espera..."));
                                 player.closeInventory();
-                                TerrainCustomizeManager.setFloor(terrain, player, mat, data);
+                                TerrainCustomizeManager.setFloor(terrain, player, mat, blockData);
                             }));
                             col++;
                             if (col >= 8) { col = 1; row++; }
                             if (row >= 4) break;
+                        }
+
+                        // ── Bloque Namek (mod, ID 702) ────────────────────────
+                        // No tiene entrada en Material; se crea con ID numérico directamente.
+                        if (row < 4) {
+                            final int  NAMEK_ID   = 702;
+                            final byte NAMEK_DATA = (byte) 0;
+
+                            // Crear el ItemStack con ID numérico del bloque del mod
+                            ItemStack namekBtn;
+                            try {
+                                namekBtn = new ItemStack(NAMEK_ID, 1, NAMEK_DATA);
+                                ItemMeta meta = namekBtn.getItemMeta();
+                                if (meta != null) {
+                                    meta.setDisplayName(CC.translate("&2&lNamek"));
+                                    List<String> namekLore = new ArrayList<String>();
+                                    namekLore.add(CC.translate("&7Bloque de Namek &8(ID: " + NAMEK_ID + ")"));
+                                    namekLore.add(CC.translate("&7Bloque especial del servidor"));
+                                    namekLore.add(CC.translate(""));
+                                    namekLore.add(CC.translate("&a▶ Click para aplicar al suelo"));
+                                    meta.setLore(namekLore);
+                                    namekBtn.setItemMeta(meta);
+                                }
+                            } catch (Exception ex) {
+                                // Fallback: si el bloque del mod no está cargado aún, usar CACTUS temporalmente
+                                namekBtn = makeItem(Material.CACTUS, "&2&lNamek",
+                                        Arrays.asList(
+                                                CC.translate("&7Bloque de Namek &8(ID: " + NAMEK_ID + ")"),
+                                                CC.translate("&7Bloque especial del servidor"),
+                                                CC.translate(""),
+                                                CC.translate("&a▶ Click para aplicar al suelo")
+                                        ));
+                            }
+
+                            final ItemStack finalBtn = namekBtn;
+                            contents.set(row, col, ClickableItem.of(finalBtn, e -> {
+                                player.closeInventory();
+                                TerrainCustomizeManager.setFloor(terrain, player, NAMEK_ID, NAMEK_DATA);
+                            }));
                         }
 
                         addBackButton(contents, 3, 4, terrain, player);
@@ -281,6 +321,8 @@ public class TerrainCustomizeMenu {
                 .build();
     }
 
+    // ─── Menú de Clima ────────────────────────────────────────────────────────
+
     public static SmartInventory createWeatherMenu(final Terrain terrain, final Player viewer) {
         return SmartInventory.builder()
                 .id("terrain_weather_" + terrain.getId())
@@ -288,47 +330,48 @@ public class TerrainCustomizeMenu {
                     @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(TerritoryMenu.createGlassPane((short) 9)));
-
-                        ItemStack title = makeItem(Material.WATER_BUCKET,
+                        contents.set(0, 4, ClickableItem.empty(makeItem(Material.WATER_BUCKET,
                                 "&b&lClima del Terreno",
-                                Arrays.asList(CC.translate("&7Terreno: &f" + terrain.getId())));
-                        contents.set(0, 4, ClickableItem.empty(title));
+                                Arrays.asList(CC.translate("&7Terreno: &f" + terrain.getId())))));
 
-                        ItemStack sunny = makeItem(Material.GOLD_NUGGET, "&e&lSoleado",
-                                Arrays.asList(
-                                        CC.translate("&7Activa un día despejado y soleado"),
-                                        CC.translate(""),
-                                        CC.translate("&e▶ Click para aplicar")
-                                ));
-                        contents.set(1, 2, ClickableItem.of(sunny, e -> {
-                            TerrainCustomizeManager.setWeather(terrain, player, "CLEAR");
-                            player.sendMessage(CC.translate("&7Clima del terreno cambiado a &eSoleado&7."));
-                            player.closeInventory();
-                        }));
+                        contents.set(1, 2, ClickableItem.of(
+                                makeItem(Material.GOLD_NUGGET, "&e&lSoleado",
+                                        Arrays.asList(
+                                                CC.translate("&7Activa un día despejado y soleado"),
+                                                CC.translate(""),
+                                                CC.translate("&e▶ Click para aplicar")
+                                        )),
+                                e -> {
+                                    TerrainCustomizeManager.setWeather(terrain, player, "CLEAR");
+                                    player.sendMessage(CC.translate("&7Clima cambiado a &eSoleado&7."));
+                                    player.closeInventory();
+                                }));
 
-                        ItemStack rain = makeItem(Material.WATER_BUCKET, "&9&lLluvia",
-                                Arrays.asList(
-                                        CC.translate("&7Activa lluvia en el terreno"),
-                                        CC.translate(""),
-                                        CC.translate("&9▶ Click para aplicar")
-                                ));
-                        contents.set(1, 4, ClickableItem.of(rain, e -> {
-                            TerrainCustomizeManager.setWeather(terrain, player, "RAIN");
-                            player.sendMessage(CC.translate("&7Clima del terreno cambiado a &9Lluvia&7."));
-                            player.closeInventory();
-                        }));
+                        contents.set(1, 4, ClickableItem.of(
+                                makeItem(Material.WATER_BUCKET, "&9&lLluvia",
+                                        Arrays.asList(
+                                                CC.translate("&7Activa lluvia en el terreno"),
+                                                CC.translate(""),
+                                                CC.translate("&9▶ Click para aplicar")
+                                        )),
+                                e -> {
+                                    TerrainCustomizeManager.setWeather(terrain, player, "RAIN");
+                                    player.sendMessage(CC.translate("&7Clima cambiado a &9Lluvia&7."));
+                                    player.closeInventory();
+                                }));
 
-                        ItemStack storm = makeItem(Material.FLINT_AND_STEEL, "&8&lTormenta",
-                                Arrays.asList(
-                                        CC.translate("&7Activa tormenta con rayos en el terreno"),
-                                        CC.translate(""),
-                                        CC.translate("&8▶ Click para aplicar")
-                                ));
-                        contents.set(1, 6, ClickableItem.of(storm, e -> {
-                            TerrainCustomizeManager.setWeather(terrain, player, "STORM");
-                            player.sendMessage(CC.translate("&7Clima del terreno cambiado a &8Tormenta&7."));
-                            player.closeInventory();
-                        }));
+                        contents.set(1, 6, ClickableItem.of(
+                                makeItem(Material.FLINT_AND_STEEL, "&8&lTormenta",
+                                        Arrays.asList(
+                                                CC.translate("&7Activa tormenta con rayos en el terreno"),
+                                                CC.translate(""),
+                                                CC.translate("&8▶ Click para aplicar")
+                                        )),
+                                e -> {
+                                    TerrainCustomizeManager.setWeather(terrain, player, "STORM");
+                                    player.sendMessage(CC.translate("&7Clima cambiado a &8Tormenta&7."));
+                                    player.closeInventory();
+                                }));
 
                         addBackButton(contents, 2, 4, terrain, player);
                     }
@@ -341,6 +384,8 @@ public class TerrainCustomizeMenu {
                 .build();
     }
 
+    // ─── Menú de Reglas ───────────────────────────────────────────────────────
+
     public static SmartInventory createRulesMenu(final Terrain terrain, final Player viewer) {
         return SmartInventory.builder()
                 .id("terrain_rules_" + terrain.getId())
@@ -348,14 +393,12 @@ public class TerrainCustomizeMenu {
                     @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(TerritoryMenu.createGlassPane((short) 14)));
-
-                        ItemStack title = makeItem(Material.BOOK_AND_QUILL,
+                        contents.set(0, 4, ClickableItem.empty(makeItem(Material.BOOK_AND_QUILL,
                                 "&e&lReglas del Terreno",
                                 Arrays.asList(
                                         CC.translate("&7Terreno: &f" + terrain.getId()),
                                         CC.translate("&7Click en una regla para alternar ON/OFF")
-                                ));
-                        contents.set(0, 4, ClickableItem.empty(title));
+                                ))));
 
                         String[][] rules = {
                                 {"pvp",           "PvP entre jugadores",    "Permite el combate entre jugadores"},
@@ -369,29 +412,27 @@ public class TerrainCustomizeMenu {
                         };
 
                         int row = 1, col = 1;
-                        for (String[] rule : rules) {
+                        for (final String[] rule : rules) {
                             final String ruleKey   = rule[0];
                             final String ruleLabel = rule[1];
                             boolean enabled = TerrainCustomizeManager.getRuleValue(terrain, ruleKey);
-                            Material mat = enabled ? Material.EMERALD : Material.REDSTONE;
-                            String stateStr = enabled ? "&aACTIVO" : "&cINACTIVO";
-                            ItemStack btn = makeItem(mat, "&f" + ruleLabel,
+                            ItemStack btn = makeItem(enabled ? Material.EMERALD : Material.REDSTONE, "&f" + ruleLabel,
                                     Arrays.asList(
                                             CC.translate("&7" + rule[2]),
-                                            CC.translate("&7Estado: " + stateStr),
+                                            CC.translate("&7Estado: " + (enabled ? "&aACTIVO" : "&cINACTIVO")),
                                             CC.translate(""),
                                             CC.translate("&e▶ Click para alternar")
                                     ));
                             contents.set(row, col, ClickableItem.of(btn, e -> {
                                 boolean newVal = TerrainCustomizeManager.toggleRule(terrain, player, ruleKey);
-                                player.sendMessage(CC.translate("&7Regla &f" + ruleLabel + " &7→ " + (newVal ? "&aACTIVO" : "&cINACTIVO")));
+                                player.sendMessage(CC.translate("&7Regla &f" + ruleLabel
+                                        + " &7→ " + (newVal ? "&aACTIVO" : "&cINACTIVO")));
                                 createRulesMenu(terrain, player).open(player);
                             }));
                             col++;
                             if (col >= 8) { col = 1; row++; }
                             if (row >= 4) break;
                         }
-
                         addBackButton(contents, 3, 4, terrain, player);
                     }
 
@@ -403,6 +444,8 @@ public class TerrainCustomizeMenu {
                 .build();
     }
 
+    // ─── Menú de Tiempo ───────────────────────────────────────────────────────
+
     public static SmartInventory createTimeMenu(final Terrain terrain, final Player viewer) {
         return SmartInventory.builder()
                 .id("terrain_time_" + terrain.getId())
@@ -410,11 +453,12 @@ public class TerrainCustomizeMenu {
                     @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(TerritoryMenu.createGlassPane((short) 4)));
-
-                        ItemStack title = makeItem(Material.WATCH,
+                        contents.set(0, 4, ClickableItem.empty(makeItem(Material.WATCH,
                                 "&d&lCiclo de Tiempo",
-                                Arrays.asList(CC.translate("&7Configura el tiempo del mundo en tu terreno")));
-                        contents.set(0, 4, ClickableItem.empty(title));
+                                Arrays.asList(
+                                        CC.translate("&7Configura el tiempo para los jugadores en el terreno"),
+                                        CC.translate("&8El mundo global no se ve afectado")
+                                ))));
 
                         Object[][] times = {
                                 {"&e&lAmanecer",   0L,     Material.SPONGE},
@@ -426,21 +470,20 @@ public class TerrainCustomizeMenu {
                         int col = 1;
                         for (Object[] t : times) {
                             final String label = (String) t[0];
-                            final long   ticks = (long)   t[1];
-                            ItemStack btn = makeItem((Material) t[2], label,
-                                    Arrays.asList(
-                                            CC.translate("&7Ticks: &f" + ticks),
-                                            CC.translate(""),
-                                            CC.translate("&d▶ Click para aplicar")
-                                    ));
-                            contents.set(1, col, ClickableItem.of(btn, e -> {
-                                TerrainCustomizeManager.setTime(terrain, player, ticks);
-                                player.sendMessage(CC.translate("&7Tiempo del terreno configurado a " + label + "&7."));
-                                player.closeInventory();
-                            }));
+                            final long   ticks = (Long)   t[1];
+                            contents.set(1, col, ClickableItem.of(
+                                    makeItem((Material) t[2], label,
+                                            Arrays.asList(
+                                                    CC.translate("&7Ticks: &f" + ticks),
+                                                    CC.translate(""),
+                                                    CC.translate("&d▶ Click para aplicar")
+                                            )),
+                                    e -> {
+                                        TerrainCustomizeManager.setTime(terrain, player, ticks);
+                                        player.closeInventory();
+                                    }));
                             col += 2;
                         }
-
                         addBackButton(contents, 2, 4, terrain, player);
                     }
 
@@ -452,6 +495,7 @@ public class TerrainCustomizeMenu {
                 .build();
     }
 
+
     public static SmartInventory createEffectsMenu(final Terrain terrain, final Player viewer) {
         return SmartInventory.builder()
                 .id("terrain_effects_" + terrain.getId())
@@ -459,42 +503,63 @@ public class TerrainCustomizeMenu {
                     @Override
                     public void init(Player player, InventoryContents contents) {
                         contents.fillBorders(ClickableItem.empty(TerritoryMenu.createGlassPane((short) 5)));
-
-                        ItemStack title = makeItem(Material.BLAZE_POWDER,
+                        contents.set(0, 4, ClickableItem.empty(makeItem(Material.BLAZE_POWDER,
                                 "&5&lEfectos Ambientales",
                                 Arrays.asList(
                                         CC.translate("&7Terreno: &f" + terrain.getId()),
                                         CC.translate("&7Aplica un efecto de poción permanente"),
-                                        CC.translate("&7a todos los que entren al terreno")
-                                ));
-                        contents.set(0, 4, ClickableItem.empty(title));
+                                        CC.translate("&7a todos los que entren al terreno"),
+                                        CC.translate("&8Click en el efecto activo para desactivarlo")
+                                ))));
 
                         Object[][] effects = {
-                                {"&a&lRegeneración",   "REGENERATION",    Material.SPECKLED_MELON},
-                                {"&e&lVelocidad",      "SPEED",           Material.SUGAR},
-                                {"&6&lFuerza",         "INCREASE_DAMAGE", Material.BLAZE_ROD},
-                                {"&f&lVisión Nocturna","NIGHT_VISION",    Material.GOLDEN_CARROT},
-                                {"&cInvisibilidad",    "INVISIBILITY",    Material.FERMENTED_SPIDER_EYE},
-                                {"&dLentitud",         "SLOW",            Material.SOUL_SAND},
-                                {"&7Ninguno",          "NONE",            Material.REDSTONE_TORCH_ON},
+                                {"&a&lRegeneración",    "REGENERATION",    Material.SPECKLED_MELON},
+                                {"&e&lVelocidad",       "SPEED",           Material.SUGAR},
+                                {"&6&lFuerza",          "INCREASE_DAMAGE", Material.BLAZE_ROD},
+                                {"&f&lVisión Nocturna", "NIGHT_VISION",    Material.GOLDEN_CARROT},
+                                {"&cInvisibilidad",     "INVISIBILITY",    Material.FERMENTED_SPIDER_EYE},
+                                {"&dLentitud",          "SLOW",            Material.SOUL_SAND},
+                                {"&7Ninguno &8(desactivar)", "NONE",        Material.REDSTONE_TORCH_ON},
                         };
+
+                        final String currentEffect = TerrainCustomizeManager.getEffect(terrain);
 
                         int row = 1, col = 1;
                         for (Object[] eff : effects) {
-                            final String label  = (String) eff[0];
-                            final String effect = (String) eff[1];
-                            boolean active = TerrainCustomizeManager.getEffect(terrain).equals(effect);
+                            final String label     = (String) eff[0];
+                            final String effectKey = (String) eff[1];
+                            boolean isActive = currentEffect.equals(effectKey);
+
                             List<String> lore = new ArrayList<String>();
-                            lore.add(CC.translate("&7Efecto: &f" + effect));
-                            if (active) lore.add(CC.translate("&a✔ ACTIVO ACTUALMENTE"));
-                            lore.add(CC.translate(""));
-                            lore.add(CC.translate("&5▶ Click para activar"));
-                            ItemStack btn = makeItem((Material) eff[2], label, lore);
+                            if (isActive) {
+                                lore.add(CC.translate("&a✔ ACTIVO — Click para desactivar"));
+                            } else {
+                                lore.add(CC.translate("&7Efecto: &f" + effectKey));
+                                lore.add(CC.translate(""));
+                                lore.add(CC.translate("&5▶ Click para activar"));
+                            }
+
+                            ItemStack btn;
+                            if (isActive) {
+                                btn = makeItem(Material.EMERALD_BLOCK, "&a&l✔ " + label, lore);
+                            } else {
+                                btn = makeItem((Material) eff[2], label, lore);
+                            }
+
                             contents.set(row, col, ClickableItem.of(btn, e -> {
-                                TerrainCustomizeManager.setEffect(terrain, player, effect);
-                                player.sendMessage(CC.translate("&7Efecto ambiental del terreno: " + label));
+                                // FIX: leemos el efecto actual en el momento del click, no el del init.
+                                // Así el toggle siempre trabaja con el estado real persistido.
+                                String effectoActual = TerrainCustomizeManager.getEffect(terrain);
+                                String newEffect;
+                                if (effectoActual.equals(effectKey) && !"NONE".equals(effectKey)) {
+                                    newEffect = "NONE";
+                                } else {
+                                    newEffect = effectKey;
+                                }
+                                TerrainCustomizeManager.setEffect(terrain, player, newEffect);
                                 createEffectsMenu(terrain, player).open(player);
                             }));
+
                             col++;
                             if (col >= 8) { col = 1; row++; }
                             if (row >= 3) break;
@@ -511,6 +576,8 @@ public class TerrainCustomizeMenu {
                 .build();
     }
 
+
+
     private static ItemStack makeItem(Material mat, String name, List<String> lore) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
@@ -522,8 +589,7 @@ public class TerrainCustomizeMenu {
 
     private static void addBackButton(InventoryContents contents, int row, int col,
                                       Terrain terrain, Player player) {
-        ItemStack back = makeItem(Material.ARROW, "&7← Volver", null);
-        contents.set(row, col, ClickableItem.of(back, e ->
-                createMainMenu(terrain, player).open(player)));
+        contents.set(row, col, ClickableItem.of(makeItem(Material.ARROW, "&7← Volver", null),
+                e -> createMainMenu(terrain, player).open(player)));
     }
 }

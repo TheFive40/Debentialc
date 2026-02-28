@@ -6,6 +6,7 @@ import org.debentialc.Main;
 import org.debentialc.claims.events.LeaseProtectionListener;
 import org.debentialc.claims.events.LeaseSelectionListener;
 import org.debentialc.claims.managers.LeaseManager;
+import org.debentialc.claims.managers.TerrainCustomizeManager;
 import org.debentialc.claims.managers.TerrainManager;
 
 public class ClaimsModule {
@@ -14,6 +15,10 @@ public class ClaimsModule {
         setupEconomy(plugin);
         TerrainManager.getInstance();
         LeaseManager.getInstance();
+
+        // Inicializa persistencia de personalizaciones ANTES de registrar listeners
+        TerrainCustomizeManager.initialize();
+
         plugin.getServer().getPluginManager().registerEvents(new LeaseProtectionListener(), plugin);
         plugin.getServer().getPluginManager().registerEvents(new LeaseSelectionListener(), plugin);
         plugin.getLogger().info("[Claims] Sistema de terrenos inicializado.");

@@ -81,8 +81,11 @@ public class Main extends JavaPlugin {
         System.out.println("[Raids] Sistema de raids inicializado");
     }
     /**
-     * Tarea periódica que aplica efectos ambientales de terrenos a los jugadores.
+     * Tarea periódica que aplica efectos ambientales y tiempo de terreno a los jugadores.
      * Se ejecuta cada 5 segundos (100 ticks).
+     *
+     * CAMBIO: ahora también llama a applyTimeToPlayer para que el tiempo sea
+     * individual por jugador según el terreno donde se encuentren.
      */
     private void startTerrainEffectsTask() {
         new BukkitRunnable() {
@@ -90,6 +93,7 @@ public class Main extends JavaPlugin {
             public void run() {
                 for (Player player : getServer().getOnlinePlayers()) {
                     TerrainCustomizeManager.applyEffectToPlayer(player);
+                    TerrainCustomizeManager.applyTimeToPlayer(player);
                 }
             }
         }.runTaskTimer(this, 20L, 100L); // cada 5 segundos
