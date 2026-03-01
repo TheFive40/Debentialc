@@ -15,23 +15,13 @@ import org.debentialc.service.CC;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Manager que centraliza todas las personalizaciones de un terreno:
- * bioma, suelo, clima, reglas de juego, tiempo y efectos ambientales.
- *
- * Los ajustes se guardan en disco mediante TerrainCustomizeStorage.
- * El tiempo es por jugador (no global); el clima sigue siendo global al mundo.
- */
 public class TerrainCustomizeManager {
-
 
     private static TerrainCustomizeStorage storage;
 
     public static void initialize() {
         storage = new TerrainCustomizeStorage();
-        Main.instance.getLogger().info("[Claims] TerrainCustomizeManager inicializado con persistencia.");
     }
-
 
     private static final Map<String, Map<String, Boolean>> terrainRules   = new HashMap<String, Map<String, Boolean>>();
     private static final Map<String, String>               terrainEffects = new HashMap<String, String>();
@@ -50,7 +40,6 @@ public class TerrainCustomizeManager {
         RULE_DEFAULTS.put("doHunger",       true);
     }
 
-
     private static Map<String, Boolean> getRulesMap(String terrainId) {
         if (!terrainRules.containsKey(terrainId)) {
             if (storage != null) {
@@ -65,6 +54,14 @@ public class TerrainCustomizeManager {
         return terrainRules.get(terrainId);
     }
 
+    // Reemplaza isCommitted() - solo verifica que el origen exista
+    private static boolean hasOrigin(Terrain terrain, Player player) {
+        if (terrain.getOrigin() == null) {
+            player.sendMessage(CC.translate("&cEste terreno no tiene posicion de origen definida."));
+            return false;
+        }
+        return true;
+    }
 
     public static boolean setBiome(final Terrain terrain, final Player player, final String biomeName) {
         final Biome biome;
@@ -75,10 +72,7 @@ public class TerrainCustomizeManager {
             return false;
         }
 
-        if (terrain.getOrigin() == null || !terrain.isCommitted()) {
-            player.sendMessage(CC.translate("&cEl terreno no está generado."));
-            return false;
-        }
+        if (!hasOrigin(terrain, player)) return false;
 
         final World world = terrain.getOrigin().getWorld();
         final int ox   = terrain.getOrigin().getBlockX();
@@ -108,42 +102,27 @@ public class TerrainCustomizeManager {
         return true;
     }
 
-
-    /**
-     * Versión con Material estándar — delega en la versión por ID.
-     */
     public static void setFloor(Terrain terrain, Player player, Material mat, byte data) {
         setFloor(terrain, player, mat.getId(), data);
     }
 
-    /**
-     * Reemplaza el suelo del terreno con el block ID dado.
-     * Soporta IDs de bloques de mods (> 255).
-     *
-     * FIX: ya no usa getHighestBlockAt (que devolvía el Y de las losas de borde).
-     * Ahora usa el Y del origen del terreno — el mismo nivel donde están los bordes —
-     * y solo modifica el interior (excluye los bloques de losa en los extremos).
-     */
     public static void setFloor(final Terrain terrain, final Player player, final int blockId, final byte data) {
-        if (terrain.getOrigin() == null || !terrain.isCommitted()) {
-            player.sendMessage(CC.translate("&cEl terreno no está generado."));
-            return;
-        }
+        if (!hasOrigin(terrain, player)) return;
 
-        final World world = terrain.getOrigin().getWorld();
-        final int ox      = terrain.getOrigin().getBlockX();
-        final int oz      = terrain.getOrigin().getBlockZ();
-        final int size    = terrain.getSizeInBlocks();
-        final int baseY   = terrain.getOrigin().getBlockY();
-        final String tid  = terrain.getId();
+        final World world  = terrain.getOrigin().getWorld();
+        final int ox       = terrain.getOrigin().getBlockX();
+        final int oz       = terrain.getOrigin().getBlockZ();
+        final int size     = terrain.getSizeInBlocks();
+        final int baseY    = terrain.getOrigin().getBlockY() - 1;
+        final String tid   = terrain.getId();
 
         player.sendMessage(CC.translate("&7Aplicando suelo al terreno &f" + tid + "&7, espera..."));
 
         Bukkit.getScheduler().runTask(Main.instance, new Runnable() {
             public void run() {
                 int count = 0;
-                for (int x = ox + 1; x < ox + size - 1; x++) {
-                    for (int z = oz + 1; z < oz + size - 1; z++) {
+                for (int x = ox; x < ox + size; x++) {
+                    for (int z = oz; z < oz + size; z++) {
                         world.getBlockAt(x, baseY, z).setTypeIdAndData(blockId, data, false);
                         count++;
                     }
@@ -153,18 +132,9 @@ public class TerrainCustomizeManager {
         });
     }
 
-
-    /**
-     * Ajusta el clima global del mundo donde está el terreno y lo persiste.
-     * (Minecraft no soporta clima por jugador en 1.7.10.)
-     *
-     * @param type "CLEAR", "RAIN" o "STORM"
-     */
     public static void setWeather(Terrain terrain, Player player, String type) {
-        if (terrain.getOrigin() == null) {
-            player.sendMessage(CC.translate("&cEl terreno no tiene origen definido."));
-            return;
-        }
+        if (!hasOrigin(terrain, player)) return;
+
         World world = terrain.getOrigin().getWorld();
         terrainWeather.put(terrain.getId(), type);
         if (storage != null) storage.setWeather(terrain.getId(), type);
@@ -184,7 +154,6 @@ public class TerrainCustomizeManager {
             world.setWeatherDuration(Integer.MAX_VALUE);
         }
     }
-
 
     public static boolean getRuleValue(Terrain terrain, String ruleKey) {
         return getRulesMap(terrain.getId()).getOrDefault(ruleKey, RULE_DEFAULTS.getOrDefault(ruleKey, true));
@@ -213,30 +182,15 @@ public class TerrainCustomizeManager {
         return terrainRules.get(terrainId).getOrDefault(ruleKey, RULE_DEFAULTS.getOrDefault(ruleKey, true));
     }
 
-    // ─── Tiempo (por jugador) ─────────────────────────────────────────────────
-
-    /**
-     * Guarda el tiempo configurado para el terreno y lo persiste.
-     * El tiempo NO es global: se aplica individualmente a cada jugador
-     * que esté en el terreno mediante {@link #applyTimeToPlayer(Player)}.
-     */
     public static void setTime(Terrain terrain, Player player, long ticks) {
         terrainTime.put(terrain.getId(), ticks);
         if (storage != null) storage.setTime(terrain.getId(), ticks);
-        // Aplica al jugador que hizo el cambio de forma inmediata
         player.setPlayerTime(ticks, false);
-        player.sendMessage(CC.translate("&7Tiempo del terreno configurado. Solo visible para ti y los jugadores en el terreno."));
+        player.sendMessage(CC.translate("&7Tiempo del terreno configurado."));
     }
 
-    /**
-     * Llamar desde el task periódico (cada ~5 s) para mantener el tiempo por jugador.
-     *
-     * - Si el jugador está en un terreno con tiempo configurado → aplica ese tiempo solo a él.
-     * - Si no está en ningún terreno con tiempo configurado → restaura el tiempo real del mundo.
-     */
     public static void applyTimeToPlayer(Player player) {
         Terrain terrain = TerrainManager.getInstance().getTerrainAt(player.getLocation());
-
         if (terrain != null) {
             Long cachedTicks = terrainTime.get(terrain.getId());
             if (cachedTicks == null && storage != null) {
@@ -251,16 +205,11 @@ public class TerrainCustomizeManager {
                 return;
             }
         }
-
-        // Fuera de terreno con tiempo → restaurar tiempo real si estaba sobreescrito
         if (!player.isPlayerTimeRelative()) {
             player.resetPlayerTime();
         }
     }
 
-    // ─── Efectos ambientales ──────────────────────────────────────────────────
-
-    /** Devuelve el nombre del efecto activo para el terreno (con caché + persistencia). */
     public static String getEffect(Terrain terrain) {
         if (!terrainEffects.containsKey(terrain.getId()) && storage != null) {
             terrainEffects.put(terrain.getId(), storage.getEffect(terrain.getId()));
@@ -268,24 +217,16 @@ public class TerrainCustomizeManager {
         return terrainEffects.getOrDefault(terrain.getId(), "NONE");
     }
 
-    /**
-     * Asigna o desactiva el efecto ambiental del terreno.
-     * Pasar "NONE" desactiva cualquier efecto activo.
-     */
     public static void setEffect(Terrain terrain, Player player, String effectName) {
         terrainEffects.put(terrain.getId(), effectName);
         if (storage != null) storage.setEffect(terrain.getId(), effectName);
         if ("NONE".equals(effectName)) {
-            player.sendMessage(CC.translate("&7Efecto ambiental desactivado en el terreno."));
+            player.sendMessage(CC.translate("&7Efecto ambiental desactivado."));
         } else {
-            player.sendMessage(CC.translate("&7Efecto ambiental configurado. Los jugadores en el terreno lo recibirán."));
+            player.sendMessage(CC.translate("&7Efecto ambiental configurado."));
         }
     }
 
-    /**
-     * Aplica el efecto ambiental al jugador si está dentro de un terreno con efecto activo.
-     * Llamar desde un task periódico (ej. cada 5 segundos).
-     */
     public static void applyEffectToPlayer(Player player) {
         Terrain terrain = TerrainManager.getInstance().getTerrainAt(player.getLocation());
         if (terrain == null) return;
@@ -296,7 +237,13 @@ public class TerrainCustomizeManager {
         PotionEffectType pet = getPotionEffectType(effectName);
         if (pet == null) return;
 
-        player.addPotionEffect(new PotionEffect(pet, 200, 0, true), true);
+        PotionEffect existing = null;
+        for (PotionEffect pe : player.getActivePotionEffects()) {
+            if (pe.getType().equals(pet)) { existing = pe; break; }
+        }
+        if (existing != null && existing.getDuration() > 100) return;
+
+        player.addPotionEffect(new PotionEffect(pet, 300, 0, true), true);
     }
 
     private static PotionEffectType getPotionEffectType(String name) {
@@ -309,7 +256,6 @@ public class TerrainCustomizeManager {
         if ("SLOW".equals(name))            return PotionEffectType.SLOW;
         return null;
     }
-
 
     public static boolean isPvpEnabled(String terrainId) {
         return isRuleEnabled(terrainId, "pvp");

@@ -96,7 +96,7 @@ public class Main extends JavaPlugin {
                     TerrainCustomizeManager.applyTimeToPlayer(player);
                 }
             }
-        }.runTaskTimer(this, 20L, 100L); // cada 5 segundos
+        }.runTaskTimer(this, 20L, 180L);
     }
     /**
      * Registra los eventos de CustomNPCs
